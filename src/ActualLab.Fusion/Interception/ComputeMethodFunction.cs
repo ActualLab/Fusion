@@ -42,7 +42,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
     public object? ComputeServiceInterceptorHandler(Invocation invocation)
     {
 #if NET9_0_OR_GREATER
-        var lookup = new ComputeMethodInput.Lookup(this, MethodDef, invocation);
+        var inputLookup = new ComputeMethodInput.Lookup(this, MethodDef, invocation);
 #else
         var input = new ComputeMethodInput(this, MethodDef, invocation);
 #endif
@@ -51,7 +51,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
             var context = ComputeContext.Current;
 #if NET9_0_OR_GREATER
             // ComputeMethodInput is sealed, and its GetExistingComputed() performs the same registry lookup.
-            var computed = ComputedRegistry.Get(lookup);
+            var computed = ComputedRegistry.Get(inputLookup);
 #else
             var computed = input.GetExistingComputed();
 #endif
@@ -73,7 +73,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
             var task = ComputedImpl.TryUseExisting(computed, context)
                 ? ComputedImpl.GetValueOrDefaultAsTask(computed, context, OutputType)
 #if NET9_0_OR_GREATER
-                : this.ProduceValuePromise(lookup.ToInput(), context, cancellationToken);
+                : this.ProduceValuePromise(inputLookup.ToInput(), context, cancellationToken);
 #else
                 : this.ProduceValuePromise(input, context, cancellationToken);
 #endif

@@ -95,25 +95,16 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
             + invocation.Proxy.GetHashCode()
             + invocation.Arguments.GetHashCode(methodDef.CancellationTokenIndex);
 
-#if NET9_0_OR_GREATER
     // Nested types
 
-    internal readonly struct Lookup
+#if NET9_0_OR_GREATER
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly struct Lookup(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {
-        public readonly IComputeFunction Function;
-        public readonly ComputeMethodDef MethodDef;
-        public readonly Invocation Invocation;
-        public readonly int HashCode;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Lookup(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
-        {
-            Function = function;
-            MethodDef = methodDef;
-            Invocation = invocation;
-
-            HashCode = ComputeHashCode(methodDef, invocation);
-        }
+        public readonly IComputeFunction Function = function;
+        public readonly ComputeMethodDef MethodDef = methodDef;
+        public readonly Invocation Invocation = invocation;
+        public readonly int HashCode = ComputeHashCode(methodDef, invocation);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool EqualsInput(ComputeMethodInput other)

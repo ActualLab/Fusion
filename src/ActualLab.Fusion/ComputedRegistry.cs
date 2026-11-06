@@ -48,7 +48,7 @@ public sealed class ComputedRegistry
     private static readonly ConcurrentDictionary<ComputedInput, WeakReference<Computed>> _storage;
 #if NET9_0_OR_GREATER
     private static readonly ConcurrentDictionary<ComputedInput, WeakReference<Computed>>
-        .AlternateLookup<ComputeMethodInput.Lookup> _computeMethodStorage;
+        .AlternateLookup<ComputeMethodInput.Lookup> _lookupStorage;
 #endif
     private static ComputedGraphPruner? _graphPruner;
     private static int _pruneOpCounterThreshold;
@@ -73,7 +73,7 @@ public sealed class ComputedRegistry
             Settings.InitialCapacity,
             StorageEqualityComparer.Instance);
 #if NET9_0_OR_GREATER
-        _computeMethodStorage = _storage.GetAlternateLookup<ComputeMethodInput.Lookup>();
+        _lookupStorage = _storage.GetAlternateLookup<ComputeMethodInput.Lookup>();
 #endif
         InputLocks = Settings.LocksFactory?.Invoke() ?? new AsyncLockSet<ComputedInput>(
             LockReentryMode.CheckedFail,
@@ -99,11 +99,11 @@ public sealed class ComputedRegistry
     }
 
 #if NET9_0_OR_GREATER
-    internal static Computed? Get(in ComputeMethodInput.Lookup key)
+    public static Computed? Get(in ComputeMethodInput.Lookup key)
     {
         var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnOperation(random);
-        if (!_computeMethodStorage.TryGetValue(key, out var weakRef))
+        if (!_lookupStorage.TryGetValue(key, out var weakRef))
             return null;
 
         if (weakRef.TryGetTarget(out var target))
