@@ -2097,6 +2097,30 @@ Extension methods for `IServiceCollection` to register Web API controllers as tr
 
 Extension methods for `IServiceProvider` to create `IDependencyResolver` instances for Web API.
 
+## ActualLab.Rpc.TypeScript
+
+### ActualLab.Rpc.TypeScript
+
+###### `RpcTypeScriptGenerator`
+
+Generates a TypeScript module with service interfaces, DTOs and `defineRpcService` definitions for a set of `RpcServiceDef`-s, so a TypeScript client can't drift from the .NET contracts. See [PartTS-Contracts.md](PartTS-Contracts.md).
+
+###### `RpcTypeScriptGeneratorOptions` (record)
+
+Options for `RpcTypeScriptGenerator`: JSON options defining the wire shape, known type mappings, and module names.
+
+###### `RpcTypeScriptGeneratorResult` (record)
+
+The generated module code plus warnings about skipped methods and types mapped to `unknown`.
+
+###### `TypeScriptTypeMapper`
+
+Maps .NET types to TypeScript type expressions using System.Text.Json metadata, collecting declarations of the DTOs it meets.
+
+###### `TypeScriptSyntax` (static)
+
+Helpers producing TypeScript identifiers and literals.
+
 ## ActualLab.CommandR
 
 ### ActualLab.CommandR

@@ -4,7 +4,7 @@ import { uiActions } from "@actuallab/fusion";
 import { AsyncContext } from "@actuallab/core";
 import type { RpcPeerStateMonitor } from "@actuallab/rpc";
 import type { Todos } from "./todos.js";
-import type { ITodoApi } from "./todo-api.js";
+import type { ITodoApi } from "./contracts.generated.js";
 import { DEFAULT_SESSION, ULID_EMPTY } from "./todo-api.js";
 import { TodoItemView } from "./TodoItemView.js";
 import { TodoSummaryBadge } from "./TodoSummaryBadge.js";

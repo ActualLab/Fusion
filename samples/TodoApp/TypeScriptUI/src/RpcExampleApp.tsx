@@ -1,7 +1,7 @@
 import React from "react";
 import { toRpcStream } from "@actuallab/rpc";
 import type { RpcPeer, RpcPeerStateMonitor } from "@actuallab/rpc";
-import type { ISimpleService, Table, Row } from "./simple-api.js";
+import type { ISimpleService, Table, Row } from "./contracts.generated.js";
 import { ConnectionStatusBanner } from "./ConnectionStatusBanner.js";
 
 const ROW_LIMIT = 16;

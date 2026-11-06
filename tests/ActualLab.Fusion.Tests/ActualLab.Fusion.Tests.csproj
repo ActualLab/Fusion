@@ -102,6 +102,7 @@
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Rpc.TypeScript\ActualLab.Rpc.TypeScript.csproj" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server.NetFx\ActualLab.Fusion.Server.NetFx.csproj" />

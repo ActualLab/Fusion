@@ -23,4 +23,25 @@
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- TypeScript contracts for TypeScriptUI: regenerated on build, verified (not written) on CI -->
+  <PropertyGroup>
+    <TypeScriptContractsTool>..\..\..\src\ActualLab.Rpc.TypeScript.Tool\ActualLab.Rpc.TypeScript.Tool.csproj</TypeScriptContractsTool>
+    <TypeScriptContractsOutput>..\TypeScriptUI\src\contracts.generated.ts</TypeScriptContractsOutput>
+    <DotNetHostPath>$(DOTNET_HOST_PATH)</DotNetHostPath>
+    <DotNetHostPath Condition="'$(DotNetHostPath)' == ''">dotnet</DotNetHostPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(TypeScriptContractsTool)" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Target Name="GenerateTypeScriptContracts" AfterTargets="Build"
+          Condition="'$(GenerateTypeScriptContracts)' != 'false' and '$(DesignTimeBuild)' != 'true'">
+    <MSBuild Projects="$(TypeScriptContractsTool)" Targets="GetTargetPath">
+      <Output TaskParameter="TargetOutputs" PropertyName="_TypeScriptContractsToolPath" />
+    </MSBuild>
+    <PropertyGroup>
+      <_TypeScriptContractsCheck Condition="'$(CI)' == 'true'"> --check</_TypeScriptContractsCheck>
+    </PropertyGroup>
+    <Exec Command="&quot;$(DotNetHostPath)&quot; exec &quot;$(_TypeScriptContractsToolPath)&quot; &quot;$(TargetPath)&quot; --output &quot;$(TypeScriptContractsOutput)&quot;$(_TypeScriptContractsCheck)" />
+  </Target>
+
 </Project>

@@ -14,7 +14,6 @@ import {
     RpcClientPeer,
     RpcError,
     RpcRefBuilder,
-    RpcType,
     defineRpcService,
     type RpcConnectionState,
     type WebSocketLike,
@@ -25,6 +24,12 @@ import {
     defineComputeService,
 } from '@actuallab/fusion-rpc';
 import { RetryDelaySeq } from '@actuallab/core';
+import {
+    TypeScriptTestComputeServiceDef as TestComputeServiceDef,
+    TypeScriptTestServiceDef as TestServiceDef,
+    type ITypeScriptTestComputeService,
+    type ITypeScriptTestService,
+} from './contracts.generated.js';
 
 // RpcConnectionState.Connected — inlined to avoid `verbatimModuleSyntax`
 // restriction on cross-package `const enum` imports.
@@ -41,57 +46,10 @@ const rpcFormat = process.env['RPC_FORMAT'] ?? 'json5np';
 const scenario = process.argv[2] ?? 'all';
 
 // ---------------------------------------------------------------------------
-// Service definitions — using defineRpcService with overload support
+// Service definitions — using defineRpcService with overload support.
+// ITypeScriptTestService & ITypeScriptTestComputeService ones are generated from the .NET
+// contracts into contracts.generated.ts, see RpcTypeScriptGeneratorTest.
 // ---------------------------------------------------------------------------
-
-// ITypeScriptTestService (IRpcService — no CancellationToken on any method)
-// Add has two overloads: Add(a,b) → wire Add:2, Add(a,b,c) → wire Add:3
-interface ITypeScriptTestService {
-  Add(a: number, b: number): Promise<number>;
-  // eslint-disable-next-line @typescript-eslint/unified-signatures
-  Add(a: number, b: number, c: number): Promise<number>;
-  Greet(name: string): Promise<string>;
-  Negate(value: boolean): Promise<boolean>;
-  Divide(a: number, b: number): Promise<number>;
-  Echo(message: string | null): Promise<string | null>;
-  Throw(message: string): Promise<string>;
-  SlowEcho(marker: string, delayMs: number): Promise<string>;
-  GetSlowEchoInvocationCount(): Promise<number>;
-  ResetSlowEchoCounter(): Promise<void>;
-}
-
-const TestServiceDef = defineRpcService('ITypeScriptTestService', {
-    Add: { args: [0, 0], wireArgCount: 2 },            // no CT
-    'Add:3': { args: [0, 0, 0], wireArgCount: 3 },     // no CT (overload)
-    Greet: { args: [''], wireArgCount: 1 },
-    Negate: { args: [false], wireArgCount: 1 },
-    Divide: { args: [0.0, 0.0], wireArgCount: 2 },
-    Echo: { args: [''], wireArgCount: 1 },
-    Throw: { args: [''], wireArgCount: 1 },
-    SlowEcho: { args: ['', 0], wireArgCount: 2 },
-    GetSlowEchoInvocationCount: { args: [], wireArgCount: 0 },
-    ResetSlowEchoCounter: { args: [], wireArgCount: 0 },
-});
-
-// ITypeScriptTestComputeService (IComputeService — all methods have CancellationToken)
-interface ITypeScriptTestComputeService {
-  GetCounter(key: string): Promise<number>;
-  Set(key: string, value: number): Promise<void>;
-  Increment(key: string): Promise<void>;
-  GetCounterNonCompute(key: string): Promise<number>;
-  StreamInt32(count: number): Promise<AsyncIterable<number>>;
-  StreamInt32NoReconnect(count: number): Promise<AsyncIterable<number>>;
-}
-
-// Only GetCounter has [ComputeMethod] — Set and Increment are regular methods
-const TestComputeServiceDef = defineComputeService('ITypeScriptTestComputeService', {
-    GetCounter: { args: [''] },
-    Set: { args: ['', 0], callTypeId: 0 },
-    Increment: { args: [''], callTypeId: 0 },
-    GetCounterNonCompute: { args: [''], callTypeId: 0 },
-    StreamInt32: { args: [0], wireArgCount: 1, callTypeId: 0, returns: RpcType.stream },
-    StreamInt32NoReconnect: { args: [0], wireArgCount: 1, callTypeId: 0, returns: RpcType.stream },
-});
 
 // Disconnect/Reconnect lifecycle matrix services — mirrors .NET pure-process tests
 // (FusionRpcReconnectionMatrixTest, RpcReconnectionMatrixTest).

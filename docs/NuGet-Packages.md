@@ -25,6 +25,8 @@ You should reference these packages based on your project type:
 - [ActualLab.Rpc](https://www.nuget.org/packages/ActualLab.Rpc/) &ndash; The fastest RPC implementation for .NET; this package includes its WebSocket client
 - [ActualLab.Rpc.Server](https://www.nuget.org/packages/ActualLab.Rpc.Server/) &ndash; RPC server for ASP.NET Core
 - [ActualLab.Rpc.Server.NetFx](https://www.nuget.org/packages/ActualLab.Rpc.Server.NetFx/) &ndash; RPC server for .NET Framework
+- [ActualLab.Rpc.TypeScript](https://www.nuget.org/packages/ActualLab.Rpc.TypeScript/) &ndash; Generates TypeScript contracts (interfaces, DTOs, service definitions) from RPC and Fusion services
+- [ActualLab.Rpc.TypeScript.Tool](https://www.nuget.org/packages/ActualLab.Rpc.TypeScript.Tool/) &ndash; `actuallab-tsgen`, a .NET tool running that generator on a compiled contracts assembly
 
 ### CommandR
 
