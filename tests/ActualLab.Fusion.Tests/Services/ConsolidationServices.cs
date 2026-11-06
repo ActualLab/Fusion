@@ -76,3 +76,67 @@ public class HiddenConsolidatingCounter : IHiddenConsolidatingCounter
     protected virtual Task<int> GetConsolidated(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(_counters.GetValueOrDefault(key));
 }
+
+// Fusion doesn't track Value, so only an explicit invalidation can refresh what Get returns.
+public class UntrackedValueService : IComputeService
+{
+    private volatile Task? _whenGateOpened;
+    private volatile TaskCompletionSource<Unit>? _whenGateReached;
+
+    public volatile int Value;
+
+    [ComputeMethod(ConsolidationDelay = 0)]
+    public virtual async Task<int> Get()
+    {
+        var value = Value;
+        await PassGate().ConfigureAwait(false);
+        return value;
+    }
+
+    [ComputeMethod]
+    public virtual async Task<int> GetOuter()
+        => await Get().ConfigureAwait(false);
+
+    [ComputeMethod(ConsolidationDelay = 0, ConsolidationComparer = typeof(HookedComparer))]
+    public virtual Task<int> GetHooked()
+        => Task.FromResult(Value);
+
+    // The next computation reads Value, then waits for the returned gate to open
+    public (Task WhenGateReached, TaskCompletionSource<Unit> Gate) CloseGate()
+    {
+        var gate = TaskCompletionSourceExt.New<Unit>();
+        var whenGateReached = TaskCompletionSourceExt.New<Unit>();
+        _whenGateReached = whenGateReached;
+        _whenGateOpened = gate.Task;
+        return (whenGateReached.Task, gate);
+    }
+
+    private Task PassGate()
+    {
+        var whenGateOpened = _whenGateOpened;
+        if (whenGateOpened is null)
+            return Task.CompletedTask;
+
+        _whenGateOpened = null;
+        _whenGateReached?.TrySetResult(default);
+        return whenGateOpened;
+    }
+}
+
+public class HookedComparer : IEqualityComparer<int>
+{
+    // Invoked by the consolidation once the new source is computed, but before it's adopted
+    public static Action? OnEquals {
+        get => Volatile.Read(ref field);
+        set => Volatile.Write(ref field, value);
+    }
+
+    public bool Equals(int x, int y)
+    {
+        OnEquals?.Invoke();
+        return x == y;
+    }
+
+    public int GetHashCode(int obj)
+        => obj;
+}

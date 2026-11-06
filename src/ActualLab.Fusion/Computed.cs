@@ -315,6 +315,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
                     OnInvalidated();
                     return;
                 }
+
                 try {
                     OnInvalidated();
                 }

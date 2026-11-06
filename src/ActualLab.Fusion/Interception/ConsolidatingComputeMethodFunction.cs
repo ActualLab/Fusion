@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Internal;
+using ActualLab.Interception;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Interception;
@@ -33,6 +34,12 @@ public abstract class ConsolidatingComputeMethodFunction(
 {
     public readonly ComputeMethodDef ConsolidationSourceMethodDef = consolidationSourceMethodDef;
     public readonly ComputeMethodFunction ConsolidationSourceFunction = consolidationSourceFunction;
+
+    public Computed? GetExistingSource(Invocation invocation)
+    {
+        var input = new ComputeMethodInput(ConsolidationSourceFunction, ConsolidationSourceMethodDef, invocation);
+        return input.GetExistingComputed();
+    }
 
     protected internal override async ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken)

@@ -245,15 +245,20 @@ is synthesized from the same `MethodInfo`, so there is no separate method to cal
 to name its computed — yet that inner computed is the one holding the dependencies, and
 therefore the one that has to be invalidated for the recompute-and-compare to happen at all.
 
-Method-based invalidation handles this for you. `ConsolidatingComputed<T>` implements
-`IHasInvalidationTarget`, pointing at its source, and an `Invalidation.Begin()` block honours
-that — so invalidating the outer method invalidates the inner computed, and the comparison
-runs as intended:
+Method-based invalidation handles this for you. For a consolidating method, an
+`Invalidation.Begin()` block invalidates the source computed registered for the same arguments —
+whether or not a consolidation target currently exists, and including a source that a running
+consolidation is still computing — so the comparison runs as intended:
 
 ```cs
 using (Invalidation.Begin())
     _ = service.GetConsolidatedLastCheckIn(userId, default); // -> the source, so the comparison happens
 ```
+
+Invalidating a captured `ConsolidatingComputed<T>` directly (`computed.Invalidate()`) works too,
+but differently: the target is invalidated at once, without a comparison, and its source is
+invalidated along with it, so the next call recomputes the value instead of re-wrapping the
+cached source.
 
 So invalidate the consolidating method itself. Invalidating a method that merely calls it —
 the RPC-exposed wrapper above, say — invalidates only that caller's computed, which then

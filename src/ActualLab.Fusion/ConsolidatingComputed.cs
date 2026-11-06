@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
+using static ActualLab.Fusion.Internal.ConsolidatingComputedImpl;
 
 namespace ActualLab.Fusion;
 
@@ -10,6 +11,7 @@ namespace ActualLab.Fusion;
 /// It clones the <see cref="Source"/>'s <see cref="Computed.Output"/>
 /// and invalidates itself after seeing the <see cref="Source"/>'s invalidation,
 /// but only in case when a newly computed <see cref="Computed.Output"/> differs from its own one.
+/// Any other invalidation of it invalidates the <see cref="Source"/> too.
 /// </remarks>
 public interface IConsolidatingComputed : IHasInvalidationTarget, IHasSynchronizationTarget
 {
@@ -25,6 +27,7 @@ public interface IConsolidatingComputed : IHasInvalidationTarget, IHasSynchroniz
 /// It clones the <see cref="Source"/>'s <see cref="Computed.Output"/>
 /// and invalidates itself after seeing the <see cref="Source"/>'s invalidation,
 /// but only in case when a newly computed <see cref="Computed.Output"/> differs from its own one.
+/// Any other invalidation of it invalidates the <see cref="Source"/> too.
 /// </remarks>
 public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsolidatingComputed
 {
@@ -33,7 +36,8 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
 
     Computed IConsolidatingComputed.Source => _source;
     public Computed<T> Source => _source;
-    public Task? WhenConsolidated => _whenConsolidated;
+    // ReSharper disable once InconsistentlySynchronizedField
+    public Task? WhenConsolidated => Volatile.Read(ref _whenConsolidated);
 
     // IHasInvalidationTarget
     Computed? IHasInvalidationTarget.InvalidationTarget => _source;
@@ -48,6 +52,26 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
         source.Invalidated += OnSourceInvalidated;
     }
 
+    // Protected methods
+
+    protected override void OnInvalidated()
+    {
+        base.OnInvalidated();
+        // Consolidation invalidates us only after computing a new source with a different output,
+        // and the next call must reuse that source rather than recompute it. Thread-static, so a direct
+        // Invalidate() on another thread winning the race with consolidation still invalidates the source.
+        if (ReferenceEquals(InvalidatingConsolidationTarget, this))
+            return;
+
+        // Otherwise the next call would create a new consolidating computed over the same source.
+        // It's the registered source that gets invalidated: a running consolidation may be computing
+        // a newer one than _source.
+        var input = (ComputeMethodInput)Input;
+        var function = (ConsolidatingComputeMethodFunction)input.Function;
+        var source = function.GetExistingSource(input.Invocation);
+        source?.Invalidate(immediately: false, new InvalidationSource(this));
+    }
+
     // Private methods
 
     private void OnSourceInvalidated(Computed invalidated)
@@ -57,17 +81,14 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
             return;
 
         lock (Lock) {
-            if (_whenConsolidated is not null) return;
+            // No need to consolidate: we're to be replaced anyway
+            if (Volatile.Read(ref _whenConsolidated) is not null || !this.IsConsistent()) return;
 
             Task whenConsolidated;
-            if (!this.IsConsistent())
-                whenConsolidated = Task.CompletedTask; // No need to consolidate: we're to be replaced anyway
-            else {
-                // The cascade bringing us here may run inside ProduceComputed, and Consolidate re-locks
-                // the very input it produces - so its MarkLockedLocally marker must not flow into it.
-                using var _ = ExecutionContextExt.TrySuppressFlow();
+            // The cascade bringing us here may run inside ProduceComputed, and Consolidate re-locks
+            // the very input it produces - so its MarkLockedLocally marker must not flow into it.
+            using (ExecutionContextExt.TrySuppressFlow())
                 whenConsolidated = Task.Run(Consolidate, CancellationToken.None);
-            }
             // Release: the null check above and WhenConsolidated read this without the lock
             Volatile.Write(ref _whenConsolidated, whenConsolidated);
         }
@@ -89,7 +110,14 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
                 finally {
                     if (nextSource is null) {
                         // No next source -> we're invalidating ourselves
-                        Invalidate(immediately: true, new InvalidationSource(_source));
+                        // Invalidate(immediately: true) runs OnInvalidated synchronously, i.e. on this thread
+                        InvalidatingConsolidationTarget = this;
+                        try {
+                            Invalidate(immediately: true, new InvalidationSource(_source));
+                        }
+                        finally {
+                            InvalidatingConsolidationTarget = null;
+                        }
                     }
                     else {
                         // 1. Re-enable the consolidation

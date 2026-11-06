@@ -38,9 +38,8 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Fact]
-    public async Task InvalidationBeginShouldReachSourceAfterTargetInvalidation()
+    public async Task TargetInvalidationInvalidatesSource()
     {
-        // arrange
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
         counterSum[0].Set(0);
@@ -49,18 +48,117 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         var source = target.Source;
         var callCount = counterSum.GetC0CallCount;
 
-        // act
         target.Invalidate();
         target.IsConsistent().Should().BeFalse();
-        source.IsConsistent().Should().BeTrue();
-        using (Invalidation.Begin())
-            _ = counterSum.GetC0(0);
-
-        // assert
         source.IsConsistent().Should().BeFalse();
+
         var refreshed = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
         refreshed.Value.Should().Be(0);
+        refreshed.Source.Should().NotBeSameAs(source);
         counterSum.GetC0CallCount.Should().BeGreaterThan(callCount);
+    }
+
+    [Fact]
+    public async Task TargetInvalidationRecomputesUntrackedValue()
+    {
+        var (service, target) = await CaptureUntracked();
+
+        target.Invalidate();
+        service.Value = 2;
+        (await service.Get()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task TargetInvalidationReachesDependants()
+    {
+        var (service, _) = await CaptureUntracked();
+        var outer = await Computed.Capture(() => service.GetOuter());
+        outer.Value.Should().Be(1);
+        var target = (ConsolidatingComputed<int>)await Computed.Capture(() => service.Get());
+
+        service.Value = 2;
+        target.Invalidate();
+        outer.IsConsistent().Should().BeFalse();
+        (await service.GetOuter()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task MethodInvalidationReachesSourceWithoutTarget()
+    {
+        var (service, target) = await CaptureUntracked();
+
+        // The consolidation sees a different value, so it invalidates the target and keeps the new source
+        service.Value = 2;
+        InvalidateUntracked(service);
+        await target.WhenInvalidated().WaitAsync(OneSecond);
+        target.IsConsistent().Should().BeFalse();
+        Computed.GetExisting(() => service.Get()).Should().BeNull();
+
+        service.Value = 3;
+        InvalidateUntracked(service);
+        (await service.Get()).Should().Be(3);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task MethodInvalidationDuringConsolidationReachesNewSource(int consolidatedValue)
+    {
+        var (service, target) = await CaptureUntracked();
+
+        var (whenGateReached, gate) = service.CloseGate();
+        service.Value = consolidatedValue;
+        InvalidateUntracked(service);
+        await whenGateReached.WaitAsync(OneSecond); // The new source has read the value
+
+        service.Value = 3;
+        InvalidateUntracked(service);
+        gate.SetResult(default);
+        await target.WhenInvalidated().WaitAsync(OneSecond);
+        (await service.Get()).Should().Be(3);
+    }
+
+    [Fact]
+    public async Task TargetInvalidationDuringConsolidationReachesNewSource()
+    {
+        var (service, target) = await CaptureUntracked();
+
+        var (whenGateReached, gate) = service.CloseGate();
+        InvalidateUntracked(service);
+        await whenGateReached.WaitAsync(OneSecond);
+
+        service.Value = 3;
+        target.Invalidate();
+        gate.SetResult(default);
+        await target.WhenInvalidated().WaitAsync(OneSecond);
+        (await service.Get()).Should().Be(3);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task TargetInvalidationBeforeNewSourceAdoptionReachesIt(int consolidatedValue)
+    {
+        var services = CreateServices();
+        var service = services.GetRequiredService<UntrackedValueService>();
+        service.Value = 1;
+        var target = (ConsolidatingComputed<int>)await Computed.Capture(() => service.GetHooked());
+
+        HookedComparer.OnEquals = () => {
+            HookedComparer.OnEquals = null;
+            service.Value = 3;
+            target.Invalidate();
+        };
+        try {
+            service.Value = consolidatedValue;
+            using (Invalidation.Begin())
+                _ = service.GetHooked();
+            await target.WhenInvalidated().WaitAsync(OneSecond);
+        }
+        finally {
+            HookedComparer.OnEquals = null;
+        }
+        (await service.GetHooked()).Should().Be(3);
     }
 
     [Fact]
@@ -243,6 +341,24 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     protected override void ConfigureServices(ServiceCollection services)
     {
         base.ConfigureServices(services);
-        services.AddFusion().AddService<CounterSumService>();
+        services.AddFusion()
+            .AddService<CounterSumService>()
+            .AddService<UntrackedValueService>();
+    }
+
+    private async Task<(UntrackedValueService, ConsolidatingComputed<int>)> CaptureUntracked()
+    {
+        var services = CreateServices();
+        var service = services.GetRequiredService<UntrackedValueService>();
+        service.Value = 1;
+        var target = (ConsolidatingComputed<int>)await Computed.Capture(() => service.Get());
+        target.Value.Should().Be(1);
+        return (service, target);
+    }
+
+    private static void InvalidateUntracked(UntrackedValueService service)
+    {
+        using (Invalidation.Begin())
+            _ = service.Get();
     }
 }
