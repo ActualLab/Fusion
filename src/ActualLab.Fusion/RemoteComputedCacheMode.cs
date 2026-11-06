@@ -16,8 +16,9 @@ public enum RemoteComputedCacheMode
 /// </summary>
 internal static class RemoteComputedCacheModeExt
 {
-    // Cache and ReturnDefault are the modes whose computeds carry an RpcCacheEntry:
+    // Cache and ReturnDefault are the modes whose computed-s carry an RpcCacheEntry:
     // they stay pseudo-registered once invalidated and can be served stale.
-    public static bool UsesCacheEntry(this RemoteComputedCacheMode mode)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsCacheOrReturnDefault(this RemoteComputedCacheMode mode)
         => mode is RemoteComputedCacheMode.Cache or RemoteComputedCacheMode.ReturnDefault;
 }

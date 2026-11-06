@@ -23,6 +23,10 @@ public sealed class ComputedRegistry
         public static int InitialCapacity { get; set; }
         public static int ConcurrencyLevel { get; set; }
         public static Func<AsyncLockSet<ComputedInput>>? LocksFactory { get; set; } = null;
+        // How long an invalidated RemoteComputed using a cache entry (Cache, ReturnDefault) stays strongly
+        // referenced: its recompute must find it here, otherwise it takes the "first call" cache path.
+        public static TimeSpan PostInvalidateKeepAliveDurationForRemoteComputedWithCacheOrReturnDefaultCacheMode { get; set; }
+            = TimeSpan.FromSeconds(10);
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public static ILogger? Log { get; set; }
 

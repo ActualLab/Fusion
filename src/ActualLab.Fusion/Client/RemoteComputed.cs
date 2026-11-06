@@ -87,8 +87,17 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         //   & produce another unsynchronized computed shortly after.
         //   And we want to avoid an extra cache lookup - even if it's at cost of some extra
         //   RAM consumption.
-        if (Options.RemoteComputedCacheMode.UsesCacheEntry()) // && !SynchronizedSource.Task.IsCompleted)
+        if (Options.RemoteComputedCacheMode.IsCacheOrReturnDefault()) { // && !SynchronizedSource.Task.IsCompleted)
             ComputedRegistry.PseudoUnregister(this);
+            // The registry holds it weakly, and invalidation drops every other strong reference to it -
+            // so the keep-alive timer is what lets the recompute of its dependants find it.
+            var keepAliveDuration = ComputedRegistry.Settings.PostInvalidateKeepAliveDurationForRemoteComputedWithCacheOrReturnDefaultCacheMode;
+            if (keepAliveDuration > TimeSpan.Zero) {
+                var keepAliveSlot = Timeouts.GetKeepAliveSlot(Timeouts.Clock.Now + keepAliveDuration);
+                Timeouts.KeepAlive.AddOrUpdate(this, keepAliveSlot);
+                return;
+            }
+        }
         else
             ComputedRegistry.Unregister(this, RegistrySlot);
         CancelTimeouts();
