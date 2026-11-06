@@ -147,6 +147,11 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcWebSocketServer` — accepts WebSocket connections for ASP.NET Core
 - `RpcWebSocketServerOriginValidators` — `AllowAll` / `SameOrigin` / `Allow(origins)` gates for the WebSocket upgrade
 
+## TypeScript Contracts — [`ActualLab.Rpc.TypeScript`] — [PartTS-Contracts.md](PartTS-Contracts.md)
+- `RpcTypeScriptGenerator` — generates TS interfaces, DTOs and `defineRpcService` definitions from `RpcServiceDef`-s
+- `TypeScriptTypeMapper` — maps .NET types to TS types via System.Text.Json metadata, collecting DTO declarations
+- `actuallab-tsgen` (`ActualLab.Rpc.TypeScript.Tool`) — .NET tool running the generator on a contracts assembly
+
 
 ## CommandR (`ActualLab.CommandR`) — [PartC.md](PartC.md)
 

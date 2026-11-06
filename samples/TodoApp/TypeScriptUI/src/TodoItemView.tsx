@@ -1,6 +1,6 @@
 import React from "react";
 import { uiActions } from "@actuallab/fusion";
-import type { TodoItem, ITodoApi } from "./todo-api.js";
+import type { TodoItem, ITodoApi } from "./contracts.generated.js";
 import { DEFAULT_SESSION } from "./todo-api.js";
 
 interface Props {

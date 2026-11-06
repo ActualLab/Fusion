@@ -97,6 +97,12 @@ const api = hub.addClient<ITodoApi>(peer, TodoApiDef);
 const items = await api.ListIds("~", 10);
 ```
 
+::: tip
+Don't write `ITodoApi`, its DTOs, and `TodoApiDef` by hand: `actuallab-tsgen`
+[generates them from the .NET contracts](./PartTS-Contracts.md), so a changed .NET signature
+can't silently break the client's wire method names.
+:::
+
 
 ## Key Differences from .NET
 

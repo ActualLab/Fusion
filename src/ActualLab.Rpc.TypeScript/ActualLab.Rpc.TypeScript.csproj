@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">$(LatestTargetFrameworks)net10.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion rpc typescript</PackageTags>
+    <Description>ActualLab.Rpc.TypeScript - generates TypeScript contracts (interfaces, DTOs, service definitions) from ActualLab.Rpc services.</Description>
+    <IsTrimmable>false</IsTrimmable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Rpc\ActualLab.Rpc.csproj" />
+  </ItemGroup>
+
+</Project>
