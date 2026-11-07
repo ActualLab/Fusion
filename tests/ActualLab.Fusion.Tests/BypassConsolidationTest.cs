@@ -26,6 +26,13 @@ public class BypassConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestB
             context.InvalidationSource.Value.Should().Be(source.Value);
             Invalidation.IsActive.Should().BeTrue();
         }
+        using (Invalidation.Begin(bypassConsolidation: true, source)) {
+            var context = ComputeContext.Current;
+            context.CallOptions.Should().Be(CallOptions.Invalidate | CallOptions.BypassConsolidation);
+            context.InvalidationSource.Value.Should().Be(source.Value);
+        }
+        using (Invalidation.Begin(bypassConsolidation: false))
+            ComputeContext.Current.CallOptions.Should().Be(CallOptions.Invalidate);
 
         // Captured invalidations are replayed without the flag, so it isn't added there
         using (new ComputeContext(new List<ServiceCall>()).Activate()) {

@@ -263,17 +263,20 @@ using (Invalidation.Begin())
 ```
 
 To let the consolidation decide whether the target sees the invalidation, invalidate only the
-source — wrap the call into `Consolidation.Bypass()`. That's what a consolidating method
-without Fusion dependencies (e.g. one reading the database) needs: explicit invalidation is the only
-thing triggering its recompute-and-compare. `Bypass()` adds `CallOptions.BypassConsolidation` to
-the current context, so it works inside invalidation blocks Fusion starts for command handlers too.
-Mind the order: `Invalidation.Begin()` starts a new context, so it has to be the outer scope.
+source — start the invalidation block with `Invalidation.Begin(bypassConsolidation: true)`. That's
+what a consolidating method without Fusion dependencies (e.g. one reading the database) needs: explicit
+invalidation is the only thing triggering its recompute-and-compare. The option affects only
+consolidating methods, so other invalidations in the same block work as usual:
 
 ```cs
-using (Invalidation.Begin())
-using (Consolidation.Bypass())
+using (Invalidation.Begin(bypassConsolidation: true))
     _ = service.GetConsolidatedLastCheckIn(userId, default); // -> only the source, so the comparison happens
 ```
+
+In an invalidation block you don't start yourself — e.g. the one Fusion runs for a command handler —
+wrap the calls into `Consolidation.Bypass()`: it adds `CallOptions.BypassConsolidation` to the current
+context. Mind the order when you combine the two: `Invalidation.Begin()` starts a new context, so it
+has to be the outer scope.
 
 Invalidating the source this way covers a source that a running consolidation is still computing,
 and it works whether or not a consolidation target currently exists. Invalidations captured by

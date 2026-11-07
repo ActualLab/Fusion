@@ -48,8 +48,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         var source0 = c0.Source;
 
         // The value didn't change, so the source is recomputed (hence replaced) and this is swallowed
-        using (Invalidation.Begin())
-        using (Consolidation.Bypass())
+        using (Invalidation.Begin(bypassConsolidation: true))
             _ = counterSum.GetC0(0);
         await (c0.WhenConsolidated ?? Task.CompletedTask);
         c0.IsConsistent().Should().BeTrue();
@@ -57,8 +56,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
 
         // ... and it propagates once the value really differs
         counterSum[0].Set(1);
-        using (Invalidation.Begin())
-        using (Consolidation.Bypass())
+        using (Invalidation.Begin(bypassConsolidation: true))
             _ = counterSum.GetC0(0);
         await (c0.WhenConsolidated ?? Task.CompletedTask);
         c0.IsConsistent().Should().BeFalse();
@@ -198,8 +196,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         };
         try {
             service.Value = consolidatedValue;
-            using (Invalidation.Begin())
-            using (Consolidation.Bypass())
+            using (Invalidation.Begin(bypassConsolidation: true))
                 _ = service.GetHooked();
             await target.WhenInvalidated().WaitAsync(OneSecond);
         }
@@ -407,8 +404,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     // bypassConsolidation: true invalidates only the source, so it starts a consolidation
     private static void InvalidateUntracked(UntrackedValueService service, bool bypassConsolidation = true)
     {
-        using var invalidating = Invalidation.Begin();
-        using var bypassing = bypassConsolidation ? Consolidation.Bypass() : default;
-        _ = service.Get();
+        using (Invalidation.Begin(bypassConsolidation))
+            _ = service.Get();
     }
 }

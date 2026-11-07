@@ -30,8 +30,7 @@ public class ConsolidatingCounter : IConsolidatingCounter
         _counters[key] = value;
 
         // Only the source: the consolidation decides whether the target sees this invalidation
-        using (Invalidation.Begin())
-        using (Consolidation.Bypass())
+        using (Invalidation.Begin(bypassConsolidation: true))
             _ = Get(key, default).AssertCompleted();
     }
 }
@@ -66,8 +65,7 @@ public class HiddenConsolidatingCounter : IHiddenConsolidatingCounter
     {
         _counters[key] = value;
 
-        using (Invalidation.Begin())
-        using (Consolidation.Bypass())
+        using (Invalidation.Begin(bypassConsolidation: true))
             _ = GetConsolidated(key, default).AssertCompleted();
 
         return Task.CompletedTask;

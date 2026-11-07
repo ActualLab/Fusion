@@ -34,6 +34,20 @@ public static class Invalidation
         [CallerLineNumber] int line = 0)
         => new(new ComputeContext(new InvalidationSource(file, member, line)));
 
+    // bypassConsolidation: true invalidates only the consolidation sources of consolidating compute methods,
+    // so their consolidation targets compare the recomputed output instead of being invalidated
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope Begin(bool bypassConsolidation, InvalidationSource source)
+        => new(new ComputeContext(GetCallOptions(bypassConsolidation), source));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope Begin(
+        bool bypassConsolidation,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => new(new ComputeContext(GetCallOptions(bypassConsolidation), new InvalidationSource(file, member, line)));
+
     // Deferred invalidation
 
     public static void Defer(Action block)
@@ -55,4 +69,12 @@ public static class Invalidation
             ?? throw Errors.NoDeferredInvalidationContext();
         context.AddBlock(block);
     }
+
+    // Private methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static CallOptions GetCallOptions(bool bypassConsolidation)
+        => bypassConsolidation
+            ? CallOptions.Invalidate | CallOptions.BypassConsolidation
+            : CallOptions.Invalidate;
 }

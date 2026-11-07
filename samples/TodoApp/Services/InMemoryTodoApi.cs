@@ -19,15 +19,17 @@ public class InMemoryTodoApi : ITodoApi
         var oldItem = oldItems.FirstOrDefault(i => i.Id == todo.Id);
         var items = _items = oldItems.RemoveAll(i => i.Id == todo.Id).Add(todo);
 
-        using var invalidating = Invalidation.Begin();
+        // GetSummary has no dependencies, so only its explicit invalidation can trigger its consolidation,
+        // and a regular one invalidates its consolidation target too
+        using var invalidating = Invalidation.Begin(bypassConsolidation: true);
         // Invalidation logic
         _ = Get(session, todo.Id, default);
         if (items.Count != oldItems.Count) {
             _ = PseudoListIds(session);
-            InvalidateSummary(session);
+            _ = GetSummary(session, default);
         }
         else if (todo.IsDone != oldItem?.IsDone)
-            InvalidateSummary(session);
+            _ = GetSummary(session, default);
         return todo;
     }
 
@@ -39,11 +41,13 @@ public class InMemoryTodoApi : ITodoApi
         if (items == oldItems)
             return; // Nothing to invalidate
 
-        using var invalidating = Invalidation.Begin();
+        // GetSummary has no dependencies, so only its explicit invalidation can trigger its consolidation,
+        // and a regular one invalidates its consolidation target too
+        using var invalidating = Invalidation.Begin(bypassConsolidation: true);
         // Invalidation logic
         _ = Get(session, id, default);
         _ = PseudoListIds(session);
-        InvalidateSummary(session);
+        _ = GetSummary(session, default);
     }
 
     // Queries
@@ -72,14 +76,4 @@ public class InMemoryTodoApi : ITodoApi
     [ComputeMethod]
     protected virtual Task<Unit> PseudoListIds(Session session)
         => TaskExt.UnitTask;
-
-    // Private methods
-
-    // GetSummary has no dependencies, so only its explicit invalidation can trigger the consolidation,
-    // and a regular one invalidates the consolidation target too.
-    private void InvalidateSummary(Session session)
-    {
-        using (Consolidation.Bypass())
-            _ = GetSummary(session, default);
-    }
 }
