@@ -1,9 +1,9 @@
-using System.Runtime.Loader;
 using System.Text;
 using ActualLab.Fusion;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.TypeScript;
+using ActualLab.Rpc.TypeScript.Generator;
 
 const string usage = """
     Usage: ActualLab.Rpc.TypeScript.Generator <contracts.dll> --output <file.ts> [--services <patterns>] [--check]
@@ -120,17 +120,7 @@ WriteLine($"Generated {outputPath}.");
 return 0;
 
 static Assembly LoadAssembly(string path)
-{
-    // The generator's own ActualLab.* assemblies are reused (so IRpcService & co. are the same types),
-    // the rest of the contracts' dependencies are resolved next to them or via their .deps.json
-    var resolver = new AssemblyDependencyResolver(path);
-    var directory = Path.GetDirectoryName(path)!;
-    AssemblyLoadContext.Default.Resolving += (context, name) => {
-        var dependencyPath = resolver.ResolveAssemblyToPath(name) ?? Path.Combine(directory, name.Name + ".dll");
-        return File.Exists(dependencyPath) ? context.LoadFromAssemblyPath(dependencyPath) : null;
-    };
-    return AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
-}
+    => new ContractsLoadContext(path).LoadFromAssemblyPath(path);
 
 static IEnumerable<Type> GetTypes(Assembly assembly)
 {
