@@ -20,6 +20,8 @@
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)..\artifacts\samples</ArtifactsPath>
     <IsPackable>false</IsPackable>
+    <!-- "dotnet pack" of the solution warns about every non-packable executable otherwise -->
+    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <IsPublishable>false</IsPublishable>
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
   </PropertyGroup>
