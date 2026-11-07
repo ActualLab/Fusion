@@ -16,6 +16,14 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
   </ItemGroup>
 
+  <!-- TypeScript contracts for TypeScriptUI, regenerated on build (only checked on CI) -->
+  <PropertyGroup>
+    <ActualLabRpcTypeScriptOutput>..\TypeScriptUI\src\contracts.generated.ts</ActualLabRpcTypeScriptOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ActualLab.Rpc.TypeScript.Generator" PrivateAssets="all" />
+  </ItemGroup>
+
   <!-- Source generators -->
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\ActualLab.Generators\ActualLab.Generators.csproj"

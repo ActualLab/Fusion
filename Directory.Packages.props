@@ -252,6 +252,8 @@
     <PackageVersion Include="UAParser" Version="3.1.47" />
     <!-- Build time only -->
     <PackageVersion Include="ActualLab.Core" Version="$(FusionVersion)" />
+    <!-- TodoApp builds against src/, so this one tracks the latest release rather than FusionVersion -->
+    <PackageVersion Include="ActualLab.Rpc.TypeScript.Generator" Version="15.1.15" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)" />
     <!-- KEEP AT 8.0.0: 10.0.2xx+ takes a hard dependency on System.IO.Hashing, which NuGet resolves
