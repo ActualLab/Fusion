@@ -11,6 +11,24 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.24+22b84116c | npm: 15.1.24
+
+Release date: 2026-11-07
+
+A small follow-up to 15.1.22: a shorter way to invalidate only the consolidation sources of
+consolidating compute methods. Nothing else changed.
+
+### Added
+
+- **Fusion:** `Invalidation.Begin(bool bypassConsolidation, ...)` overloads (with an explicit
+  `InvalidationSource`, or with caller info like `Invalidation.Begin()`).
+  `Invalidation.Begin(bypassConsolidation: true)` starts an invalidation block where consolidating
+  compute methods invalidate only their consolidation sources, so their targets compare the recomputed
+  output - the same as `Invalidation.Begin()` + `Consolidation.Bypass()`. Other invalidations in the
+  block work as usual. `Consolidation.Bypass()` remains for invalidation blocks you don't start yourself,
+  e.g. a command handler's.
+
+
 ## 15.1.22+ac4c838b4 | npm: 15.1.22
 
 Release date: 2026-11-07
