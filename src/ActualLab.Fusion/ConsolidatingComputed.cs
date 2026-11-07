@@ -13,7 +13,7 @@ namespace ActualLab.Fusion;
 /// but only in case when a newly computed <see cref="Computed.Output"/> differs from its own one.
 /// Any other invalidation of it invalidates the <see cref="Source"/> too.
 /// </remarks>
-public interface IConsolidatingComputed : IHasInvalidationTarget, IHasSynchronizationTarget
+public interface IConsolidatingComputed : IHasSynchronizationTarget
 {
     public Computed Source { get; }
     public Task? WhenConsolidated { get; }
@@ -39,8 +39,6 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
     // ReSharper disable once InconsistentlySynchronizedField
     public Task? WhenConsolidated => Volatile.Read(ref _whenConsolidated);
 
-    // IHasInvalidationTarget
-    Computed? IHasInvalidationTarget.InvalidationTarget => _source;
     // IHasSynchronizationTarget
     Computed? IHasSynchronizationTarget.SynchronizationTarget => _source;
 
@@ -101,6 +99,9 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
                 try {
                     if (Options.ConsolidationDelay != TimeSpanExt.Infinite)
                         await Task.Delay(Options.ConsolidationDelay, CancellationToken.None).ConfigureAwait(false);
+                    // E.g. a method invalidation, which invalidates the source and then us
+                    if (!this.IsConsistent())
+                        return;
 
                     var updatedSource = (Computed<T>)await _source.UpdateUntyped(CancellationToken.None).ConfigureAwait(false);
                     nextSource = AreOutputsEqual(UntypedOutput, updatedSource.UntypedOutput)
@@ -120,14 +121,20 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
                         }
                     }
                     else {
-                        // 1. Re-enable the consolidation
+                        // 1. Re-enable the consolidation, unless we were invalidated meanwhile
+                        // (e.g. by a method invalidation) - a dead target must not hold the next source
+                        bool isAdopted;
                         lock (Lock) {
-                            Volatile.Write(ref _source, nextSource);
-                            // Stored last: the null re-enables consolidation, which reads _source
-                            Volatile.Write(ref _whenConsolidated, null);
+                            isAdopted = this.IsConsistent();
+                            if (isAdopted) {
+                                Volatile.Write(ref _source, nextSource);
+                                // Stored last: the null re-enables consolidation, which reads _source
+                                Volatile.Write(ref _whenConsolidated, null);
+                            }
                         }
-                        // 2. Subscribe to the next source's invalidation'
-                        nextSource.Invalidated += OnSourceInvalidated;
+                        // 2. Subscribe to the next source's invalidation
+                        if (isAdopted)
+                            nextSource.Invalidated += OnSourceInvalidated;
                     }
                 }
             }

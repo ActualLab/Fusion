@@ -2480,6 +2480,10 @@ Provides default delegate instances used by Fusion infrastructure.
 
 Provides static helpers to check whether invalidation is active, to begin invalidation scopes, and to defer invalidation blocks.
 
+###### `Consolidation`
+
+Provides `Bypass()`, which makes the calls of consolidating compute methods act on their consolidation sources, i.e. as if there is no consolidation.
+
 ###### `DeferredInvalidationMode` (enum)
 
 Describes how far a command handler's deferred invalidation reaches: `Local`, `Replicated`, `Distributed`. The mode of an operation comes from the first handler that defers a block; handlers that defer nothing have no say, and two that disagree are an error. There is no "unset" member and no app-wide default.

@@ -54,6 +54,12 @@ public static class Errors
             $"{nameof(RpcServiceMode.Local)}, {nameof(RpcServiceMode.Server)}, " +
             $"{nameof(RpcServiceMode.Client)} and {nameof(RpcServiceMode.ServerAndClient)} services.");
 
+    public static Exception ConsolidationDelayWithInvalidationDelay(Type serviceType, MethodInfo method)
+        => new InvalidOperationException(
+            $"'{serviceType.GetName()}.{method.Name}' has both {nameof(ComputedOptions.ConsolidationDelay)} " +
+            $"and {nameof(ComputedOptions.InvalidationDelay)}, but a consolidating compute method " +
+            $"is always invalidated immediately. Remove {nameof(ComputedOptions.InvalidationDelay)}.");
+
     public static Exception ConsolidationComparerWithoutConsolidationDelay(Type serviceType, MethodInfo method)
         => new InvalidOperationException(
             $"{nameof(ComputeMethodAttribute.ConsolidationComparer)} is set on " +

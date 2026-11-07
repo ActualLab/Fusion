@@ -29,7 +29,9 @@ public class ConsolidatingCounter : IConsolidatingCounter
     {
         _counters[key] = value;
 
+        // Only the source: the consolidation decides whether the target sees this invalidation
         using (Invalidation.Begin())
+        using (Consolidation.Bypass())
             _ = Get(key, default).AssertCompleted();
     }
 }
@@ -65,6 +67,7 @@ public class HiddenConsolidatingCounter : IHiddenConsolidatingCounter
         _counters[key] = value;
 
         using (Invalidation.Begin())
+        using (Consolidation.Bypass())
             _ = GetConsolidated(key, default).AssertCompleted();
 
         return Task.CompletedTask;
@@ -75,6 +78,13 @@ public class HiddenConsolidatingCounter : IHiddenConsolidatingCounter
     [ComputeMethod(ConsolidationDelay = 0)]
     protected virtual Task<int> GetConsolidated(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(_counters.GetValueOrDefault(key));
+}
+
+public class DelayedConsolidatingService : IComputeService
+{
+    [ComputeMethod(ConsolidationDelay = 0, InvalidationDelay = 0.2)]
+    public virtual Task<int> Get()
+        => Task.FromResult(0);
 }
 
 // Fusion doesn't track Value, so only an explicit invalidation can refresh what Get returns.

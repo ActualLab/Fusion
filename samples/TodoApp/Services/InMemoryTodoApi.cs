@@ -24,10 +24,10 @@ public class InMemoryTodoApi : ITodoApi
         _ = Get(session, todo.Id, default);
         if (items.Count != oldItems.Count) {
             _ = PseudoListIds(session);
-            _ = GetSummary(session, default);
+            InvalidateSummary(session);
         }
         else if (todo.IsDone != oldItem?.IsDone)
-            _ = GetSummary(session, default);
+            InvalidateSummary(session);
         return todo;
     }
 
@@ -43,7 +43,7 @@ public class InMemoryTodoApi : ITodoApi
         // Invalidation logic
         _ = Get(session, id, default);
         _ = PseudoListIds(session);
-        _ = GetSummary(session, default);
+        InvalidateSummary(session);
     }
 
     // Queries
@@ -72,4 +72,14 @@ public class InMemoryTodoApi : ITodoApi
     [ComputeMethod]
     protected virtual Task<Unit> PseudoListIds(Session session)
         => TaskExt.UnitTask;
+
+    // Private methods
+
+    // GetSummary has no dependencies, so only its explicit invalidation can trigger the consolidation,
+    // and a regular one invalidates the consolidation target too.
+    private void InvalidateSummary(Session session)
+    {
+        using (Consolidation.Bypass())
+            _ = GetSummary(session, default);
+    }
 }

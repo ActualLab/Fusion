@@ -45,6 +45,12 @@ public partial class Computed
         => new(new ComputeContext(CallOptions.Capture));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope BeginCapture(bool bypassConsolidation)
+        => new(new ComputeContext(bypassConsolidation
+            ? CallOptions.Capture | CallOptions.BypassConsolidation
+            : CallOptions.Capture));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginCaptureExisting()
         => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
 
@@ -150,12 +156,19 @@ public partial class Computed
 
     // Capture
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Computed> Capture(
+        Func<Task> producer,
+        CancellationToken cancellationToken = default)
+        => Capture(bypassConsolidation: false, producer, cancellationToken);
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Computed> Capture(
+        bool bypassConsolidation,
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = BeginCapture();
+        using var ccs = BeginCapture(bypassConsolidation);
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured();
@@ -168,12 +181,19 @@ public partial class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Computed<T>> Capture<T>(
+        Func<Task<T>> producer,
+        CancellationToken cancellationToken = default)
+        => Capture(bypassConsolidation: false, producer, cancellationToken);
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Computed<T>> Capture<T>(
+        bool bypassConsolidation,
         Func<Task<T>> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = BeginCapture();
+        using var ccs = BeginCapture(bypassConsolidation);
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured<T>();
@@ -186,12 +206,19 @@ public partial class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Computed> Capture(
+        Func<ValueTask> producer,
+        CancellationToken cancellationToken = default)
+        => Capture(bypassConsolidation: false, producer, cancellationToken);
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Computed> Capture(
+        bool bypassConsolidation,
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = BeginCapture();
+        using var ccs = BeginCapture(bypassConsolidation);
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured();
@@ -204,12 +231,19 @@ public partial class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Computed<T>> Capture<T>(
+        Func<ValueTask<T>> producer,
+        CancellationToken cancellationToken = default)
+        => Capture(bypassConsolidation: false, producer, cancellationToken);
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Computed<T>> Capture<T>(
+        bool bypassConsolidation,
         Func<ValueTask<T>> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = BeginCapture();
+        using var ccs = BeginCapture(bypassConsolidation);
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured<T>();

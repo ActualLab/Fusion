@@ -41,13 +41,17 @@ public sealed class ComputeMethodDef : MethodDef
             return;
         }
         if (computedOptions.IsConsolidating) {
+            // A method invalidation invalidates the source and the target, the source first,
+            // so a delayed source invalidation would let the next target re-wrap a stale source
+            if (computedOptions.InvalidationDelay > TimeSpan.Zero)
+                throw Errors.ConsolidationDelayWithInvalidationDelay(type, methodInfo);
+
             if (consolidationTargetMethodDef is null) {
                 // We are the consolidation target, the twin we create is going to be the consolidation source
                 ConsolidationSourceMethodDef = new ComputeMethodDef(type, methodInfo, interceptor, this);
                 ConsolidationTargetMethodDef = null;
                 computedOptions = computedOptions with {
                     // All invalidation delays are disabled for the consolidation target
-                    InvalidationDelay = TimeSpan.Zero,
                     AutoInvalidationDelay = TimeSpanExt.Infinite,
                     TransientErrorInvalidationDelay = TimeSpanExt.Infinite,
                     // Cancellation reprocessing should happen only for the consolidation source

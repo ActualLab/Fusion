@@ -168,6 +168,9 @@ Task<Summary> GetSummary();
 - Debouncing UI updates during batch operations
 - Reducing server load during bulk data imports
 
+It can't be combined with `ConsolidationDelay`: a consolidating method is always invalidated
+immediately, and `ConsolidationDelay` itself is the way to postpone its update.
+
 ### ConsolidationDelay
 
 **Type:** `double` (seconds)
@@ -210,6 +213,10 @@ With ConsolidationDelay, the counter only invalidates when its value actually ch
 - Reducing invalidation cascades in deep dependency graphs
 - Preventing unnecessary UI refreshes
 
+**Restrictions — `InvalidationDelay`:** it's rejected on a consolidating method. A method
+invalidation invalidates the consolidation source first and the target next, so a delayed source
+invalidation would let the next call re-wrap the still-consistent source into a new target.
+
 **Restrictions — `Distributed` services:**
 
 | Service mode | ConsolidationDelay |
@@ -238,31 +245,75 @@ public class Presences : IPresencesBackend
 
 **Invalidating a consolidating method:**
 
-Recall that one consolidating method is backed by *two* method defs and two computeds. Only
-the **outer** one is reachable: calling the method or capturing its computed always gives you
-the consolidation target, a `ConsolidatingComputed<T>`. The **inner** consolidation source def
-is synthesized from the same `MethodInfo`, so there is no separate method to call and no way
-to name its computed — yet that inner computed is the one holding the dependencies, and
-therefore the one that has to be invalidated for the recompute-and-compare to happen at all.
+Recall that one consolidating method is backed by *two* method defs and two computeds. A regular
+call reaches the **outer** one: calling the method or capturing its computed gives you the
+consolidation target, a `ConsolidatingComputed<T>`. The **inner** consolidation source def is
+synthesized from the same `MethodInfo`, so there is no separate method to call — yet that inner
+computed is the one holding the dependencies.
 
-Method-based invalidation handles this for you. For a consolidating method, an
-`Invalidation.Begin()` block invalidates the source computed registered for the same arguments —
-whether or not a consolidation target currently exists, and including a source that a running
-consolidation is still computing — so the comparison runs as intended:
+An invalidation acts as if there is no consolidation: whichever way the target gets invalidated,
+its source gets invalidated too, so the next call recomputes the value instead of re-wrapping the
+cached source. An `Invalidation.Begin()` block
+invalidates the source registered for the same arguments first and the target next, just like
+a dependency and its dependant:
 
 ```cs
 using (Invalidation.Begin())
-    _ = service.GetConsolidatedLastCheckIn(userId, default); // -> the source, so the comparison happens
+    _ = service.GetConsolidatedLastCheckIn(userId, default); // Invalidates both, no comparison
 ```
 
-Invalidating a captured `ConsolidatingComputed<T>` directly (`computed.Invalidate()`) works too,
-but differently: the target is invalidated at once, without a comparison, and its source is
-invalidated along with it, so the next call recomputes the value instead of re-wrapping the
-cached source.
+To let the consolidation decide whether the target sees the invalidation, invalidate only the
+source — wrap the call into `Consolidation.Bypass()`. That's what a consolidating method
+without Fusion dependencies (e.g. one reading the database) needs: explicit invalidation is the only
+thing triggering its recompute-and-compare. `Bypass()` adds `CallOptions.BypassConsolidation` to
+the current context, so it works inside invalidation blocks Fusion starts for command handlers too.
+Mind the order: `Invalidation.Begin()` starts a new context, so it has to be the outer scope.
 
-So invalidate the consolidating method itself. Invalidating a method that merely calls it —
-the RPC-exposed wrapper above, say — invalidates only that caller's computed, which then
+```cs
+using (Invalidation.Begin())
+using (Consolidation.Bypass())
+    _ = service.GetConsolidatedLastCheckIn(userId, default); // -> only the source, so the comparison happens
+```
+
+Invalidating the source this way covers a source that a running consolidation is still computing,
+and it works whether or not a consolidation target currently exists. Invalidations captured by
+`Replicated` and `Distributed` operations are replayed without the flag, so they invalidate both.
+
+Either way, invalidate the consolidating method itself. Invalidating a method that merely calls
+it — the RPC-exposed wrapper above, say — invalidates only that caller's computed, which then
 re-reads the still-consistent consolidating one and keeps serving the previous value.
+
+**Reading the consolidation source:**
+
+Some code needs the non-consolidated variant of a consolidating method, i.e. to see every
+invalidation of its dependencies. Call it inside `Consolidation.Bypass()`: such
+calls use the consolidation source, and they still become dependencies of the current computed.
+This makes a separate non-consolidating twin of the method unnecessary:
+
+```cs
+[ComputeMethod]
+public virtual async Task<int> GetRawUnreadCount(string placeId, CancellationToken cancellationToken = default)
+{
+    using var _ = Consolidation.Bypass();
+    return await GetUnreadCount(placeId, cancellationToken); // Depends on the consolidation source
+}
+```
+
+`Consolidation.Bypass(isolate: true)` does the same, but the calls made inside it don't become
+dependencies of the current computed.
+
+The flag combines with the other `CallOptions`, so they act on the source too. To capture
+the source computed, use `Computed.Capture(bypassConsolidation: true, ...)`:
+
+```cs
+var source = await Computed.Capture(bypassConsolidation: true, () => GetUnreadCount(placeId));
+```
+
+`Consolidation.Bypass()` can't be used inside a `Capture` scope: it starts a new context, so
+the computed would be captured there rather than into the one `Computed.Capture` reads.
+
+Calls made by the method bodies don't inherit the flag, and it's ignored by non-consolidating
+compute methods.
 
 ### ConsolidationComparer
 

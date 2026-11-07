@@ -37,6 +37,15 @@ public sealed class ComputeContext
     public ComputeContext(CallOptions callOptions)
         => CallOptions = callOptions;
 
+    // ReSharper disable once ConvertToPrimaryConstructor
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContext(Computed? computed, CallOptions callOptions, InvalidationSource invalidationSource)
+    {
+        Computed = computed;
+        CallOptions = callOptions;
+        InvalidationSource = invalidationSource;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ComputeContext(InvalidationSource invalidationSource)
         : this(CallOptions.Invalidate, invalidationSource)

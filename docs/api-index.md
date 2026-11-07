@@ -209,6 +209,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ### Invalidation
 - `Invalidation` — static helpers to check/begin invalidation scopes, and to defer invalidation
+- `Consolidation` — `Bypass()` makes calls of consolidating compute methods act on their consolidation sources
 - `InvalidationSource` (struct) — describes source of invalidation
 - `DeferredInvalidationMode` (enum) — `Local` / `Replicated` / `Distributed` per command handler
 - `DeferredInvalidationModeAttribute` — declares the mode on a handler method, its declaring/implementation type, or the service interface

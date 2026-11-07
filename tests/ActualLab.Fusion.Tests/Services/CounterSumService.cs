@@ -33,6 +33,24 @@ public class CounterSumService : IComputeService
         return await this[counterIndex].Use(cancellationToken);
     }
 
+    [ComputeMethod]
+    public virtual async Task<int> GetC0Source(int counterIndex, CancellationToken cancellationToken = default)
+    {
+        using var _ = Consolidation.Bypass();
+        return await GetC0(counterIndex, cancellationToken);
+    }
+
+    [ComputeMethod]
+    public virtual async Task<int> GetC0SourceIsolated(int counterIndex, CancellationToken cancellationToken = default)
+    {
+        using var _ = Consolidation.Bypass(isolate: true);
+        return await GetC0(counterIndex, cancellationToken);
+    }
+
+    [ComputeMethod]
+    public virtual async Task<int> GetViaC0(int counterIndex, CancellationToken cancellationToken = default)
+        => await GetC0(counterIndex, cancellationToken);
+
     [ComputeMethod(ConsolidationDelay = 0.2)]
     public virtual async Task<int> GetC2(int counterIndex, CancellationToken cancellationToken = default)
         => await this[counterIndex].Use(cancellationToken);

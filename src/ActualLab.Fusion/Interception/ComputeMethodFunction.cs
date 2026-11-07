@@ -24,23 +24,43 @@ public sealed class ComputeMethodFunction<T> : ComputeMethodFunction
 /// A <see cref="ComputeFunction"/> that handles compute method interception,
 /// producing <see cref="Computed"/> instances for intercepted method calls.
 /// </summary>
-public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef)
-    : ComputeFunction(hub, methodDef.UnwrappedReturnType)
+public abstract class ComputeMethodFunction : ComputeFunction
 {
     // "~" marks a consolidation source, which otherwise shares its FullName with its consolidation target
-    private readonly string _toString = methodDef.ConsolidationTargetMethodDef is null
-        ? methodDef.FullName
-        : "~" + methodDef.FullName;
+    private readonly string _toString;
 
-    public readonly ComputeMethodDef MethodDef = methodDef;
-    public readonly ComputedOptions ComputedOptions = methodDef.ComputedOptions;
-    public readonly int CancellationTokenIndex = methodDef.CancellationTokenIndex;
+    protected readonly ConsolidatingComputeMethodFunction? ThisAsConsolidatingComputeMethodFunction;
+
+    public readonly ComputeMethodDef MethodDef;
+    public readonly ComputedOptions ComputedOptions;
+    public readonly int CancellationTokenIndex;
+
+    /// <summary>
+    /// A <see cref="ComputeFunction"/> that handles compute method interception,
+    /// producing <see cref="Computed"/> instances for intercepted method calls.
+    /// </summary>
+    protected ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef)
+        : base(hub, methodDef.UnwrappedReturnType)
+    {
+        MethodDef = methodDef;
+        ComputedOptions = methodDef.ComputedOptions;
+        CancellationTokenIndex = methodDef.CancellationTokenIndex;
+        ThisAsConsolidatingComputeMethodFunction = this as ConsolidatingComputeMethodFunction;
+        _toString = methodDef.ConsolidationTargetMethodDef is null
+            ? methodDef.FullName
+            : "~" + methodDef.FullName;
+    }
 
     public override string ToString()
         => _toString;
 
     public object? ComputeServiceInterceptorHandler(Invocation invocation)
     {
+        var context = ComputeContext.Current;
+        if (context.CallOptions.HasFlag(CallOptions.BypassConsolidation)
+            && ThisAsConsolidatingComputeMethodFunction is { } ccmf)
+            return ccmf.ConsolidationSourceFunction.ComputeServiceInterceptorHandler(invocation);
+
 #if NET9_0_OR_GREATER
         var inputLookup = new ComputeMethodInput.Lookup(this, MethodDef, invocation);
 #else
@@ -48,7 +68,6 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
 #endif
         var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
         try {
-            var context = ComputeContext.Current;
 #if NET9_0_OR_GREATER
             // ComputeMethodInput is sealed, and its GetExistingComputed() performs the same registry lookup.
             var computed = ComputedRegistry.Get(inputLookup);
@@ -62,10 +81,11 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
                 return MethodDef.DefaultResult;
             }
             if (context.CallOptions.HasFlag(CallOptions.Invalidate)) {
-                // A consolidating method invalidates its registered source, even with no consolidating computed
-                // registered: it may be the one a running consolidation computes, not the one the target holds.
-                if (this is ConsolidatingComputeMethodFunction consolidatingFunction)
-                    computed = consolidatingFunction.GetExistingSourceComputed(invocation);
+                // Invalidation acts as if there is no consolidation: it invalidates both the source and the target,
+                // the source first. That's the registered source, which may be newer than the target's one.
+                ThisAsConsolidatingComputeMethodFunction
+                    ?.GetExistingSourceComputed(invocation)
+                    ?.Invalidate(immediately: false, context.InvalidationSource);
                 _ = ComputedImpl.TryUseExisting(computed, context);
                 return MethodDef.DefaultResult;
             }

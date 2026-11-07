@@ -11,7 +11,33 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     private static readonly TimeSpan MinDelay = TimeSpan.FromMilliseconds(50);
 
     [Fact]
-    public async Task MethodInvalidationReachesConsolidationSource()
+    public async Task MethodInvalidationInvalidatesSourceAndTarget()
+    {
+        var services = CreateServices();
+        var counterSum = services.GetRequiredService<CounterSumService>();
+        counterSum[0].Set(0);
+
+        var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
+        var source0 = c0.Source;
+        var invalidated = new List<Computed>();
+        source0.Invalidated += invalidated.Add;
+        c0.Invalidated += invalidated.Add;
+
+        // The value didn't change, but there is no consolidation: both are invalidated
+        using (Invalidation.Begin())
+            _ = counterSum.GetC0(0);
+        invalidated.Should().Equal(source0, c0);
+
+        // The source invalidation starts a consolidation, but it can't revive the target
+        await (c0.WhenConsolidated ?? Task.CompletedTask);
+        c0.IsConsistent().Should().BeFalse();
+        var c1 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
+        c1.Should().NotBeSameAs(c0);
+        c1.Value.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SourceMethodInvalidationConsolidates()
     {
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
@@ -23,6 +49,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
 
         // The value didn't change, so the source is recomputed (hence replaced) and this is swallowed
         using (Invalidation.Begin())
+        using (Consolidation.Bypass())
             _ = counterSum.GetC0(0);
         await (c0.WhenConsolidated ?? Task.CompletedTask);
         c0.IsConsistent().Should().BeTrue();
@@ -31,6 +58,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         // ... and it propagates once the value really differs
         counterSum[0].Set(1);
         using (Invalidation.Begin())
+        using (Consolidation.Bypass())
             _ = counterSum.GetC0(0);
         await (c0.WhenConsolidated ?? Task.CompletedTask);
         c0.IsConsistent().Should().BeFalse();
@@ -82,8 +110,10 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         (await service.GetOuter()).Should().Be(2);
     }
 
-    [Fact]
-    public async Task MethodInvalidationReachesSourceWithoutTarget()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MethodInvalidationReachesSourceWithoutTarget(bool bypassConsolidation)
     {
         var (service, target) = await CaptureUntracked();
 
@@ -95,26 +125,35 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         Computed.GetExisting(() => service.Get()).Should().BeNull();
 
         service.Value = 3;
-        InvalidateUntracked(service);
+        InvalidateUntracked(service, bypassConsolidation);
         (await service.Get()).Should().Be(3);
     }
 
     [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    public async Task MethodInvalidationDuringConsolidationReachesNewSource(int consolidatedValue)
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    public async Task MethodInvalidationDuringConsolidationReachesNewSource(
+        int consolidatedValue, bool bypassConsolidation)
     {
         var (service, target) = await CaptureUntracked();
 
         var (whenGateReached, gate) = service.CloseGate();
         service.Value = consolidatedValue;
         InvalidateUntracked(service);
+        var whenConsolidated = target.WhenConsolidated!;
         await whenGateReached.WaitAsync(OneSecond); // The new source has read the value
 
         service.Value = 3;
-        InvalidateUntracked(service);
+        InvalidateUntracked(service, bypassConsolidation);
+        if (!bypassConsolidation)
+            target.IsConsistent().Should().BeFalse(); // A plain invalidation doesn't wait for the consolidation
         gate.SetResult(default);
         await target.WhenInvalidated().WaitAsync(OneSecond);
+        // The new source is invalidated right after its output is set, and a lock-free read in between
+        // still sees it consistent - that's the case for any computed invalidated while it's computing
+        await whenConsolidated.WaitAsync(OneSecond);
         (await service.Get()).Should().Be(3);
     }
 
@@ -135,9 +174,12 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    public async Task TargetInvalidationBeforeNewSourceAdoptionReachesIt(int consolidatedValue)
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    public async Task TargetInvalidationBeforeNewSourceAdoptionReachesIt(
+        int consolidatedValue, bool useMethodInvalidation)
     {
         var services = CreateServices();
         var service = services.GetRequiredService<UntrackedValueService>();
@@ -147,11 +189,17 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         HookedComparer.OnEquals = () => {
             HookedComparer.OnEquals = null;
             service.Value = 3;
-            target.Invalidate();
+            if (useMethodInvalidation) {
+                using (Invalidation.Begin())
+                    _ = service.GetHooked();
+            }
+            else
+                target.Invalidate();
         };
         try {
             service.Value = consolidatedValue;
             using (Invalidation.Begin())
+            using (Consolidation.Bypass())
                 _ = service.GetHooked();
             await target.WhenInvalidated().WaitAsync(OneSecond);
         }
@@ -356,9 +404,11 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         return (service, target);
     }
 
-    private static void InvalidateUntracked(UntrackedValueService service)
+    // bypassConsolidation: true invalidates only the source, so it starts a consolidation
+    private static void InvalidateUntracked(UntrackedValueService service, bool bypassConsolidation = true)
     {
-        using (Invalidation.Begin())
-            _ = service.Get();
+        using var invalidating = Invalidation.Begin();
+        using var bypassing = bypassConsolidation ? Consolidation.Bypass() : default;
+        _ = service.Get();
     }
 }

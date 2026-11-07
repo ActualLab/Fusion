@@ -20,6 +20,15 @@ public class ConsolidationValidationTest(ITestOutputHelper @out) : SimpleFusionT
     private const string ExpectedMessage = "*ConsolidationDelay cannot be used on*Distributed service*";
 
     [Fact]
+    public void InvalidationDelayIsRejected()
+    {
+        var services = CreateServices(s => s.AddFusion().AddComputeService<DelayedConsolidatingService>());
+        var act = () => services.GetRequiredService<DelayedConsolidatingService>();
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*both ConsolidationDelay and InvalidationDelay*");
+    }
+
+    [Fact]
     public void LocalRegistrationIsAccepted()
     {
         var fusion = new ServiceCollection().AddFusion();

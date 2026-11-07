@@ -96,6 +96,8 @@ public class ComputeServiceInterceptor : Interceptor
             if (unwrappedReturnType == typeof(RpcNoWait))
                 throw Errors.ComputeMethodAttributeOnAsyncMethodReturningRpcNoWait(method);
 
+            if (options.IsConsolidating && options.InvalidationDelay > TimeSpan.Zero)
+                throw Errors.ConsolidationDelayWithInvalidationDelay(type, method);
             // Validates the comparer type & caches its instance
             ComputeMethodDef.GetConsolidationComparer(options.ConsolidationComparerType, unwrappedReturnType, method);
 
