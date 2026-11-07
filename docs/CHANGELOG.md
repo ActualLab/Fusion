@@ -21,10 +21,15 @@ MSBuild target that writes TypeScript interfaces, DTOs and `defineRpcService` de
 services of your contracts project on every build, so TypeScript clients no longer mirror .NET
 contracts by hand. `15.1.6` shipped the same packages; this entry covers both.
 
+Thanks to Timurbek Saburov ([#173](https://github.com/ActualLab/Fusion/pull/173), the TypeScript
+contracts generator) and Wu Shuwen ([#170](https://github.com/ActualLab/Fusion/pull/170), the first
+consolidation invalidation fix) for their contributions!
+
 ### Added
 
 - **RPC:** `ActualLab.Rpc.TypeScript` &mdash; a generator of TypeScript interfaces, DTOs and
-  `defineRpcService` definitions from the `RpcServiceDef` metadata the server uses.
+  `defineRpcService` definitions from the `RpcServiceDef` metadata the server uses
+  ([#173](https://github.com/ActualLab/Fusion/pull/173) by Timurbek Saburov).
 - **RPC:** `ActualLab.Rpc.TypeScript.Generator` &mdash; a development-only package with an MSBuild
   target that regenerates the TypeScript file after each build. Set `ActualLabRpcTypeScriptOutput` to
   enable it; `ActualLabRpcTypeScriptServices` selects services by patterns like `ITodo*,IStockApi`;
@@ -39,7 +44,7 @@ contracts by hand. `15.1.6` shipped the same packages; this entry covers both.
   `Invalidation.Begin()` on it now invalidates the source registered for the call, including one a
   running consolidation is still computing, and invalidating a consolidating computed directly
   invalidates its source too. Invalidating a consolidating method whose computed isn't registered
-  invalidates the source as well.
+  invalidates the source as well ([#170](https://github.com/ActualLab/Fusion/pull/170) by Wu Shuwen).
 - **Fusion:** a remote computed with `RemoteComputedCacheMode.Cache` or `ReturnDefault` stays alive
   for 10 seconds after invalidation
   (`ComputedRegistry.Settings.PostInvalidateKeepAliveDurationForRemoteComputedWithCacheOrReturnDefaultCacheMode`).
