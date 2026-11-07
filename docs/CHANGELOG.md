@@ -11,6 +11,43 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.11+7f26e3d19 | npm: 15.1.11
+
+Release date: 2026-11-06
+
+**TypeScript contracts can now be generated from .NET RPC services, and consolidating compute
+methods no longer lose invalidations.** The new `ActualLab.Rpc.TypeScript.Generator` package adds an
+MSBuild target that writes TypeScript interfaces, DTOs and `defineRpcService` definitions for the
+services of your contracts project on every build, so TypeScript clients no longer mirror .NET
+contracts by hand. `15.1.6` shipped the same packages; this entry covers both.
+
+### Added
+
+- **RPC:** `ActualLab.Rpc.TypeScript` &mdash; a generator of TypeScript interfaces, DTOs and
+  `defineRpcService` definitions from the `RpcServiceDef` metadata the server uses.
+- **RPC:** `ActualLab.Rpc.TypeScript.Generator` &mdash; a development-only package with an MSBuild
+  target that regenerates the TypeScript file after each build. Set `ActualLabRpcTypeScriptOutput` to
+  enable it; `ActualLabRpcTypeScriptServices` selects services by patterns like `ITodo*,IStockApi`;
+  on CI (`CI=true`) it fails the build if the file is out of date instead of updating it. Use it
+  with the same version as your `ActualLab.*` packages. See [PartTS-Contracts.md](PartTS-Contracts.md).
+- **Fusion:** `ComputeMethodInput.Lookup` and `ComputedRegistry.Get(in ComputeMethodInput.Lookup)`
+  are public.
+
+### Fixed
+
+- **Fusion:** a consolidating compute method no longer loses an invalidation.
+  `Invalidation.Begin()` on it now invalidates the source registered for the call, including one a
+  running consolidation is still computing, and invalidating a consolidating computed directly
+  invalidates its source too. Invalidating a consolidating method whose computed isn't registered
+  invalidates the source as well.
+- **Fusion:** a remote computed with `RemoteComputedCacheMode.Cache` or `ReturnDefault` stays alive
+  for 10 seconds after invalidation
+  (`ComputedRegistry.Settings.PostInvalidateKeepAliveDurationForRemoteComputedWithCacheOrReturnDefaultCacheMode`).
+  Before, a GC between the invalidation and a dependant's recompute sent that recompute down the
+  first-call path: `ReturnDefault` returned `default(T)` mid-session, and `Cache` served a stale value
+  again.
+
+
 ## 15.0.21+dc319975e | npm: 15.0.21
 
 Release date: 2026-10-24
