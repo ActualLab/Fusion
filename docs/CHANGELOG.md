@@ -11,6 +11,63 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.22+ac4c838b4 | npm: 15.1.22
+
+Release date: 2026-11-07
+
+**Check this one if you use `ConsolidationDelay`.** Invalidating a consolidating compute method now
+acts as if there is no consolidation, and the new `Consolidation.Bypass()` gives you the old
+"invalidate the source and compare" behavior where you need it. The release also fixes a race that let
+a read issued right after an invalidation return the pre-invalidation value of any compute method.
+
+### Breaking Changes
+
+- **Fusion:** a plain invalidation of a consolidating compute method (`Invalidation.Begin()` + call)
+  invalidates both its consolidation source and the consolidation target, the source first, like a
+  dependency and its dependant. It used to invalidate only the source, so the target compared the
+  recomputed output and could swallow the invalidation. **Migration:** a consolidating method without
+  Fusion dependencies (e.g. one reading the database) relies on that comparison, since an explicit
+  invalidation is the only thing triggering it, so wrap its invalidation calls into
+  `Consolidation.Bypass()` (inside the invalidation block - it has to be the inner scope):
+  ```cs
+  using (Invalidation.Begin())
+  using (Consolidation.Bypass())
+      _ = GetSummary(session, default); // Only the source: the target compares
+  ```
+  The TodoApp sample's `InMemoryTodoApi` does exactly that. Invalidations captured by `Replicated` and
+  `Distributed` operations are replayed without it, so they invalidate both.
+- **Fusion:** `ConsolidationDelay` combined with `InvalidationDelay > 0` on the same method is rejected
+  when the service is resolved: a consolidating method is always invalidated immediately, and
+  `ConsolidationDelay` is the way to postpone its update. Remove `InvalidationDelay` there.
+
+### Added
+
+- **Fusion:** `CallOptions.BypassConsolidation` - a call of a consolidating method acts on its
+  consolidation source, combined with the other options: a regular call depends on the source,
+  `Capture` / `GetExisting` return it, and `Invalidate` invalidates only it.
+- **Fusion:** `Consolidation.Bypass(bool isolate = false)` adds it to the current context, so it works
+  inside compute methods (the calls still become dependencies, unless `isolate: true`) and inside
+  invalidation blocks, including the ones Fusion runs for command handlers. A compute method can now
+  read the non-consolidated variant of a consolidating method instead of having a separate twin method.
+- **Fusion:** `Computed.Capture(bool bypassConsolidation, ...)` overloads and
+  `Computed.BeginCapture(bool bypassConsolidation)` capture the consolidation source computed.
+
+### Fixed
+
+- **Fusion:** a computed invalidated while it was computing briefly became `Consistent` with the output
+  it had already been invalidated for, until the deferred invalidation was applied. A lock-free read in
+  that window - the fast path of every compute method call - could use it, i.e. a read issued after the
+  invalidation call returned could still get the old value. Such a computed now goes straight to
+  `Invalidated` (unless its `InvalidationDelay` is positive, which still delays the invalidation).
+- **Fusion:** a consolidation no longer adopts a newly computed source into a target invalidated in the
+  meantime, and it skips the recompute if the target is already inconsistent.
+
+### Documentation
+
+- `PartF-CO.md` describes the new invalidation rules for consolidating methods, `Consolidation.Bypass()`,
+  capturing the consolidation source, and the `InvalidationDelay` restriction.
+
+
 ## 15.1.15+08ae374c8 | npm: 15.1.15
 
 Release date: 2026-11-06
