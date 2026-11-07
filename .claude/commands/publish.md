@@ -1,13 +1,15 @@
 ---
 allowed-tools: Read, Edit, Bash, Glob, Grep, WebFetch, AskUserQuestion, Skill, mcp__voxt-robokitty__list_messages, mcp__voxt-robokitty__post_message
-description: Publish NuGet (.NET) and/or npm (TS) packages; auto-detects what changed, tests via /test, updates the changelog, then announces the release
-argument-hint: "[.net|ts|both|auto|-post-only] [-test|-no-test] [-changelog|-no-changelog] [-post|-no-post]"
+description: Publish NuGet (.NET) and npm (TS) packages via the Publish GitHub workflow, update the changelog, then announce the release
+argument-hint: "[-post-only] [-test|-no-test] [-changelog|-no-changelog] [-post|-no-post]"
 ---
 
 # Publish
 
-Publish ActualLab.Fusion packages to NuGet (.NET) and/or npm (TS), then announce
-the release on Voxt.
+Publish ActualLab.Fusion packages to NuGet (.NET) and npm (TS), then announce
+the release on Voxt. Every publish ships both: the `Publish` GitHub workflow
+(`.github/workflows/Publish.yml`) runs the smoke tests, then pushes all NuGet and
+npm packages with the same version.
 
 **Publishing is a critical, effectively irreversible action** — a pushed package
 version can't be replaced, and consumers pick it up immediately. So the bar for
@@ -22,13 +24,8 @@ a wrong publish costs a version.
 
 ### Step 1: Parse arguments
 
-`$ARGUMENTS` holds a target and flags; **the default is `auto -test -changelog -post`**.
+`$ARGUMENTS` holds flags; **the default is `-test -changelog -post`**.
 
-Target:
-- `.net`, `dotnet`, or `net` → publish .NET (NuGet) only
-- `ts` → publish TypeScript (npm) only
-- `both`, `all` → publish both (order: .NET first, then TS)
-- `auto` (or no target) → detect what needs publishing (Step 3)
 - `-post-only` → **publish nothing.** Announce the release that's already
   published (Step 7) and stop. Skip Steps 2–6 entirely; the version comes from
   the topmost `docs/CHANGELOG.md` entry. Use this to announce a release that was
@@ -81,39 +78,19 @@ trusted publishing — no API keys are involved locally. Locally you only need `
 and a `gh` CLI authenticated with the right to run workflows in `ActualLab/Fusion`
 (`gh auth status`). If `gh` isn't authenticated, STOP and tell the user.
 
-### Step 3: Auto target detection (target `auto` only)
+### Step 3: Check there's something to publish
 
-Figure out what actually changed since the last publish, per artifact family:
+Find the latest published version (`npm view @actuallab/core version`, or the last entry of
+`https://api.nuget.org/v3-flatcontainer/actuallab.core/index.json`), map it to its commit
+(`dotnet nbgv get-commits <version>`), and list what changed since:
+`git log <commit>..HEAD --oneline -- src/ ts/packages/ Directory.Packages.props Directory.Build.props version.json`.
+If nothing shipping changed, **skip publishing**: report what was checked and stop.
+Otherwise report the version→commit mapping and a one-line diff summary, then proceed.
 
-1. **Find the latest published versions:**
-   - Check the changelog (see the `/changelog-update` skill for its location) for the
-     most recent published version entries.
-   - Verify directly: NuGet — `dotnet package search ActualLab.Core --exact-match`
-     (or fetch `https://api.nuget.org/v3-flatcontainer/actuallab.core/index.json` and
-     take the last entry); npm — `npm view @actuallab/core version` (run `npm view`
-     on one of the `ts/packages/*` package names).
-2. **Map each version to its commit:** `dotnet nbgv get-commits <version>` prints the
-   commit(s) matching a version. Cross-check with the changelog entry's commit if
-   ambiguous.
-3. **Diff for relevant changes** from that commit to `HEAD`:
-   - .NET packages: `git log <commit>..HEAD --oneline -- src/ Directory.Packages.props
-     Directory.Build.props version.json` (anything under `src/` ships in packages;
-     ignore `docs/`, `tests/`, `samples/`, `.claude/`).
-   - TS packages: `git log <commit>..HEAD --oneline -- ts/packages/` (ignore `ts/e2e/`,
-     TS test/config-only changes that don't ship: judge by the file lists).
-4. **Decide:**
-   - Changes in both → publish both.
-   - Changes only in TS artifacts → publish (and test) TS only.
-   - Changes only in .NET artifacts → publish (and test) .NET only.
-   - No relevant changes anywhere → **skip publishing entirely**; report what was
-     checked (versions, commits, diff summary) and stop.
+### Step 4: Local pre-publish tests (skip with `-no-test`)
 
-Report the decision (with the version→commit mapping and a one-line diff summary)
-before proceeding.
-
-### Step 4: Pre-publish tests (skip with `-no-test`)
-
-Only test the targets being published:
+The workflow always runs the smoke tests (all TS tests plus the .NET tests marked with
+`[Trait("Category", "Smoke")]`) before publishing anything. `-test` adds the full local pass:
 
 - **.NET**: run the parallel test suite via the `/test` skill (equivalently:
   `./Run-Tests.cmd` from the repository root — `all fast` mode). It must be green;
@@ -122,26 +99,26 @@ Only test the targets being published:
   (vitest). Both must pass.
 
 If something fails: fix the errors, re-run the failed part, and repeat until green.
-Don't skip or suppress failures. (With `-no-test`, still run `ts/Run-Lint.cmd`
-before a TS publish — it's fast and catches build breaks.)
+Don't skip or suppress failures. (With `-no-test`, still run `ts/Run-Lint.cmd` —
+it's fast and catches build breaks the workflow doesn't check.)
 
 ### Step 5: Publish
 
-Run `build/Publish.cmd <dotnet|ts|both>` once, with the target(s) chosen above.
-It re-checks that `master` is clean and matches `origin/master`, starts the `Publish`
-workflow on that commit, and waits for it (`gh run watch`), printing the failed
-step's log on failure. In the workflow:
+Run `build/Publish.cmd` once. It re-checks that `master` is clean and matches
+`origin/master`, starts the `Publish` workflow on that commit, and waits for it
+(`gh run watch`), printing the failed step's log on failure. The workflow:
 
-- **.NET**: packs with `PUBLIC_BUILD=1`, gets a 1-hour NuGet key via `NuGet/login`,
-  and pushes every package from `artifacts/nupkg/` to NuGet.org.
-- **TS**: runs `ts/Publish.ps1`, which stamps the nbgv version into
-  `packages/*/package.json`, builds, and publishes all `@actuallab/*` workspaces to npm.
+1. runs the smoke tests;
+2. packs with `PUBLIC_BUILD=1`, gets a 1-hour NuGet key via `NuGet/login`,
+   and pushes every package from `artifacts/nupkg/` to NuGet.org;
+3. runs `ts/Publish.ps1`, which stamps the nbgv version into
+   `packages/*/package.json`, builds, and publishes all `@actuallab/*` workspaces to npm.
 
 Use a long Bash timeout (or run it in the background) — the workflow takes a while.
 
 If a publish fails:
 
-- **Build/compile errors** → fix them, run the tests targeting the fixed
+- **Test or build errors** → fix them, run the tests targeting the fixed
   code (e.g., `/test` for .NET, `ts/Run-Tests.cmd` for TS), commit and push the fix,
   then re-run the publish script.
 - **Auth errors** (`NuGet/login` failure, 403 on push, npm `ENEEDAUTH`/`E404` on
@@ -149,7 +126,7 @@ If a publish fails:
   npmjs.com or the `NUGET_USER` secret needs fixing. Never work around credentials.
 - **Transient push errors** → re-run once before reporting. NuGet pushes use
   `--skip-duplicate`, so a re-run skips packages that already went out; npm doesn't,
-  so on a partial npm failure, ask the user before re-running.
+  so if NuGet succeeded and npm failed partway, ask the user before re-running.
 
 ### Step 6: Changelog update (skip with `-no-changelog`)
 
@@ -165,8 +142,7 @@ dotnet nbgv get-version -v NuGetPackageVersion
 nbgv version.)
 
 Invoke the `changelog-update` skill passing that exact version as its
-argument, and mention in its input which targets (NuGet, npm, or both) were
-just published.
+argument, and mention in its input that both NuGet and npm were just published.
 
 The entry has to be committed and pushed to `master` — Step 7 verifies it on the
 live docs site, which builds from the remote.
@@ -237,8 +213,6 @@ keep one between a paragraph and the next label.
   headline fix or feature, and who is affected.
 - Call out breaking changes explicitly, with the concrete migration ("rename X to
   Y", "override the method instead of the property").
-- Mention when a target was skipped, e.g. "NuGet-only release (npm stays at
-  `14.1.5`)".
 - Use backticks for type and member names.
 - Concrete numbers land better than adjectives — "returns in 44ms, the second one
   times out", "171 and 732 attempts were observed".

@@ -28,6 +28,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
             fusion.AddClient<IKeyValueService<string>>();
     }
 
+    [Trait("Category", "Smoke")]
     [Fact]
     public async Task BasicTest()
     {

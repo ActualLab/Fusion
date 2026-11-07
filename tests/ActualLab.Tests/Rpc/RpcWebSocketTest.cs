@@ -31,6 +31,7 @@ public class RpcWebSocketTest : RpcTestBase
     public Task BasicTest_Json5()
         => BasicTest("json5");
 
+    [Trait("Category", "Smoke")]
     [Theory]
     [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
     public async Task BasicTest(string serializationFormat)

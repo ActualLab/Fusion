@@ -1,10 +1,6 @@
-# Publishes NuGet and/or npm packages by running .github/workflows/Publish.yml on GitHub,
+# Publishes NuGet and npm packages by running .github/workflows/Publish.yml on GitHub,
 # which authenticates via trusted publishing, so no API keys are needed here.
 # The workflow publishes origin/master, so the local master must match it.
-param(
-    [ValidateSet('dotnet', 'ts', 'both')]
-    [string] $Target = 'dotnet'
-)
 
 $ErrorActionPreference = 'Stop'
 Push-Location (Split-Path $PSScriptRoot)
@@ -28,10 +24,10 @@ try {
     if ($LASTEXITCODE -ne 0 -or -not $version) {
         throw "Failed to get version from nbgv."
     }
-    Write-Host "Publishing $version ($Target) from $sha"
+    Write-Host "Publishing $version from $sha"
 
     $startedAt = [DateTimeOffset]::UtcNow.AddSeconds(-10)
-    & gh workflow run Publish.yml --ref master -f "target=$Target"
+    & gh workflow run Publish.yml --ref master
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to start the Publish workflow."
     }
@@ -56,7 +52,7 @@ try {
         throw "The Publish workflow run failed: $(& gh run view $runId --json url --jq .url)"
     }
 
-    Write-Host "Published $version ($Target)."
+    Write-Host "Published $version."
 }
 finally {
     Pop-Location

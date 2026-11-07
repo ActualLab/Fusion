@@ -59,6 +59,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario("overload-resolution", format);
     }
 
+    [Trait("Category", "Smoke")]
     [Theory]
     [InlineData("json5")]
     [InlineData("msgpack6")]
