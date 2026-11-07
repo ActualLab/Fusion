@@ -11,6 +11,24 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.15+08ae374c8 | npm: 15.1.15
+
+Release date: 2026-11-06
+
+**Take this one if you use `ActualLab.Rpc.TypeScript.Generator` and your contracts don't reference
+exactly the same `ActualLab.*` version as the generator.** The `15.1.11` generator couldn't load
+contracts built against a newer `ActualLab.*`: every service type failed to load, so it wrote a
+TypeScript file with no services, and with `CI=true` it failed the build for a stale file.
+
+### Fixed
+
+- **RPC:** the TypeScript generator reads contracts built against a newer `ActualLab.*` than its own
+  (e.g. ones built from source). It loads them into a separate assembly load context that reuses the
+  generator's own assemblies by name, whatever version the contracts reference. Before, the default
+  load context refused such references and the generator only printed warnings like
+  `Could not load file or assembly 'ActualLab.Rpc, Version=...'`.
+
+
 ## 15.1.11+7f26e3d19 | npm: 15.1.11
 
 Release date: 2026-11-06
