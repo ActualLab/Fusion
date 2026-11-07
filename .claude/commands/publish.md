@@ -128,7 +128,10 @@ The workflow:
 2. packs with `PUBLIC_BUILD=1`, gets a 1-hour NuGet key via `NuGet/login`,
    and pushes every package from `artifacts/nupkg/` to NuGet.org;
 3. runs `ts/Publish.ps1`, which stamps the nbgv version into
-   `packages/*/package.json`, builds, and publishes all `@actuallab/*` workspaces to npm.
+   `packages/*/package.json`, builds, and publishes all `@actuallab/*` workspaces to npm;
+4. then, in separate jobs, creates the `v<version>` GitHub release and mirrors all packages
+   to GitHub Packages (shown on the repository page). A failure there doesn't undo the
+   publish — report it, and re-run just the failed job (`gh run rerun <id> --failed`).
 
 Use a long Bash timeout (or run it in the background) — the workflow takes a while.
 

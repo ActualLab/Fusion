@@ -66,6 +66,12 @@ try {
 
     if ($publishError -ne 0) { throw "Publish failed" }
 
+    # The Publish workflow mirrors these tarballs to GitHub Packages
+    $packDir = Join-Path $PSScriptRoot "../artifacts/npm"
+    New-Item -ItemType Directory -Force $packDir | Out-Null
+    & npm pack --workspaces --pack-destination $packDir
+    if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
+
     Write-Host "Done! Published version $version"
 }
 finally {

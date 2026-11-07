@@ -2,6 +2,7 @@ name: Publish
 
 # Started by build/Publish.cmd (see build/Start-PublishWorkflow.ps1); always publishes both NuGet and npm packages.
 # "build/Publish.cmd -no-test" sets skip-tests, which skips the smoke tests.
+# After publishing, it creates the GitHub release and mirrors the packages to GitHub Packages.
 # The "release" environment requires an approval from one of its reviewers (repository settings) before the job runs.
 # Both registries authenticate via trusted publishing, so the repository holds no API keys:
 # - NuGet: a nuget.org trusted publishing policy for ActualLab/Fusion + Publish.yml + the "release" environment;
@@ -92,6 +93,15 @@ jobs:
         shell: pwsh
         run: ./Publish.ps1
 
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            artifacts/nupkg/*.nupkg
+            artifacts/npm/*.tgz
+          if-no-files-found: error
+
   # A separate job, so the publishing one (which runs package build scripts) never gets write access to the repository.
   # "/publish" replaces these notes with the changelog entry once it's written.
   release:
@@ -107,3 +117,37 @@ jobs:
         run: >
           gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$VERSION"
           --notes "NuGet and npm packages $VERSION. Changelog: https://fusion.actuallab.net/CHANGELOG"
+
+  # Mirrors the packages to GitHub Packages, so they're listed on the repository page.
+  # nuget.org and npmjs.com stay the primary feeds.
+  github-packages:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: packages
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Push NuGet packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          dotnet nuget push "packages/nupkg/*.nupkg" --source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json"
+          --api-key "$GH_TOKEN" --skip-duplicate
+
+      - name: Publish npm packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN}" > ~/.npmrc
+          for tarball in packages/npm/*.tgz; do
+            npm publish "$tarball" --registry https://npm.pkg.github.com
+          done
