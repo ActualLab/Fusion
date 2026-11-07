@@ -307,8 +307,13 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             return;
         }
 
-        // Instant invalidation - it may happen just once,
-        // so we don't need a lock here.
+        CompleteInvalidation(source);
+    }
+
+    // Runs once, right after the state becomes Invalidated, so it needs no lock
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void CompleteInvalidation(InvalidationSource source)
+    {
         try {
             if (_invalidated.IsEmpty && _dependants.Count == 0) {
                 if (_dependencies.Count == 0) {
@@ -382,20 +387,36 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     protected internal bool TrySetOutput(Result output)
     {
         int state;
+        bool isInvalidated;
         lock (Lock) {
-            if ((_state & ConsistencyStateMask) != 0) // != ComputedState.Computing
+            state = _state;
+            if ((state & ConsistencyStateMask) != 0) // != ComputedState.Computing
                 return false;
 
             // _output must be stored first: the state store is what publishes it to the lock-free
             // readers of Output/UntypedOutput, which gate on ConsistencyState and then read it plainly
             _output = output;
-            state = _state | (int)ConsistencyState.Consistent; // Fine to do that, this part of the state was 0
+            // An invalidation that arrived while computing and isn't delayed skips the Consistent state,
+            // otherwise a lock-free reader could use the output it has already invalidated
+            isInvalidated = (state & (int)InvalidationFlags.InvalidateOnSetOutput) != 0
+                && ((state & (int)InvalidationFlags.InvalidateOnSetOutputImmediately) != 0
+                    || Options.InvalidationDelay <= TimeSpan.Zero);
+            state = isInvalidated
+                ? (int)ConsistencyState.Invalidated
+                : state | (int)ConsistencyState.Consistent; // Fine to do that, this part of the state was 0
             Volatile.Write(ref _state, state);
         }
 
+        if (isInvalidated) {
+            CompleteInvalidation(new InvalidationSource(
+                _invalidationSource ?? InvalidationSource.ComputedTrySetOutputNoInvalidationSource.Value));
+            return true;
+        }
+
         if ((state & (int)InvalidationFlags.InvalidateOnSetOutput) != 0) {
+            // A delayed invalidation: the output stays consistent until it happens
             Invalidate(
-                immediately: (state & (int)InvalidationFlags.InvalidateOnSetOutputImmediately) != 0,
+                immediately: false,
                 source: new InvalidationSource(
                     _invalidationSource ?? InvalidationSource.ComputedTrySetOutputNoInvalidationSource.Value));
             return true;
