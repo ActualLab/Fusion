@@ -54,7 +54,7 @@ Layout:
 - `packages/*` — the published packages; tests live in each package's `tests/` folder
 - `e2e/` — cross-language scripts driven from .NET tests (`ts-dotnet-e2e.ts`,
   `ts-dotnet-perf.ts`), which run a TypeScript client against a real .NET RPC server
-- `Publish.ps1` / `Publish.cmd` — release scripts
+- `Publish.cmd` — starts the `Publish` GitHub workflow, which runs `Publish.ps1`
 
 Publishing goes through the repo's release flow, which bumps all workspace versions together — see
 the [changelog](https://fusion.actuallab.net/CHANGELOG) for the npm version line of each release.

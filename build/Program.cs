@@ -167,7 +167,8 @@ internal static class Program
                 .Select(FilePath.New)
                 .ToArray();
             foreach (var nupkgPath in nupkgPaths) {
-                await Cli.Wrap(dotnetExePath).WithArguments(new string[] {
+                // No validation: the exception it throws includes the command line, i.e. the API key
+                var result = await Cli.Wrap(dotnetExePath).WithArguments(new string[] {
                         "nuget",
                         "push",
                         nupkgPath,
@@ -177,9 +178,13 @@ internal static class Program
                         "--source", feed,
                         "--skip-duplicate"
                     })
+                    .WithValidation(CommandResultValidation.None)
                     .ToConsole()
                     .ExecuteAsync(cancellationToken)
                     .ConfigureAwait(false);
+                if (!result.IsSuccess)
+                    throw new InvalidOperationException(
+                        $"'dotnet nuget push {nupkgPath.FileName}' failed with exit code {result.ExitCode}.");
             }
         });
 

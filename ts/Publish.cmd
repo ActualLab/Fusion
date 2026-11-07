@@ -1,3 +1,3 @@
 @echo off
-cd /d "%~dp0"
-pwsh -NoProfile -ExecutionPolicy Bypass -File Publish.ps1 %*
+rem Runs the Publish workflow on GitHub; ts/Publish.ps1 is what it runs there
+call "%~dp0..\build\Publish.cmd" ts

@@ -33,5 +33,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ActualLab/Fusion.git",
+    "directory": "ts/packages/rpc"
+  },
   "license": "MIT"
 }

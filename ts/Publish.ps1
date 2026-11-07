@@ -2,25 +2,31 @@ $ErrorActionPreference = 'Stop'
 Push-Location $PSScriptRoot
 $npmrcPath = Join-Path $PSScriptRoot ".npmrc"
 try {
-    # Check for npm key
+    # In GitHub Actions, npm authenticates via trusted publishing (OIDC), so no key is needed there
     $npmKey = $env:ActualLab_NPM_Key
-    if (-not $npmKey) {
-        throw "ActualLab_NPM_Key environment variable is not set"
+    $isTrustedPublishing = -not $npmKey -and $env:ACTIONS_ID_TOKEN_REQUEST_URL
+    if ($isTrustedPublishing) {
+        Write-Host "npm auth: trusted publishing"
     }
+    else {
+        if (-not $npmKey) {
+            throw "ActualLab_NPM_Key environment variable is not set"
+        }
 
-    # Create temporary .npmrc with auth token
-    "//registry.npmjs.org/:_authToken=$npmKey" | Set-Content $npmrcPath -NoNewline
+        # Create temporary .npmrc with auth token
+        "//registry.npmjs.org/:_authToken=$npmKey" | Set-Content $npmrcPath -NoNewline
 
-    # Check npm auth and scope access before mutating package.json files or building
-    $npmUser = & npm whoami --registry https://registry.npmjs.org/ 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm authentication failed: $npmUser"
-    }
-    Write-Host "npm user: $npmUser"
+        # Check npm auth and scope access before mutating package.json files or building
+        $npmUser = & npm whoami --registry https://registry.npmjs.org/ 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm authentication failed: $npmUser"
+        }
+        Write-Host "npm user: $npmUser"
 
-    $scopeAccess = & npm access list packages "@actuallab" --json --registry https://registry.npmjs.org/ 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm token can't access the '@actuallab' scope. Make sure the npm org exists and the token can create/publish packages under it. npm output: $scopeAccess"
+        $scopeAccess = & npm access list packages "@actuallab" --json --registry https://registry.npmjs.org/ 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm token can't access the '@actuallab' scope. Make sure the npm org exists and the token can create/publish packages under it. npm output: $scopeAccess"
+        }
     }
 
     # Get version from Nerdbank GitVersion

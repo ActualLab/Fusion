@@ -75,16 +75,11 @@ Resolve problems as follows:
 - **Version still has a `-g<hash>` suffix on master** → STOP and ask; something is
   off with the nbgv setup and the publish would be wrong.
 
-Then check the environment. Publishing runs `.cmd` scripts and needs host credentials
-(`ActualChat_NuGet_API_Key`, `ActualLab_NPM_Key`), so it must run on the
-host OS. **This is a hard requirement for .NET publishing.**
-
-Check the `AC_OS` environment variable:
-
-- Unset, `Windows`, `macOS`, or `Linux` → OK, proceed.
-- `Linux in Docker`, `Linux on WSL`, or anything else sandboxed → STOP and
-  tell the user to re-run the publish from an agent started on the host OS
-  (`ai os`). Do not try to work around this.
+Then check the environment. The packages are built and pushed by the `Publish` GitHub
+workflow (`.github/workflows/Publish.yml`), which authenticates to NuGet and npm via
+trusted publishing — no API keys are involved locally. Locally you only need `pwsh`
+and a `gh` CLI authenticated with the right to run workflows in `ActualLab/Fusion`
+(`gh auth status`). If `gh` isn't authenticated, STOP and tell the user.
 
 ### Step 3: Auto target detection (target `auto` only)
 
@@ -132,24 +127,29 @@ before a TS publish — it's fast and catches build breaks.)
 
 ### Step 5: Publish
 
-- **.NET**: run `./Publish.cmd` from the `build/` folder. It packs with
-  `PUBLIC_BUILD=1` and pushes every package from `artifacts/nupkg/` to
-  NuGet.org.
-- **TS**: run `./Publish.cmd` from the `ts/` folder. It stamps the nbgv
-  version into `packages/*/package.json`, builds, and publishes all
-  `@actuallab/*` workspaces to npm.
+Run `build/Publish.cmd <dotnet|ts|both>` once, with the target(s) chosen above.
+It re-checks that `master` is clean and matches `origin/master`, starts the `Publish`
+workflow on that commit, and waits for it (`gh run watch`), printing the failed
+step's log on failure. In the workflow:
 
-Use a generous Bash timeout (10 minutes) — packing and pushing take a while.
+- **.NET**: packs with `PUBLIC_BUILD=1`, gets a 1-hour NuGet key via `NuGet/login`,
+  and pushes every package from `artifacts/nupkg/` to NuGet.org.
+- **TS**: runs `ts/Publish.ps1`, which stamps the nbgv version into
+  `packages/*/package.json`, builds, and publishes all `@actuallab/*` workspaces to npm.
+
+Use a long Bash timeout (or run it in the background) — the workflow takes a while.
 
 If a publish fails:
 
 - **Build/compile errors** → fix them, run the tests targeting the fixed
-  code (e.g., `/test` for .NET, `ts/Run-Tests.cmd` for TS), then re-run the
-  publish script.
-- **Credential/auth errors** (missing API key, `npm whoami` failure, scope
-  access) → report to the user and stop; never work around credentials.
-- **Transient push errors** → the scripts already retry; re-run once before
-  reporting.
+  code (e.g., `/test` for .NET, `ts/Run-Tests.cmd` for TS), commit and push the fix,
+  then re-run the publish script.
+- **Auth errors** (`NuGet/login` failure, 403 on push, npm `ENEEDAUTH`/`E404` on
+  publish) → report to the user and stop; the trusted publishing policy on nuget.org /
+  npmjs.com or the `NUGET_USER` secret needs fixing. Never work around credentials.
+- **Transient push errors** → re-run once before reporting. NuGet pushes use
+  `--skip-duplicate`, so a re-run skips packages that already went out; npm doesn't,
+  so on a partial npm failure, ask the user before re-running.
 
 ### Step 6: Changelog update (skip with `-no-changelog`)
 

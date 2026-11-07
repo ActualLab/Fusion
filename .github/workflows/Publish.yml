@@ -1,0 +1,87 @@
+name: Publish
+
+# Started by build/Publish.cmd (see build/Start-PublishWorkflow.ps1).
+# Both registries authenticate via trusted publishing, so the repository holds no API keys:
+# - NuGet: a nuget.org trusted publishing policy for ActualLab/Fusion + Publish.yml + the "release" environment;
+#   the NUGET_USER secret is the nuget.org profile name owning that policy.
+# - npm: every @actuallab/* package lists ActualLab/Fusion + Publish.yml as its trusted publisher.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to publish
+        type: choice
+        options: [dotnet, ts, both]
+        default: dotnet
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # version.json's publicReleaseRefSpec: other branches get versions with a git hash suffix
+    if: github.ref == 'refs/heads/master'
+    runs-on: windows-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # Trusted publishing exchanges the workflow's OIDC token for short-lived keys
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Avoid shallow clone for Nerdbank.GitVersioning
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # npm trusted publishing requires npm 11.5.1+
+          node-version: '24'
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Install .NET workloads
+        if: inputs.target != 'ts'
+        run: dotnet workload install wasm-tools
+
+      - name: Pack NuGet packages
+        if: inputs.target != 'ts'
+        env:
+          PUBLIC_BUILD: 1
+        run: dotnet run --project build -c Release --no-launch-profile -- --configuration Release pack
+
+      # The key it produces is valid for 1 hour, so it goes right before the push
+      - name: NuGet login
+        if: inputs.target != 'ts'
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push NuGet packages
+        if: inputs.target != 'ts'
+        env:
+          PUBLIC_BUILD: 1
+          ActualChat_NuGet_API_Key: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: dotnet run --project build -c Release --no-launch-profile -- --configuration Release --skip-dependencies publish
+
+      - name: Install npm packages
+        if: inputs.target != 'dotnet'
+        working-directory: ts
+        run: npm ci
+
+      - name: Publish npm packages
+        if: inputs.target != 'dotnet'
+        working-directory: ts
+        shell: pwsh
+        run: ./Publish.ps1

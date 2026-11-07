@@ -1,2 +1,3 @@
-@set PUBLIC_BUILD=1
-@dotnet run --project Build.csproj --configuration Release --no-launch-profile -- --configuration Release publish
+@echo off
+rem Usage: Publish.cmd [dotnet|ts|both]  (default: dotnet) - runs the Publish workflow on GitHub
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-PublishWorkflow.ps1" %*

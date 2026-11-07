@@ -31,5 +31,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ActualLab/Fusion.git",
+    "directory": "ts/packages/fusion"
+  },
   "license": "MIT"
 }
