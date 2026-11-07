@@ -1,12 +1,18 @@
 name: Publish
 
 # Started by build/Publish.cmd (see build/Start-PublishWorkflow.ps1); always publishes both NuGet and npm packages.
+# "build/Publish.cmd -no-test" sets skip-tests, which skips the smoke tests.
 # Both registries authenticate via trusted publishing, so the repository holds no API keys:
 # - NuGet: a nuget.org trusted publishing policy for ActualLab/Fusion + Publish.yml + the "release" environment;
 #   the NUGET_USER secret is the nuget.org profile name of that policy's creator.
 # - npm: every @actuallab/* package lists ActualLab/Fusion + Publish.yml as its trusted publisher.
 on:
   workflow_dispatch:
+    inputs:
+      skip-tests:
+        description: Skip the smoke tests
+        type: boolean
+        default: false
 
 concurrency:
   group: publish
@@ -53,10 +59,12 @@ jobs:
 
       # Smoke tests: all TypeScript tests + the .NET tests marked with [Trait("Category", "Smoke")]
       - name: Test TypeScript packages
+        if: ${{ !inputs.skip-tests }}
         working-directory: ts
         run: ./Run-Tests.cmd
 
       - name: Run .NET smoke tests
+        if: ${{ !inputs.skip-tests }}
         run: |
           dotnet test tests/ActualLab.Tests -c Release -f net11.0 --filter Category=Smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

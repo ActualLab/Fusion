@@ -1,8 +1,17 @@
 # Publishes NuGet and npm packages by running .github/workflows/Publish.yml on GitHub,
 # which authenticates via trusted publishing, so no API keys are needed here.
 # The workflow publishes origin/master, so the local master must match it.
+# -NoTest (or -no-test) skips the workflow's smoke tests.
+param(
+    [Alias('no-test')]
+    [switch] $NoTest
+)
 
 $ErrorActionPreference = 'Stop'
+# GH_TOKEN may be a fine-grained token of another organization, which can't start workflows here
+if ($env:GH_TOKEN_ACTUALLAB) {
+    $env:GH_TOKEN = $env:GH_TOKEN_ACTUALLAB
+}
 Push-Location (Split-Path $PSScriptRoot)
 try {
     $branch = & git rev-parse --abbrev-ref HEAD
@@ -24,10 +33,10 @@ try {
     if ($LASTEXITCODE -ne 0 -or -not $version) {
         throw "Failed to get version from nbgv."
     }
-    Write-Host "Publishing $version from $sha"
+    Write-Host "Publishing $version from $sha$(if ($NoTest) { ' (no smoke tests)' })"
 
     $startedAt = [DateTimeOffset]::UtcNow.AddSeconds(-10)
-    & gh workflow run Publish.yml --ref master
+    & gh workflow run Publish.yml --ref master -f "skip-tests=$($NoTest.IsPresent.ToString().ToLowerInvariant())"
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to start the Publish workflow."
     }

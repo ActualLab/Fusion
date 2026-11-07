@@ -24,6 +24,21 @@ should NOT create a feature branch in this repo unless the user explicitly asks
 for one.** Small, self-contained changes (docs, fixes, tweaks) belong on
 `master`; a needless branch only adds a merge step later.
 
+# GitHub CLI — use `GH_TOKEN_ACTUALLAB`
+
+On a local machine, `GH_TOKEN` usually holds a fine-grained token of another
+organization (Actual-Chat): it can read this public repository, but every write
+call — starting workflows, creating PRs, comments, secrets — fails with
+`403 Resource not accessible by personal access token`. A fine-grained token can't
+span organizations, so this repository has its own: `GH_TOKEN_ACTUALLAB`.
+
+**Every `gh` call that targets `ActualLab/*` must use it** when it's set:
+`GH_TOKEN="$GH_TOKEN_ACTUALLAB" gh ...` in bash, or
+`$env:GH_TOKEN = $env:GH_TOKEN_ACTUALLAB` before `gh` in PowerShell (scripts like
+`build/Publish.cmd` already do this). If it isn't set and a write call gets 403,
+tell the user to set `GH_TOKEN_ACTUALLAB` instead of retrying. `git push` is
+unaffected: it goes through SSH.
+
 # Type Catalog — Reuse Existing Abstractions (CRITICAL)
 
 This codebase is mature. **Reusing what already exists is more important
@@ -232,14 +247,37 @@ What `install` does, by host OS:
 - **Linux / WSL** — same as macOS, but the aliases go into `~/.bashrc`.
 
 After the PATH/alias step, `install` also links AgentCli's shared
-`.claude/{commands,skills}` into `~/.claude/{commands,skills}/team/` and
-triggers a Docker build of the AgentCli image (`claude-agentcli`). Install is
-idempotent — running it again only updates what's stale.
+`.claude/commands` and `.claude/skills` into the user's global Claude config,
+then triggers a Docker build of the AgentCli image (`claude-agentcli`).
+Install is idempotent — running it again only updates what's stale.
+
+The two folders are linked differently, because Claude Code discovers them
+differently:
+
+| Folder | Link | Why | Invoked as |
+|---|---|---|---|
+| `.claude/commands` | one link → `~/.claude/commands/team/` | commands recurse into subfolders, and the subfolder becomes a namespace | `/team:<name>` |
+| `.claude/skills` | one link *per skill* → `~/.claude/skills/<name>/` | skills are discovered exactly one level deep (`~/.claude/skills/<name>/SKILL.md`); a link to the whole folder is never scanned | `/<name>` |
+
+So shared skills are **not** namespaced — `/pair`, not `/team:pair`. If a
+personal skill in `~/.claude/skills/` already uses the same name, `install`
+leaves it alone and says so rather than overwriting it. Skills removed or
+renamed in AgentCli have their stale links pruned on the next `install`, and
+`uninstall` removes every link that points into AgentCli's skills folder
+(dangling ones included) while leaving your own skills untouched.
+
+Inside Docker these host links always dangle — they point at host paths the
+container doesn't have, on **every** OS including Windows, where Docker Desktop
+surfaces an NTFS junction as a symlink to an unmounted `/mnt/host/<drive>/…`.
+So the launcher bind-mounts AgentCli's source folders read-only on top of them:
+`.claude/commands` → `/home/claude/.claude/commands/team`, and each skill →
+`/home/claude/.claude/skills/<name>`.
 
 Re-open the shell (or `source ~/.zshrc` / `~/.bashrc`) before using `ai`.
 
 To undo everything `install` did — unregister those entry points, remove the
-`team` links, stop the AgentCli docker-compose stack, and remove the AgentCli Docker image:
+command and skill links, stop the AgentCli docker-compose stack, and remove the
+AgentCli Docker image:
 
 ```
 ./ai.ps1 uninstall
@@ -295,7 +333,7 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 | Category | Tools |
 |----------|-------|
 | **AI CLIs** | Claude Code, OpenAI Codex, xAI Grok, Codename Goose, OpenCode |
-| **.NET** | .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
+| **.NET** | .NET 11 SDK (preview), .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
 | **Node.js** | Node.js 20, npm |
 | **Shell** | Zsh (default), Bash, PowerShell (`pwsh`) |
 | **Search** | ripgrep (`rg`), fd-find (`fdfind`), fzf |
@@ -328,7 +366,7 @@ When running in Docker, `/proj/<CurrentProject>/artifacts` path is mapped to `ar
 
 **Google Cloud credentials**: The `~/.gcp` folder is mounted read-only to `/home/claude/.gcp`. If `GOOGLE_APPLICATION_CREDENTIALS` is set on the host, it's automatically remapped to `/home/claude/.gcp/key.json` inside the container.
 
-**Container reuse**: By default, `c` reuses an existing Docker container for the current worktree (matched by the `worktree` label). If multiple containers exist, you'll be prompted to select one. Use `--new` to force creating a fresh container instead.
+**Container reuse**: By default, `ai` reuses an existing Docker container for the current worktree (matched by the `worktree` label). If multiple containers exist, you'll be prompted to select one. Use `--new` to force creating a fresh container instead.
 
 **Isolated mode**: Set `AC_CLAUDE_ISOLATE=true` (or `1`) to run with an isolated `.claude.json` config file. When enabled, the launcher copies `.claude.json` to `artifacts/claude-docker/.claude-{timestamp}.json` and mounts that copy instead of the original. Changes made inside the container are not synced back to the host's `.claude.json`. This is useful for parallel Claude instances or testing without affecting the main config.
 
@@ -377,7 +415,7 @@ projects sitting next to AgentCli are accessible at `/proj/<name>`.
 ## Launching from any folder
 
 The launcher does **not** require the current folder to be a sibling of
-AgentCli (or even a git repo). You can `c` from anywhere — your home dir,
+AgentCli (or even a git repo). You can run `ai` from anywhere — your home dir,
 a one-off scratch folder, a project under another drive — and it will work.
 
 The behavior splits along the Docker vs. OS/WSL line:
@@ -434,6 +472,31 @@ ai wt feature1   # Creates ActualLab.Fusion-feature1 if it doesn't exist and run
 ```
 
 The worktree is created using `git worktree add` from the main project directory.
+
+**Removing worktrees**: `ai rwt <suffix>` (or `ai wt rm <suffix>`) removes the worktree,
+its branch, and its ports/hosts/nginx config. When git cannot delete the folder (a process
+still writes into it), `rwt` deletes it itself.
+
+**`wt` subcommands**: `ls`/`list`, `rm`/`remove` and `prune` are reserved words after
+`wt`, so they cannot be worktree suffixes.
+
+```
+ai wt ls            # the project's worktrees, with dead worktree folders flagged
+ai wt rm <suffix>   # same as ai rwt <suffix>
+ai wt prune         # remove the dead folders marked `leftovers`
+ai wt prune --all   # remove every dead folder
+```
+
+**Dead worktree folders**: a `<project>-*` sibling folder that git no longer knows as a
+worktree — left by an interrupted removal, or re-created by an IDE saving its settings.
+`ai wt ls` marks each as one of:
+
+- `leftovers` — only IDE/OS/build leftovers (`.idea`, `.DS_Store`, `node_modules`, …)
+- `checkout` — a full tree whose `.git` file points at worktree metadata that is gone
+- `partial` — no `.git`, but other files remain
+
+`prune` asks for confirmation; `--yes` skips it. Git cannot tell whether a `checkout` or
+`partial` folder holds unsaved work, so look before using `--all`.
 
 # `roslynk` MCP (optional)
 

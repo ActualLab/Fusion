@@ -32,7 +32,8 @@ a wrong publish costs a version.
   published earlier, or to retry an announcement that was skipped or failed.
 
 Flags:
-- `-test` (default) / `-no-test` → run or skip the pre-publish test pass (Step 4)
+- `-test` (default) / `-no-test` → run or skip the local pre-publish test pass (Step 4)
+  and the workflow's smoke tests (Step 5)
 - `-changelog` (default) / `-no-changelog` → run or skip `/changelog-update` after
   publishing (Step 6)
 - `-post` (default) / `-no-post` → announce the release on Voxt (Step 7), or skip
@@ -76,7 +77,10 @@ Then check the environment. The packages are built and pushed by the `Publish` G
 workflow (`.github/workflows/Publish.yml`), which authenticates to NuGet and npm via
 trusted publishing — no API keys are involved locally. Locally you only need `pwsh`
 and a `gh` CLI authenticated with the right to run workflows in `ActualLab/Fusion`
-(`gh auth status`). If `gh` isn't authenticated, STOP and tell the user.
+(`gh auth status`). `GH_TOKEN` is often another organization's fine-grained token that
+gets 403 on starting workflows here, so `build/Publish.cmd` switches to `GH_TOKEN_ACTUALLAB`
+when it's set. If `GH_TOKEN_ACTUALLAB` isn't set (`pwsh -c '[bool]$env:GH_TOKEN_ACTUALLAB'`),
+STOP and tell the user to set it — a token owned by `ActualLab` with "Actions: Read and write".
 
 ### Step 3: Check there's something to publish
 
@@ -89,8 +93,9 @@ Otherwise report the version→commit mapping and a one-line diff summary, then 
 
 ### Step 4: Local pre-publish tests (skip with `-no-test`)
 
-The workflow always runs the smoke tests (all TS tests plus the .NET tests marked with
-`[Trait("Category", "Smoke")]`) before publishing anything. `-test` adds the full local pass:
+The workflow runs the smoke tests (all TS tests plus the .NET tests marked with
+`[Trait("Category", "Smoke")]`) before publishing anything, unless `-no-test` is given.
+`-test` also adds the full local pass:
 
 - **.NET**: run the parallel test suite via the `/test` skill (equivalently:
   `./Run-Tests.cmd` from the repository root — `all fast` mode). It must be green;
@@ -104,11 +109,12 @@ it's fast and catches build breaks the workflow doesn't check.)
 
 ### Step 5: Publish
 
-Run `build/Publish.cmd` once. It re-checks that `master` is clean and matches
+Run `build/Publish.cmd` once, adding `-no-test` when the skill got `-no-test`
+(it sets the workflow's `skip-tests` input). It re-checks that `master` is clean and matches
 `origin/master`, starts the `Publish` workflow on that commit, and waits for it
 (`gh run watch`), printing the failed step's log on failure. The workflow:
 
-1. runs the smoke tests;
+1. runs the smoke tests (skipped with `-no-test`);
 2. packs with `PUBLIC_BUILD=1`, gets a 1-hour NuGet key via `NuGet/login`,
    and pushes every package from `artifacts/nupkg/` to NuGet.org;
 3. runs `ts/Publish.ps1`, which stamps the nbgv version into

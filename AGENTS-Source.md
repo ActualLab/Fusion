@@ -22,6 +22,21 @@ should NOT create a feature branch in this repo unless the user explicitly asks
 for one.** Small, self-contained changes (docs, fixes, tweaks) belong on
 `master`; a needless branch only adds a merge step later.
 
+# GitHub CLI — use `GH_TOKEN_ACTUALLAB`
+
+On a local machine, `GH_TOKEN` usually holds a fine-grained token of another
+organization (Actual-Chat): it can read this public repository, but every write
+call — starting workflows, creating PRs, comments, secrets — fails with
+`403 Resource not accessible by personal access token`. A fine-grained token can't
+span organizations, so this repository has its own: `GH_TOKEN_ACTUALLAB`.
+
+**Every `gh` call that targets `ActualLab/*` must use it** when it's set:
+`GH_TOKEN="$GH_TOKEN_ACTUALLAB" gh ...` in bash, or
+`$env:GH_TOKEN = $env:GH_TOKEN_ACTUALLAB` before `gh` in PowerShell (scripts like
+`build/Publish.cmd` already do this). If it isn't set and a write call gets 403,
+tell the user to set `GH_TOKEN_ACTUALLAB` instead of retrying. `git push` is
+unaffected: it goes through SSH.
+
 # Type Catalog — Reuse Existing Abstractions (CRITICAL)
 
 This codebase is mature. **Reusing what already exists is more important
