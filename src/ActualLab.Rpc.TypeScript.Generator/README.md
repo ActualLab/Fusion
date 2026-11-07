@@ -8,9 +8,9 @@ after each build of your contracts project, so the TypeScript client never drift
 
 ```xml
 <PropertyGroup>
-  <RpcTypeScriptOutput>..\Web\src\contracts.generated.ts</RpcTypeScriptOutput>
+  <ActualLabRpcTypeScriptOutput>..\Web\src\contracts.generated.ts</ActualLabRpcTypeScriptOutput>
   <!-- Optional: comma-separated service type name patterns, '*' matches any sequence of characters -->
-  <RpcTypeScriptServices>ITodo*,IStockApi</RpcTypeScriptServices>
+  <ActualLabRpcTypeScriptServices>ITodo*,IStockApi</ActualLabRpcTypeScriptServices>
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="ActualLab.Rpc.TypeScript.Generator" PrivateAssets="all" />

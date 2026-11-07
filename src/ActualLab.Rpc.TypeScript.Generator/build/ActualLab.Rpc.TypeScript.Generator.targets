@@ -2,31 +2,34 @@
 
   <!--
     Generates TypeScript contracts for the RPC services of this project's assembly after each build.
-    Set RpcTypeScriptOutput to enable it. Other settings:
-    - RpcTypeScriptServices: comma-separated service type name patterns, '*' matches any sequence of characters
-    - RpcTypeScriptCheck: 'true' fails the build if the file is out of date instead of updating it (default on CI)
-    - RpcTypeScriptTargetFramework: the target framework to generate from, if there are many (default: the first one)
+    Set ActualLabRpcTypeScriptOutput to enable it. Other settings:
+    - ActualLabRpcTypeScriptServices: comma-separated service type name patterns,
+      '*' matches any sequence of characters
+    - ActualLabRpcTypeScriptCheck: 'true' fails the build if the file is out of date
+      instead of updating it (default on CI)
+    - ActualLabRpcTypeScriptTargetFramework: the target framework to generate from,
+      if there are many (default: the first one)
   -->
   <PropertyGroup>
-    <RpcTypeScriptServices Condition="'$(RpcTypeScriptServices)' == ''">*</RpcTypeScriptServices>
-    <RpcTypeScriptCheck Condition="'$(RpcTypeScriptCheck)' == '' and '$(CI)' == 'true'">true</RpcTypeScriptCheck>
-    <RpcTypeScriptTargetFramework Condition="'$(RpcTypeScriptTargetFramework)' == '' and '$(TargetFrameworks)' != ''">$(TargetFrameworks.Split(';')[0].Trim())</RpcTypeScriptTargetFramework>
+    <ActualLabRpcTypeScriptServices Condition="'$(ActualLabRpcTypeScriptServices)' == ''">*</ActualLabRpcTypeScriptServices>
+    <ActualLabRpcTypeScriptCheck Condition="'$(ActualLabRpcTypeScriptCheck)' == '' and '$(CI)' == 'true'">true</ActualLabRpcTypeScriptCheck>
+    <ActualLabRpcTypeScriptTargetFramework Condition="'$(ActualLabRpcTypeScriptTargetFramework)' == '' and '$(TargetFrameworks)' != ''">$(TargetFrameworks.Split(';')[0].Trim())</ActualLabRpcTypeScriptTargetFramework>
   </PropertyGroup>
 
-  <Target Name="GenerateRpcTypeScript" AfterTargets="Build"
-          Condition="'$(RpcTypeScriptOutput)' != '' and '$(DesignTimeBuild)' != 'true' and ('$(RpcTypeScriptTargetFramework)' == '' or '$(RpcTypeScriptTargetFramework)' == '$(TargetFramework)')">
+  <Target Name="GenerateActualLabRpcTypeScript" AfterTargets="Build"
+          Condition="'$(ActualLabRpcTypeScriptOutput)' != '' and '$(DesignTimeBuild)' != 'true' and ('$(ActualLabRpcTypeScriptTargetFramework)' == '' or '$(ActualLabRpcTypeScriptTargetFramework)' == '$(TargetFramework)')">
     <PropertyGroup>
       <!-- The generator must run on a runtime that can load the contracts, so net11.0+ ones need its net11.0 build -->
-      <_RpcTypeScriptGeneratorFramework>net10.0</_RpcTypeScriptGeneratorFramework>
-      <_RpcTypeScriptGeneratorFramework Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' and $([MSBuild]::VersionGreaterThanOrEquals('$(TargetFrameworkVersion.TrimStart(`v`))', '11.0'))">net11.0</_RpcTypeScriptGeneratorFramework>
-      <_RpcTypeScriptGeneratorPath>$(RpcTypeScriptGeneratorPath)</_RpcTypeScriptGeneratorPath>
-      <_RpcTypeScriptGeneratorPath Condition="'$(_RpcTypeScriptGeneratorPath)' == ''">$(MSBuildThisFileDirectory)..\tools\$(_RpcTypeScriptGeneratorFramework)\ActualLab.Rpc.TypeScript.Generator.dll</_RpcTypeScriptGeneratorPath>
-      <_RpcTypeScriptDotNetHost>$(DOTNET_HOST_PATH)</_RpcTypeScriptDotNetHost>
-      <_RpcTypeScriptDotNetHost Condition="'$(_RpcTypeScriptDotNetHost)' == ''">dotnet</_RpcTypeScriptDotNetHost>
-      <_RpcTypeScriptOutputPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(RpcTypeScriptOutput)'))</_RpcTypeScriptOutputPath>
-      <_RpcTypeScriptCheckArgument Condition="'$(RpcTypeScriptCheck)' == 'true'"> --check</_RpcTypeScriptCheckArgument>
+      <_ActualLabRpcTypeScriptGeneratorFramework>net10.0</_ActualLabRpcTypeScriptGeneratorFramework>
+      <_ActualLabRpcTypeScriptGeneratorFramework Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' and $([MSBuild]::VersionGreaterThanOrEquals('$(TargetFrameworkVersion.TrimStart(`v`))', '11.0'))">net11.0</_ActualLabRpcTypeScriptGeneratorFramework>
+      <_ActualLabRpcTypeScriptGeneratorPath>$(ActualLabRpcTypeScriptGeneratorPath)</_ActualLabRpcTypeScriptGeneratorPath>
+      <_ActualLabRpcTypeScriptGeneratorPath Condition="'$(_ActualLabRpcTypeScriptGeneratorPath)' == ''">$(MSBuildThisFileDirectory)..\tools\$(_ActualLabRpcTypeScriptGeneratorFramework)\ActualLab.Rpc.TypeScript.Generator.dll</_ActualLabRpcTypeScriptGeneratorPath>
+      <_ActualLabRpcTypeScriptDotNetHost>$(DOTNET_HOST_PATH)</_ActualLabRpcTypeScriptDotNetHost>
+      <_ActualLabRpcTypeScriptDotNetHost Condition="'$(_ActualLabRpcTypeScriptDotNetHost)' == ''">dotnet</_ActualLabRpcTypeScriptDotNetHost>
+      <_ActualLabRpcTypeScriptOutputPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(ActualLabRpcTypeScriptOutput)'))</_ActualLabRpcTypeScriptOutputPath>
+      <_ActualLabRpcTypeScriptCheckArgument Condition="'$(ActualLabRpcTypeScriptCheck)' == 'true'"> --check</_ActualLabRpcTypeScriptCheckArgument>
     </PropertyGroup>
-    <Exec Command="&quot;$(_RpcTypeScriptDotNetHost)&quot; exec &quot;$(_RpcTypeScriptGeneratorPath)&quot; &quot;$(TargetPath)&quot; --output &quot;$(_RpcTypeScriptOutputPath)&quot; --services &quot;$(RpcTypeScriptServices)&quot;$(_RpcTypeScriptCheckArgument)" />
+    <Exec Command="&quot;$(_ActualLabRpcTypeScriptDotNetHost)&quot; exec &quot;$(_ActualLabRpcTypeScriptGeneratorPath)&quot; &quot;$(TargetPath)&quot; --output &quot;$(_ActualLabRpcTypeScriptOutputPath)&quot; --services &quot;$(ActualLabRpcTypeScriptServices)&quot;$(_ActualLabRpcTypeScriptCheckArgument)" />
   </Target>
 
 </Project>

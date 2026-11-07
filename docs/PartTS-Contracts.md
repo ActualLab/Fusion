@@ -60,7 +60,7 @@ and tell it where to write the file:
 
 ```xml
 <PropertyGroup>
-  <RpcTypeScriptOutput>..\Web\src\contracts.generated.ts</RpcTypeScriptOutput>
+  <ActualLabRpcTypeScriptOutput>..\Web\src\contracts.generated.ts</ActualLabRpcTypeScriptOutput>
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="ActualLab.Rpc.TypeScript.Generator" PrivateAssets="all" />
@@ -73,10 +73,10 @@ except `IBackendService`-s. The package is a development dependency: it adds no 
 
 | MSBuild property | Meaning |
 |------------------|---------|
-| `RpcTypeScriptOutput` | The file to generate, relative to the project. Generation is off when it's empty. |
-| `RpcTypeScriptServices` | Comma-separated service type name patterns, where `*` matches any sequence of characters, e.g. `ITodo*,IStockApi`. Each pattern is matched against both the short and the full type name. Default: `*`. |
-| `RpcTypeScriptCheck` | `true` fails the build if the file is missing or out of date instead of updating it. Default: `true` when `CI` is `true` (GitHub Actions and most other CI systems set it). |
-| `RpcTypeScriptTargetFramework` | The target framework to generate from when the project has many. Default: the first one. |
+| `ActualLabRpcTypeScriptOutput` | The file to generate, relative to the project. Generation is off when it's empty. |
+| `ActualLabRpcTypeScriptServices` | Comma-separated service type name patterns, where `*` matches any sequence of characters, e.g. `ITodo*,IStockApi`. Each pattern is matched against both the short and the full type name. Default: `*`. |
+| `ActualLabRpcTypeScriptCheck` | `true` fails the build if the file is missing or out of date instead of updating it. Default: `true` when `CI` is `true` (GitHub Actions and most other CI systems set it). |
+| `ActualLabRpcTypeScriptTargetFramework` | The target framework to generate from when the project has many. Default: the first one. |
 
 Use the generator of the same version as the `ActualLab.*` packages your contracts reference:
 it loads the contracts assembly together with its own `ActualLab.*` assemblies.
