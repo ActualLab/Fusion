@@ -57,18 +57,10 @@ jobs:
         working-directory: ts
         run: npm ci
 
-      # Smoke tests: all TypeScript tests + the .NET tests marked with [Trait("Category", "Smoke")]
-      - name: Test TypeScript packages
+      # All TypeScript tests + the .NET tests marked with [Trait("Category", "Smoke")]
+      - name: Run smoke tests
         if: ${{ !inputs.skip-tests }}
-        working-directory: ts
-        run: ./Run-Tests.cmd
-
-      - name: Run .NET smoke tests
-        if: ${{ !inputs.skip-tests }}
-        run: |
-          dotnet test tests/ActualLab.Tests -c Release -f net11.0 --filter Category=Smoke
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet test tests/ActualLab.Fusion.Tests -c Release -f net11.0 --filter Category=Smoke
+        run: ./Run-Tests.cmd smoke
 
       - name: Pack NuGet packages
         env:

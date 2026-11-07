@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, PowerShell, Read, Grep, Glob
-description: Run the test suite with parallel runners (scopes: core|fusion|rpc|all; modes: fast|full)
-argument-hint: "[core|fusion|rpc|all] [fast|full]"
+description: Run the test suite with parallel runners (scopes: core|fusion|rpc|all; modes: fast|full), or just the smoke tests (smoke)
+argument-hint: "[core|fusion|rpc|all] [fast|full] | smoke"
 ---
 
 # Parallel test runner
@@ -12,6 +12,12 @@ Background: [`tests/README.md`](../../tests/README.md).
 
 `$ARGUMENTS` holds up to two tokens: a **scope** (`core`, `rpc`, `fusion`, `all`; default `all`)
 and a **mode** (`fast`, `full`; default `fast`). A bare `/test` means `all fast`.
+
+`/test smoke` is different: it runs just the smoke tests — all TypeScript tests plus the .NET
+tests marked with `[Trait("Category", "Smoke")]` — via `./Run-Tests.cmd smoke`
+(`build/Run-SmokeTests.ps1`). It takes ~1-2 minutes, needs `npm install` done in `ts/`, and
+is what the Publish workflow runs before publishing. It prints vitest's and `dotnet test`'s own
+output instead of the per-group summary below; on a failure, report the failing tests from it.
 
 ## Run
 

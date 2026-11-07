@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Bash, Glob, Grep, WebFetch, AskUserQuestion, Skill, mcp__voxt-robokitty__list_messages, mcp__voxt-robokitty__post_message
 description: Publish NuGet (.NET) and npm (TS) packages via the Publish GitHub workflow, update the changelog, then announce the release
-argument-hint: "[-post-only] [-test|-no-test] [-changelog|-no-changelog] [-post|-no-post]"
+argument-hint: "[-post-only] [-test|-smoke-test|-no-test] [-changelog|-no-changelog] [-post|-no-post]"
 ---
 
 # Publish
@@ -32,8 +32,10 @@ a wrong publish costs a version.
   published earlier, or to retry an announcement that was skipped or failed.
 
 Flags:
-- `-test` (default) / `-no-test` → run or skip the local pre-publish test pass (Step 4)
-  and the workflow's smoke tests (Step 5)
+- `-test` (default) → the full local pre-publish test pass (Step 4), then the workflow's
+  smoke tests (Step 5)
+- `-smoke-test` → just the workflow's smoke tests: skip the local pass
+- `-no-test` → no tests at all: skip both the local pass and the workflow's smoke tests
 - `-changelog` (default) / `-no-changelog` → run or skip `/changelog-update` after
   publishing (Step 6)
 - `-post` (default) / `-no-post` → announce the release on Voxt (Step 7), or skip
@@ -91,7 +93,7 @@ Find the latest published version (`npm view @actuallab/core version`, or the la
 If nothing shipping changed, **skip publishing**: report what was checked and stop.
 Otherwise report the version→commit mapping and a one-line diff summary, then proceed.
 
-### Step 4: Local pre-publish tests (skip with `-no-test`)
+### Step 4: Local pre-publish tests (skip with `-smoke-test` or `-no-test`)
 
 The workflow runs the smoke tests (all TS tests plus the .NET tests marked with
 `[Trait("Category", "Smoke")]`) before publishing anything, unless `-no-test` is given.
@@ -104,7 +106,7 @@ The workflow runs the smoke tests (all TS tests plus the .NET tests marked with
   (vitest). Both must pass.
 
 If something fails: fix the errors, re-run the failed part, and repeat until green.
-Don't skip or suppress failures. (With `-no-test`, still run `ts/Run-Lint.cmd` —
+Don't skip or suppress failures. (With `-smoke-test` or `-no-test`, still run `ts/Run-Lint.cmd` —
 it's fast and catches build breaks the workflow doesn't check.)
 
 ### Step 5: Publish
