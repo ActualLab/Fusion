@@ -163,13 +163,26 @@ nbgv version.)
 Invoke the `changelog-update` skill passing that exact version as its
 argument, and mention in its input that both NuGet and npm were just published.
 
-The entry has to be committed and pushed to `master` — Step 7 verifies it on the
-live docs site, which builds from the remote.
+**Credit external contributors.** For every pull request merged since the last release whose
+author isn't a maintainer (`GH_TOKEN="$GH_TOKEN_FUSION" gh pr list --repo ActualLab/Fusion --state merged`),
+thank its author in the entry's intro and link the PR on the bullet it produced, e.g.
+`([#173](https://github.com/ActualLab/Fusion/pull/173) by Timurbek Saburov)`. Do the same in the
+release notes (with `@login`, so GitHub notifies them) and in the announcement.
+
+The entry has to be committed and pushed to `master`.
 
 Then put the entry into the GitHub release. The workflow's `release` job created
 `v<version>` (on the published commit) with placeholder notes; replace them with the
-entry's body (everything under its `##` header) followed by a
-`More details: <changelog link>` line (the anchor is built as in Step 7):
+entry's body (everything under its `##` header; turn relative `*.md` links into
+`https://github.com/ActualLab/Fusion/blob/master/docs/*.md` ones, and contributors' names into
+`@login`), followed by a `More details: <changelog link>` line. The site turns an entry header
+into an anchor by lowercasing it and replacing every run of non-alphanumeric characters with
+a single `-`, prefixed by `_`:
+
+```
+## 14.1.62+ab9673b6 | npm: 14.1.5
+  → https://fusion.actuallab.net/CHANGELOG#_14-1-62-ab9673b6-npm-14-1-5
+```
 
 ```bash
 GH_TOKEN="$GH_TOKEN_FUSION" gh release view "v<version>" --repo ActualLab/Fusion   # must exist
@@ -184,29 +197,14 @@ creating it from your machine: a tag created locally may point at a different co
 Announce in Fusion's "🎉Releases" chat on Voxt — chat id
 `s-1KCdcYy9z2-uJVPKZsbEo` — using `mcp__voxt-robokitty__post_message`.
 
-**1. Build the changelog anchor.** The site turns an entry header into an anchor
-by lowercasing it and replacing every run of non-alphanumeric characters with a
-single `-`, prefixed by `_`:
+**1. Link the GitHub release.** The announcement's "More details:" link is the release
+page, `https://github.com/ActualLab/Fusion/releases/tag/v<version>` — it exists as soon as
+Step 6 is done, so there's no need to wait for the docs site to rebuild with the changelog.
+Check it resolves (`gh release view`) before posting.
 
-```
-## 14.1.62+ab9673b6 | npm: 14.1.5
-  → https://fusion.actuallab.net/CHANGELOG#_14-1-62-ab9673b6-npm-14-1-5
-```
-
-**2. Confirm the entry is live before announcing anything.** The docs site
-rebuilds from `master` and lags a push by a few minutes, so a link posted right
-after the push can point at a changelog that doesn't have the entry yet.
-WebFetch `https://fusion.actuallab.net/CHANGELOG` and confirm the new version's
-header text is actually present.
-
-- Not there yet → wait a bit and re-check, a few times.
-- Still missing after several tries → **STOP and ask the user** whether to keep
-  waiting or skip the announcement. Never announce a link you haven't seen
-  resolve; a wrong link in a release channel is exactly the kind of thing this
-  skill exists to prevent.
-
-**3. Match the channel's voice.** Read back up to **100 messages**
-(`mcp__voxt-robokitty__list_messages` on the same chat id) and study the past
+**2. Match the channel's voice.** Read back up to **100 messages**
+(`mcp__voxt-robokitty__list_messages` on the same chat id; it lists from the start of the
+chat, so pass `afterId` = the chat's last id minus 100 to get the latest ones) and study the past
 release announcements — the ones from **Alex Yakunin** and **RoboKitty**, which
 are the model to imitate. A short tail isn't enough: releases are spaced out, so
 20 messages can be all follow-up discussion and no announcement at all. Read
@@ -232,7 +230,7 @@ This exact skeleton is what the last release used, blank lines included:
 **Added**
 - <the new API and what it's for>
 
-More details: <changelog link>
+More details: <GitHub release link>
 ```
 
 So: no blank line after the `#` heading, none between a bullet and a paragraph
@@ -251,7 +249,7 @@ keep one between a paragraph and the next label.
 - Leave out infrastructure, docs, and tooling churn — it's release noise.
 - Keep it short. A few paragraphs, not a recital of the changelog.
 
-**4. Show the draft to the user and get approval before posting.** Posting to a
+**3. Show the draft to the user and get approval before posting.** Posting to a
 public release channel reaches real users and can't be quietly undone, so treat
 it like the publish itself: present the exact text, ask whether to post it as-is
 or adjust, and post only after an explicit yes. If anything in the draft rests on
