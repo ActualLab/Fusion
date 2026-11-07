@@ -118,9 +118,9 @@ Run `build/Publish.cmd` once, adding `-no-test` when the skill got `-no-test`
 
 **The run waits for an approval.** Its `release` environment requires one of its reviewers
 (`alexyakunin`, `alexis-kochetov`, `crui3er`, `frolyo`; set in the repository settings) to
-approve it before the job starts. Right after starting it, tell the user to approve the run
-on its page (the script prints nothing until the job moves, so give them the run URL from
-`gh run list --workflow Publish.yml --limit 1`). Never approve it yourself.
+approve it before the job starts. The script opens the run's page in the browser and prints
+`Approve the run to start publishing: <url>` — relay that URL to the user right away (read it
+from the script's output; it then stays quiet until the run moves). Never approve it yourself.
 
 The workflow:
 

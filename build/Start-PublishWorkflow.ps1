@@ -55,6 +55,11 @@ try {
         throw "The started Publish workflow run isn't found."
     }
 
+    # The run waits for a "release" environment reviewer to approve it on this page
+    $runUrl = & gh run view $runId --json url --jq .url
+    Write-Host "Approve the run to start publishing: $runUrl"
+    & gh run view $runId --web
+
     & gh run watch $runId --exit-status --interval 15
     if ($LASTEXITCODE -ne 0) {
         & gh run view $runId --log-failed
