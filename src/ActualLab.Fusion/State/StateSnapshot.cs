@@ -8,7 +8,7 @@ public sealed class StateSnapshot
 {
     private AsyncTaskMethodBuilder _whenUpdatingSource = AsyncTaskMethodBuilderExt.New();
     private AsyncTaskMethodBuilder _whenUpdatedSource = AsyncTaskMethodBuilderExt.New();
-    private int _invalidatedRaised;
+    private int _isInvalidatedEventRaised;
 
     public readonly State State;
     public readonly Computed Computed;
@@ -61,8 +61,8 @@ public sealed class StateSnapshot
     public Task WhenUpdating() => _whenUpdatingSource.Task;
     public Task WhenUpdated() => _whenUpdatedSource.Task;
 
-    internal bool TryClaimInvalidatedRaise()
-        => Interlocked.Exchange(ref _invalidatedRaised, 1) == 0;
+    internal bool TryMarkInvalidatedEventRaised()
+        => Interlocked.Exchange(ref _isInvalidatedEventRaised, 1) == 0;
 
     internal void OnUpdating()
         => _whenUpdatingSource.TrySetResult();

@@ -395,7 +395,7 @@ Status: **closed** — per the Recommended split, 2026-07-15 (batch hooks): `las
 Confidence: confirmed (absent in TS).
 
 - TS: no equivalent of the three events or `StateEventKind`; no `UpdateCount`/`ErrorCount`/`RetryCount`/`IsInitial` (only `updateIndex`); `lastNonErrorValue` is stored as a raw value — ambiguous when `T` includes `undefined` (`state.ts:14, 21-23, 94`).
-- C#: `State.cs:124-126` — events with exactly-once-per-generation semantics via `StateSnapshot.TryClaimInvalidatedRaise`; counters in `StateSnapshot.cs:16-19`.
+- C#: `State.cs:124-126` — events with exactly-once-per-generation semantics via `StateSnapshot.TryMarkInvalidatedEventRaised`; counters in `StateSnapshot.cs:16-19`.
 - Failure: C# patterns like `state.Invalidated += ...` (used pervasively in Fusion UIs for eager recompute) have no counterpart; `whenInvalidated()` covers one generation with none of the exactly-once machinery.
 - **Recommended:** keep the event trio out of scope for now (document it), but replace `lastNonErrorValue`'s raw-value storage with a reference to the last non-error *computed* — removes the `undefined` ambiguity cheaply.
 - **Alternative:** port the events with exactly-once semantics — requires the `StateSnapshot` concept (S11's alternative) to carry the claim flags; do it only together with that port.
