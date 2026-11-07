@@ -65,7 +65,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
                 // A consolidating method invalidates its registered source, even with no consolidating computed
                 // registered: it may be the one a running consolidation computes, not the one the target holds.
                 if (this is ConsolidatingComputeMethodFunction consolidatingFunction)
-                    computed = consolidatingFunction.GetExistingSource(invocation);
+                    computed = consolidatingFunction.GetExistingSourceComputed(invocation);
                 _ = ComputedImpl.TryUseExisting(computed, context);
                 return MethodDef.DefaultResult;
             }

@@ -35,7 +35,7 @@ public abstract class ConsolidatingComputeMethodFunction(
     public readonly ComputeMethodDef ConsolidationSourceMethodDef = consolidationSourceMethodDef;
     public readonly ComputeMethodFunction ConsolidationSourceFunction = consolidationSourceFunction;
 
-    public Computed? GetExistingSource(Invocation invocation)
+    public Computed? GetExistingSourceComputed(Invocation invocation)
     {
         var input = new ComputeMethodInput(ConsolidationSourceFunction, ConsolidationSourceMethodDef, invocation);
         return input.GetExistingComputed();

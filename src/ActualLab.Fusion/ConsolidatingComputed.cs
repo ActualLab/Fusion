@@ -68,7 +68,7 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
         // a newer one than _source.
         var input = (ComputeMethodInput)Input;
         var function = (ConsolidatingComputeMethodFunction)input.Function;
-        var source = function.GetExistingSource(input.Invocation);
+        var source = function.GetExistingSourceComputed(input.Invocation);
         source?.Invalidate(immediately: false, new InvalidationSource(this));
     }
 
