@@ -163,6 +163,19 @@ argument, and mention in its input that both NuGet and npm were just published.
 The entry has to be committed and pushed to `master` — Step 7 verifies it on the
 live docs site, which builds from the remote.
 
+Then put the entry into the GitHub release. The workflow's `release` job created
+`v<version>` (on the published commit) with placeholder notes; replace them with the
+entry's body (everything under its `##` header) followed by a
+`More details: <changelog link>` line (the anchor is built as in Step 7):
+
+```bash
+GH_TOKEN="$GH_TOKEN_FUSION" gh release view "v<version>" --repo ActualLab/Fusion   # must exist
+GH_TOKEN="$GH_TOKEN_FUSION" gh release edit "v<version>" --repo ActualLab/Fusion --notes-file tmp/release-notes.md
+```
+
+If the release is missing (the `release` job failed), report it to the user rather than
+creating it from your machine: a tag created locally may point at a different commit.
+
 ### Step 7: Announce the release (skip with `-no-post`)
 
 Announce in Fusion's "🎉Releases" chat on Voxt — chat id

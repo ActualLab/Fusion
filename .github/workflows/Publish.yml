@@ -31,6 +31,8 @@ jobs:
     permissions:
       contents: read
       id-token: write # Trusted publishing exchanges the workflow's OIDC token for short-lived keys
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,6 +52,10 @@ jobs:
 
       - name: Restore .NET tools
         run: dotnet tool restore
+
+      - name: Get version
+        id: version
+        run: '"version=$(dotnet nbgv get-version -v NuGetPackageVersion)" >> $env:GITHUB_OUTPUT'
 
       - name: Install .NET workloads
         run: dotnet workload install wasm-tools
@@ -85,3 +91,19 @@ jobs:
         working-directory: ts
         shell: pwsh
         run: ./Publish.ps1
+
+  # A separate job, so the publishing one (which runs package build scripts) never gets write access to the repository.
+  # "/publish" replaces these notes with the changelog entry once it's written.
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: >
+          gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$VERSION"
+          --notes "NuGet and npm packages $VERSION. Changelog: https://fusion.actuallab.net/CHANGELOG"
