@@ -9,8 +9,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 # GH_TOKEN may be a fine-grained token of another organization, which can't start workflows here
-if ($env:GH_TOKEN_ACTUALLAB) {
-    $env:GH_TOKEN = $env:GH_TOKEN_ACTUALLAB
+if ($env:GH_TOKEN_FUSION) {
+    $env:GH_TOKEN = $env:GH_TOKEN_FUSION
 }
 Push-Location (Split-Path $PSScriptRoot)
 try {

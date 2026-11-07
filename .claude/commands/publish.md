@@ -78,9 +78,9 @@ workflow (`.github/workflows/Publish.yml`), which authenticates to NuGet and npm
 trusted publishing — no API keys are involved locally. Locally you only need `pwsh`
 and a `gh` CLI authenticated with the right to run workflows in `ActualLab/Fusion`
 (`gh auth status`). `GH_TOKEN` is often another organization's fine-grained token that
-gets 403 on starting workflows here, so `build/Publish.cmd` switches to `GH_TOKEN_ACTUALLAB`
-when it's set. If `GH_TOKEN_ACTUALLAB` isn't set (`pwsh -c '[bool]$env:GH_TOKEN_ACTUALLAB'`),
-STOP and tell the user to set it — a token owned by `ActualLab` with "Actions: Read and write".
+gets 403 on starting workflows here, so `build/Publish.cmd` switches to `GH_TOKEN_FUSION`
+when it's set. If `GH_TOKEN_FUSION` isn't set (`pwsh -c '[bool]$env:GH_TOKEN_FUSION'`),
+STOP and tell the user to set it — a token owned by `ActualLab`, covering the Fusion repositories, with "Actions: Read and write".
 
 ### Step 3: Check there's something to publish
 
