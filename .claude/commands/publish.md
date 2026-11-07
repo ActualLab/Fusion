@@ -114,7 +114,15 @@ it's fast and catches build breaks the workflow doesn't check.)
 Run `build/Publish.cmd` once, adding `-no-test` when the skill got `-no-test`
 (it sets the workflow's `skip-tests` input). It re-checks that `master` is clean and matches
 `origin/master`, starts the `Publish` workflow on that commit, and waits for it
-(`gh run watch`), printing the failed step's log on failure. The workflow:
+(`gh run watch`), printing the failed step's log on failure.
+
+**The run waits for an approval.** Its `release` environment requires one of its reviewers
+(`alexyakunin`, `alexis-kochetov`, `crui3er`, `frolyo`; set in the repository settings) to
+approve it before the job starts. Right after starting it, tell the user to approve the run
+on its page (the script prints nothing until the job moves, so give them the run URL from
+`gh run list --workflow Publish.yml --limit 1`). Never approve it yourself.
+
+The workflow:
 
 1. runs the smoke tests (skipped with `-no-test`);
 2. packs with `PUBLIC_BUILD=1`, gets a 1-hour NuGet key via `NuGet/login`,

@@ -2,6 +2,7 @@ name: Publish
 
 # Started by build/Publish.cmd (see build/Start-PublishWorkflow.ps1); always publishes both NuGet and npm packages.
 # "build/Publish.cmd -no-test" sets skip-tests, which skips the smoke tests.
+# The "release" environment requires an approval from one of its reviewers (repository settings) before the job runs.
 # Both registries authenticate via trusted publishing, so the repository holds no API keys:
 # - NuGet: a nuget.org trusted publishing policy for ActualLab/Fusion + Publish.yml + the "release" environment;
 #   the NUGET_USER secret is the nuget.org profile name of that policy's creator.
