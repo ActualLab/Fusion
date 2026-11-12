@@ -38,8 +38,8 @@
     <!-- Context #1 (State Node) -->
     <rect x="210" y="130" width="380" height="80" rx="8" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" />
     <text x="400" y="150" text-anchor="middle" font-family="Inter,sans-serif" font-size="11px" fill="#8b90a8" font-weight="600" text-transform="uppercase">Context #1 (Delegating command context)</text>
-    <text x="400" y="170" text-anchor="middle" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic">• Operations Framework handlers filtered out</text>
-    <text x="400" y="190" text-anchor="middle" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic">• No operation logging for this command</text>
+    <text x="400" y="170" text-anchor="middle" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic">• Never reprocessed (its sub-commands are)</text>
+    <text x="400" y="190" text-anchor="middle" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic">• No operation unless its handler uses one</text>
 
     <!-- Item 1 (Action Node) -->
     <rect x="60" y="285" width="320" height="50" rx="14" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" />

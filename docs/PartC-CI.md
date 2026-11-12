@@ -137,13 +137,14 @@ public interface IDelegatingCommand<TResult> : ICommand<TResult>, IDelegatingCom
        isOutermost = true;
    ```
 
-3. **Operations Framework Bypass**: a delegating command makes no changes of its own, so the
-   Operations Framework handlers are filtered out of its pipeline.
+3. **No Reprocessing**: `OperationReprocessor` skips a delegating command. The commands it
+   invokes are reprocessed on their own.
 
-   This means:
-   - The delegating command itself is not logged to the operation log
-   - No invalidation is recorded or applied for the delegating command
-   - You don't need to declare any invalidation of your own
+   A delegating command is meant to make no changes of its own, so it normally has no
+   operation: nothing is logged for it and it has no invalidation to declare. This is a
+   convention, not something the pipeline enforces - the Operations Framework handlers stay
+   in place, and a delegating command handler that does use an operation scope gets an
+   operation like any other handler.
 
 4. **Each Sub-Command is Independent**: Each command you call gets its own operation, transaction, and invalidation handling.
 
@@ -509,7 +510,7 @@ ICommand (base marker)
 │   └── IBackendCommand<TResult>
 │
 ├── IOutermostCommand (forces new ServiceScope)
-│   └── IDelegatingCommand (orchestration, bypasses OF)
+│   └── IDelegatingCommand (orchestration, not reprocessed)
 │       └── IDelegatingCommand<TResult>
 │
 ├── IPreparedCommand (Prepare() called first)
@@ -564,7 +565,7 @@ public record SecureTransactionCommand(decimal Amount)
 
 3. **Use `IBackendCommand` liberally** - Any command that shouldn't be callable from clients.
 
-4. **Use `IDelegatingCommand` for orchestration** - Avoids duplicate Operations Framework overhead.
+4. **Use `IDelegatingCommand` for orchestration** - Each command it invokes gets its own operation and transaction.
 
 5. **Include parameterless constructors** - Required for serialization (RPC, operation log).
 

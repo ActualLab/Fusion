@@ -9,10 +9,10 @@ namespace ActualLab.CommandR.Commands;
 /// Delegating commands:
 /// - Always execute as the outermost ones.
 /// - Always execute nested commands as the outermost ones.
-/// Delegating command handlers are guaranteed to:
-/// - Have no Operation Framework handlers in their pipeline -
-///   they are filtered out, coz such commands can't make any changes directly.
-/// - And thus they never need to declare any invalidation of their own.
+/// - Are never reprocessed by <c>OperationReprocessor</c>; the commands they invoke are.
+/// "No direct changes" is a convention, nothing enforces it: Operations Framework handlers
+/// stay in the pipeline, so a delegating command handler that uses an operation scope
+/// gets an operation and may defer invalidation like any other handler.
 /// </remarks>
 public interface IDelegatingCommand : IOutermostCommand;
 
