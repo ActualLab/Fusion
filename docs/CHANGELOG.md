@@ -11,6 +11,25 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.26+0452192c1 | npm: 15.1.26
+
+Release date: 2026-11-11
+
+The `net11.0` assets now depend on the released .NET 11 packages instead of RC2. No API or behavior
+changes; the npm packages are identical to 15.1.24 except for the version.
+
+### Changed
+
+- **Updated to .NET 11 (`11.0.100` SDK).** On `net11.0`, ASP.NET Core, Blazor and
+  `Microsoft.Extensions.*` dependencies are `11.0.0` (was `11.0.0-rc.2.26504.105`), so a `net11.0`
+  app on the released packages no longer gets a prerelease floor from Fusion.
+- **EF Core in this repository's own tests and samples is `11.0.0-rc.3.26522.148`** on `net11.0`
+  (was RC1), not `11.0.0`: `Npgsql.EntityFrameworkCore.PostgreSQL` has no `11.0.0` release yet, and
+  its `11.0.0-rc.3` pins that exact EF Core build. So `ActualLab.Fusion.EntityFramework.Npgsql`
+  requires `Npgsql.EntityFrameworkCore.PostgreSQL` `11.0.0-rc.3` or later on `net11.0`.
+  `ActualLab.Fusion.EntityFramework` itself still accepts any EF Core 10+ there.
+
+
 ## 15.1.24+22b84116c | npm: 15.1.24
 
 Release date: 2026-11-07
