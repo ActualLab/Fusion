@@ -11,9 +11,8 @@
   </PropertyGroup>
   <!-- Constants -->
   <PropertyGroup>
-    <!-- The .NET 11 prerelease all Microsoft.* packages are aligned on.
-         Keep in sync with the SDK version in global.json. -->
-    <DotNet11Version>[11.0.0-rc.2.26504.105,)</DotNet11Version>
+    <!-- The .NET 11 release all Microsoft.* packages are aligned on -->
+    <DotNet11Version>[11.0.0,)</DotNet11Version>
     <!-- Core packages -->
     <AspNetCoreVersion10>[10.0.0,)</AspNetCoreVersion10>
     <AspNetCoreVersion>$(AspNetCoreVersion10)</AspNetCoreVersion>
@@ -51,23 +50,21 @@
          Npgsql/Sqlite/SqlServer/Pomelo each cap EF to a single major, so whatever provider an app
          picks decides its EF version. EntityFrameworkCoreVersion11 is what this repo's own apps and
          tests pin on net11.0, so CI exercises EF 11. Its exact value is dictated by efcore.pg, whose
-         every prerelease exact-pins EF Core - [11.0.0-rc.1.26425.128] in 11.0.0-rc.1.1 - so this has
-         to name the same build or restore fails. That build happens to be DotNet11Version's, so EF
-         now matches the SDK and the ASP.NET Core packages; it didn't while efcore.pg's newest
-         prerelease still pinned preview.6. Take rc.1.1 and not rc.1: rc.1 pins 11.0.0-rc.1.26431.118,
-         a different EF build from the one our SDK carries. -->
+         every prerelease exact-pins EF Core - [11.0.0-rc.3.26522.148] in 11.0.0-rc.3 - so this has
+         to name the same build or restore fails. efcore.pg has no 11.0.0 release yet, so EF stays
+         on RC3 while everything else is on 11.0.0; move both to 11.0.0 once it ships. -->
     <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
-    <EntityFrameworkCoreVersion11>[11.0.0-rc.1.26425.128,)</EntityFrameworkCoreVersion11>
+    <EntityFrameworkCoreVersion11>[11.0.0-rc.3.26522.148,)</EntityFrameworkCoreVersion11>
     <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,)</EntityFrameworkCoreVersion3>
-    <!-- efcore.pg previews don't carry the SDK build suffix, and they still bind to Npgsql 10.x -->
+    <!-- efcore.pg prereleases don't carry the SDK build suffix, and they still bind to Npgsql 10.x -->
     <EntityFrameworkCoreNpgsqlVersion10>[10.0.0,)</EntityFrameworkCoreNpgsqlVersion10>
     <EntityFrameworkCoreNpgsqlVersion>$(EntityFrameworkCoreNpgsqlVersion10)</EntityFrameworkCoreNpgsqlVersion>
-    <EntityFrameworkCoreNpgsqlVersion Condition="$(EnableDotNet11)">[11.0.0-rc.1.1,)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion Condition="$(EnableDotNet11)">[11.0.0-rc.3,)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion9>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion9>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,)</EntityFrameworkCoreNpgsqlVersion7>
@@ -204,7 +201,7 @@
     <!-- Used only in TodoApp sample -->
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireSdkVersion)" />
-    <!-- These two ship on their own 10.x train - there's no .NET 11 preview of either -->
+    <!-- These two ship on their own train, so they aren't aligned on DotNet11Version -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MicrosoftExtensionsVersion10)" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(MicrosoftExtensionsVersion10)" />
     <!-- Legacy support only -->
