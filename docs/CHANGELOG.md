@@ -11,6 +11,29 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.30+6deb7cbc6 | npm: 15.1.30
+
+Release date: 2026-11-13
+
+A bug-fix release for the .NET packages: errors swallowed by `SilentAwait` no longer surface later as
+unobserved task exceptions. Worth taking if you report `TaskScheduler.UnobservedTaskException` (e.g.
+to Sentry) and see `ChannelClosedException: Connection is closed prematurely.` there. The npm
+packages are identical to 15.1.26 except for the version.
+
+### Fixed
+
+- **Core:** `SilentAwait()` on a faulted `Task` didn't mark its error as observed, so the GC later
+  reported it via `TaskScheduler.UnobservedTaskException`. RPC transports await their completion
+  this way on shutdown, so a connection closed with an error could produce such a report. The
+  parameterless `SuppressExceptions()` overloads had the same problem. Both now observe the error,
+  and `SilentAwait()` on a `ValueTask` / `ValueTask<T>` does too.
+- **Core:** `ResultAwait()` and `SuppressCancellationAwait()` on a `ValueTask` now consume it exactly
+  once, so a pooled `IValueTaskSource` behind it is always released. Before, `ResultAwait()` skipped
+  a successfully completed non-generic `ValueTask`, and `SuppressCancellationAwait()` skipped a
+  canceled one and consumed a faulted one twice. `ValueTaskExt.ToResultSynchronously()` is fixed
+  the same way.
+
+
 ## 15.1.26+0452192c1 | npm: 15.1.26
 
 Release date: 2026-11-11
