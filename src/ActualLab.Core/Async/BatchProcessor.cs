@@ -211,8 +211,11 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
                     var delta = WorkerPolicy.GetWorkerCountDelta(minQueueTime);
                     await AddOrRemoveWorkers(delta, true).ConfigureAwait(false);
 
-                    // Decide on how quickly to run the next cycle
-                    nextCycle = delta < 0 ? shortCycle : longCycle;
+                    // Decide on how quickly to run the next cycle: an idle queue always asks to remove
+                    // workers, so keep the short cycle only while there are workers to remove
+                    nextCycle = delta < 0 && GetPlannedWorkerCount() > wp.MinWorkerCount
+                        ? shortCycle
+                        : longCycle;
                     if (!ReferenceEquals(WorkerPolicy, wp))
                         break;
                 }

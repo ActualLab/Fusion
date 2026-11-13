@@ -88,6 +88,32 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact(Timeout = 30_000)]
+    public async Task IdleCollectorShouldNotUseShortCycleAtMinWorkerCount()
+    {
+        // arrange
+        var workerPolicy = new AlwaysShrinkWorkerPolicy() {
+            CollectorCycle = TimeSpan.FromSeconds(0.5),
+        };
+        await using var processor = new BatchProcessor<int, int>() {
+            WorkerPolicy = workerPolicy,
+            Implementation = (batch, _) => {
+                foreach (var item in batch)
+                    item.TrySetResult(item.Input);
+                return Task.CompletedTask;
+            },
+        };
+        await processor.Process(0);
+
+        // act
+        await Delay(2.2);
+
+        // assert
+        processor.GetWorkerCount().Should().Be(1);
+        workerPolicy.CallCount.Should().BeLessThanOrEqualTo(5,
+            "with nothing to remove the collector must run once per CollectorCycle, not every Cooldown");
+    }
+
+    [Fact(Timeout = 30_000)]
     public async Task WorkerRampUpTest()
     {
         if (TestRunnerInfo.IsBuildAgent())
@@ -146,6 +172,21 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
             await Task.WhenAll(tasks);
             tasks.Where((t, i) => t.Result != i).Count().Should().Be(0);
             WriteLine("");
+        }
+    }
+
+    // Nested types
+
+    private sealed record AlwaysShrinkWorkerPolicy : BatchProcessorWorkerPolicy
+    {
+        private int _callCount;
+
+        public int CallCount => Volatile.Read(ref _callCount);
+
+        public override int GetWorkerCountDelta(TimeSpan minQueueTime)
+        {
+            Interlocked.Increment(ref _callCount);
+            return -1;
         }
     }
 }

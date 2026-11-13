@@ -171,6 +171,30 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         return _buckets[0];
     }
 
+    // Unlike PeekMin, doesn't raise MinPriority, so values with lower priorities can still be added
+    public bool TryGetMinPriority(out long priority)
+    {
+        for (var index = 0; index < _buckets.Length; index++) {
+            var bucket = _buckets[index];
+            if (bucket.Count == 0)
+                continue;
+
+            if (index == 0) {
+                priority = MinPriority;
+                return true;
+            }
+
+            priority = long.MaxValue;
+            foreach (var (_, p) in bucket)
+                if (p < priority)
+                    priority = p;
+            return true;
+        }
+
+        priority = default;
+        return false;
+    }
+
     public Option<(long Priority, T Value)> ExtractMin()
     {
         UpdateMinPriority();
