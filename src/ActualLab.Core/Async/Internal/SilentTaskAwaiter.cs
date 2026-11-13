@@ -13,7 +13,14 @@ public readonly struct SilentTaskAwaiter<TTask>(TTask task, bool captureContext 
     public bool IsCompleted => task.IsCompleted;
 
     public SilentTaskAwaiter<TTask> GetAwaiter() => this;
-    public void GetResult() { }
+
+    public void GetResult()
+    {
+        // Reading Exception marks the error as observed - otherwise it's reported
+        // via TaskScheduler.UnobservedTaskException once the task is collected
+        if (task.IsFaulted)
+            _ = task.Exception;
+    }
 
     public void OnCompleted(Action action)
         => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);

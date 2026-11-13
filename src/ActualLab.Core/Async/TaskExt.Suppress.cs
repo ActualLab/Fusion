@@ -4,11 +4,13 @@ public static partial class TaskExt
 {
     // SuppressExceptions
 
+    // The continuations of parameterless SuppressExceptions overloads read t.Exception
+    // to mark the error as observed, see SilentTaskAwaiter.GetResult
     public static Task SuppressExceptions(this Task task)
         => task.IsCompletedSuccessfully
             ? task
             : task.ContinueWith(
-                static _ => { },
+                static t => { _ = t.Exception; },
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     public static async Task SuppressExceptions(this Task task, Func<Exception, bool>? filter)
@@ -27,9 +29,13 @@ public static partial class TaskExt
         => task.IsCompletedSuccessfully
             ? task
             : task.ContinueWith(
-                static t => t.IsCompletedSuccessfully
-                    ? t.GetAwaiter().GetResult()
-                    : default!,
+                static t => {
+                    if (t.IsCompletedSuccessfully)
+                        return t.GetAwaiter().GetResult();
+
+                    _ = t.Exception;
+                    return default!;
+                },
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     public static async Task<T> SuppressExceptions<T>(this Task<T> task, Func<Exception, bool>? filter)

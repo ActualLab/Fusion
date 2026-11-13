@@ -12,7 +12,16 @@ public readonly struct SilentValueTaskAwaiter(ValueTask task, bool captureContex
     public bool IsCompleted => task.IsCompleted;
 
     public SilentValueTaskAwaiter GetAwaiter() => this;
-    public void GetResult() { }
+
+    public void GetResult()
+    {
+        // A ValueTask must be consumed: that's what releases its IValueTaskSource
+        // and marks the error of the Task it may wrap as observed
+        if (task.IsCompletedSuccessfully)
+            task.GetAwaiter().GetResult();
+        else
+            _ = task.AsTask().Exception;
+    }
 
     public void OnCompleted(Action action)
         => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
@@ -30,7 +39,15 @@ public readonly struct VoidValueTaskAwaiter<T>(ValueTask<T> task, bool captureCo
     public bool IsCompleted => task.IsCompleted;
 
     public VoidValueTaskAwaiter<T> GetAwaiter() => this;
-    public void GetResult() { }
+
+    public void GetResult()
+    {
+        // See SilentValueTaskAwaiter.GetResult
+        if (task.IsCompletedSuccessfully)
+            _ = task.GetAwaiter().GetResult();
+        else
+            _ = task.AsTask().Exception;
+    }
 
     public void OnCompleted(Action action)
         => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
