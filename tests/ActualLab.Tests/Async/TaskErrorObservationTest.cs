@@ -1,3 +1,5 @@
+using System.Threading.Tasks.Sources;
+
 namespace ActualLab.Tests.Async;
 
 public class TaskErrorObservationTest(ITestOutputHelper @out) : TestBase(@out)
@@ -62,6 +64,34 @@ public class TaskErrorObservationTest(ITestOutputHelper @out) : TestBase(@out)
         isObservedForGeneric.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData(ValueTaskSourceStatus.Succeeded)]
+    [InlineData(ValueTaskSourceStatus.Canceled)]
+    [InlineData(ValueTaskSourceStatus.Faulted)]
+    public async Task ValueTaskAwaitersShouldConsumeValueTaskOnce(ValueTaskSourceStatus status)
+    {
+        // arrange
+        var sources = Enumerable.Range(0, 6).Select(_ => new CountingValueTaskSource(status)).ToArray();
+
+        // act
+        await new ValueTask(sources[0], 0).SilentAwait(false);
+        await new ValueTask<int>(sources[1], 0).SilentAwait(false);
+        await new ValueTask(sources[2], 0).ResultAwait(false);
+        await new ValueTask<int>(sources[3], 0).ResultAwait(false);
+        try {
+            await new ValueTask(sources[4], 0).SuppressCancellationAwait(false);
+        }
+        catch (InvalidOperationException) when (status == ValueTaskSourceStatus.Faulted) { }
+        try {
+            await new ValueTask<int>(sources[5], 0).SuppressCancellationAwait(false);
+        }
+        catch (InvalidOperationException) when (status == ValueTaskSourceStatus.Faulted) { }
+
+        // assert
+        sources.Select(x => x.GetResultCallCount).Should().AllBeEquivalentTo(1,
+            "a ValueTask must be consumed exactly once to release its IValueTaskSource");
+    }
+
     // Private methods
 
     // UnobservedTaskException is process-global and raised by a finalizer, so this method matches
@@ -103,4 +133,32 @@ public class TaskErrorObservationTest(ITestOutputHelper @out) : TestBase(@out)
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void LeaveUnobserved(Exception error)
         => _ = Task.FromException(error);
+
+    // Nested types
+
+    private sealed class CountingValueTaskSource(ValueTaskSourceStatus status)
+        : IValueTaskSource, IValueTaskSource<int>
+    {
+        public int GetResultCallCount { get; private set; }
+
+        public ValueTaskSourceStatus GetStatus(short token)
+            => status;
+
+        public int GetResult(short token)
+        {
+            GetResultCallCount++;
+            return status switch {
+                ValueTaskSourceStatus.Succeeded => 1,
+                ValueTaskSourceStatus.Canceled => throw new OperationCanceledException(),
+                _ => throw new InvalidOperationException("Error"),
+            };
+        }
+
+        void IValueTaskSource.GetResult(short token)
+            => GetResult(token);
+
+        public void OnCompleted(
+            Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
+            => throw new InvalidOperationException("The source is always completed.");
+    }
 }

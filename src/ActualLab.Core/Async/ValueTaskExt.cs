@@ -51,9 +51,14 @@ public static partial class ValueTaskExt
     // ToResultSynchronously
 
     public static Result<Unit> ToResultSynchronously(this ValueTask task)
-        => task.AssertCompleted().IsCompletedSuccessfully
-            ? default
-            : new Result<Unit>(default, task.AsTask().GetBaseException());
+    {
+        if (!task.AssertCompleted().IsCompletedSuccessfully)
+            return new Result<Unit>(default, task.AsTask().GetBaseException());
+
+        // Consumes the ValueTask, so a pooled IValueTaskSource behind it gets released
+        task.GetAwaiter().GetResult();
+        return default;
+    }
 
     public static Result<T> ToResultSynchronously<T>(this ValueTask<T> task)
         => task.AssertCompleted().IsCompletedSuccessfully

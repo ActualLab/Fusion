@@ -15,10 +15,16 @@ public readonly struct SuppressCancellationValueTaskAwaiter(ValueTask task, bool
 
     public void GetResult()
     {
-        if (task.IsCanceledOrFaultedWithOce())
+        // A ValueTask can be consumed only once, and AsTask consumes it,
+        // so every path below either calls task.GetAwaiter().GetResult() or uses AsTask
+        if (task.IsCompletedSuccessfully) {
+            task.GetAwaiter().GetResult();
             return;
+        }
 
-        task.GetAwaiter().GetResult();
+        var completedTask = task.AsTask();
+        if (!completedTask.IsCanceledOrFaultedWithOce())
+            completedTask.GetAwaiter().GetResult();
     }
 
     public void OnCompleted(Action action)
@@ -38,9 +44,16 @@ public readonly struct SuppressCancellationValueTaskAwaiter<T>(ValueTask<T> task
 
     public SuppressCancellationValueTaskAwaiter<T> GetAwaiter() => this;
     public T GetResult()
-        => task.IsCanceledOrFaultedWithOce()
+    {
+        // See SuppressCancellationValueTaskAwaiter.GetResult
+        if (task.IsCompletedSuccessfully)
+            return task.GetAwaiter().GetResult();
+
+        var completedTask = task.AsTask();
+        return completedTask.IsCanceledOrFaultedWithOce()
             ? default!
-            : task.GetAwaiter().GetResult();
+            : completedTask.GetAwaiter().GetResult();
+    }
 
     public void OnCompleted(Action action)
         => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
