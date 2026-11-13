@@ -162,8 +162,9 @@ public sealed class TimerSet<TTimer> : WorkerBase
                 : TimeSpanExt.Min(MaxSleepDuration,
                     _start + TimeSpan.FromTicks(Quanta.Ticks * wakeUpPriority) - Clock.Now);
             if (sleepDuration > TimeSpan.Zero) {
-                // Times out unless an earlier timer is added; the loop rechecks cancellation right after
-                await whenWokenUp.WaitAsync(sleepDuration, cancellationToken).SilentAwait(false);
+                // Times out unless an earlier timer is added. Neither the timeout nor the cancellation throws here:
+                // the loop rechecks cancellation right after.
+                _ = await whenWokenUp.WaitResultAsync(Clock, sleepDuration, cancellationToken).ConfigureAwait(false);
             }
             lock (_lock) {
                 _wakeUpSource = null;
