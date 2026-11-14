@@ -11,6 +11,36 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.38+b373fd2eb | npm: 15.1.38
+
+Release date: 2026-11-13
+
+A performance release for the .NET RPC stack: no fixes or new APIs. The npm packages are identical
+to 15.1.30 except for the version.
+
+### Performance
+
+- **RPC:** a received `RpcStream` batch is handed to the reader as a whole instead of item by item:
+  about +5-7% on the `Stream1` test of `RpcBenchmark`.
+- **RPC:** argument lists are serialized without boxing value-type arguments, with one serializer
+  cache lookup per list instead of one per argument: about +2% on the `Sum` test of `RpcBenchmark`.
+- **RPC:** `NoWait` system calls (`Ok`, `I`, `B`, `Ack`, `Invalidate`) no longer write the
+  `AsyncLocal` behind `RpcInboundContext.Current`, which allocated an `ExecutionContext` per inbound
+  message.
+- **RPC:** an inbound call no longer registers its own callback on the peer's shared cancellation
+  token; the peer cancels its inbound calls with a single registration instead: about +1-3% on `Sum`.
+
+### Changed
+
+- **RPC:** `RpcPeer.Reset` cancels the inbound calls it drops. Before, it only unregistered them
+  and left the cancellation to the peer change or the disconnect around it.
+- **RPC:** a handler of a `NoWait` system call has to read `RpcInboundContext.Current` before its
+  first `await`. This matters only if you add your own system calls.
+- **RPC:** `RpcInboundCallTracker.Clear()` is removed, use `Abort()`, which also cancels the calls.
+- **Fusion:** handlers of a remote computed's invalidation no longer inherit the `ExecutionContext`
+  of the peer's message processing loop.
+
+
 ## 15.1.30+6deb7cbc6 | npm: 15.1.30
 
 Release date: 2026-11-13
