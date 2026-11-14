@@ -27,7 +27,7 @@ Fusion solves a set of infamously hard problems with a 🦄 single abstraction:
 | 🪄 Real-time updates            | Fusion client automatically propagates server-side cache invalidation back to the client making it aware of state changes on the server side                                      | SignalR, WebSockets, custom pub/sub, ...                                                                       |
 | ✈️ Offline operation            | Client-side persistent cache support (IndexedDB, SQLite) is integrated right into the Fusion RPC client, so you get offline mode for free!                                       | Service workers, sync logic, conflict resolution, ...                                                          |
 | 🤬 Network chattiness           | Persistent cache enables speculative execution on the client side, allowing `ActualLab.Rpc` to batch hundreds of RPC calls into a single transmission frame                      | Request batching, debouncing, manual optimization, ...                                                         |
-| 📡 Network traffic              | `ActualLab.Rpc` is 2-7x faster than gRPC and SignalR even in its "raw" mode; Fusion integration, if enabled, turns it into an efficiency beast by adding "cache match" responses | Protocol tuning, custom serialization, ...                                                                     |
+| 📡 Network traffic              | `ActualLab.Rpc` is 2-11x faster than gRPC and SignalR even in its "raw" mode; Fusion integration, if enabled, turns it into an efficiency beast by adding "cache match" responses | Protocol tuning, custom serialization, ...                                                                     |
 | 🧩 Client-side state management | Same abstractions everywhere: `Computed<T>`, `MutableState<T>`, and compute methods                                                                                              | MobX, Flux/Redux, Recoil, ...                                                                                  |
 | 💰 Single codebase              | Single codebase for Blazor Server, WebAssembly, and MAUI (iOS, Android, Windows, macOS, and more)                                                                                | Platform-specific code, multiple implementations, ...                                                          |
 
@@ -89,9 +89,9 @@ Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 500 millio
 
 | Scenario                                       | Without Fusion        | With Fusion     | Speedup      |
 |------------------------------------------------|-----------------------|-----------------|--------------|
-| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 533.85M calls/s | **>13,000x** |
-| Local repo-like service, non-stop writes       | 171.05K calls/s       | 344.98M calls/s | **~2,017x**  |
-| Remote repo-like service, non-stop writes      | 102.82K calls/s (REST)| 230.16M calls/s | **~2,239x**  |
+| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 510.40M calls/s | **>13,000x** |
+| Local repo-like service, non-stop writes       | 161.23K calls/s       | 330.53M calls/s | **~2,050x**  |
+| Remote repo-like service, non-stop writes      | 103.88K calls/s (REST)| 226.05M calls/s | **~2,176x**  |
 
 These aren't typos &ndash; Fusion makes your services **thousands of times faster** by eliminating redundant computation, RPC, and database access.
 
@@ -103,9 +103,9 @@ Note that these benchmarks test Fusion method calls with no dependency chains. R
 
 | Framework | Calls/s | Streaming |
 |-----------|---------|-----------|
-| **ActualLab.Rpc** | **9.91M** | **99.96M items/s** |
-| SignalR | 4.85M | 17.97M items/s |
-| gRPC | 1.28M | 43.78M items/s |
+| **ActualLab.Rpc** | **9.97M** | **104.98M items/s** |
+| SignalR | 4.84M | 22.36M items/s |
+| gRPC | 0.84M | 39.51M items/s |
 
 So it's **significantly faster** than gRPC and SignalR, both for calls and for streaming.
 
@@ -114,7 +114,7 @@ So it's **significantly faster** than gRPC and SignalR, both for calls and for s
 - The concept itself is all about eliminating any unnecessary computation. Think `msbuild`, but for your method call results: what's computed and consistent is never recomputed.
 - Fusion caches call results in memory, so if there's a cache hit, the result is instantly available. No round-trips to external caches, no serialization/deserialization, etc.
 - Moreover, there is no cloning: what's cached is the .NET object or struct returned from a call, so any call result is "shared". This is much more CPU cache-friendly than, e.g., deserializing a new copy on every hit.
-- Fusion uses its own `ActualLab.Interception` library for method interception. Unlike [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/) and similar libraries that box arguments and allocate heavily, our interceptors require just 1 allocation per call with zero boxing &ndash; making them the fastest on .NET (our microbenchmarks show them **~5-7x faster per call than Castle DynamicProxy**).
+- Fusion uses its own `ActualLab.Interception` library for method interception. Unlike [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/) and similar libraries that box arguments and allocate heavily, our interceptors require just 1 allocation per call with zero boxing &ndash; making them the fastest on .NET (our microbenchmarks show them **~4-6x faster per call than Castle DynamicProxy**).
 - `ActualLab.Rpc` uses the fastest serializers available on .NET &ndash; [MemoryPack](https://github.com/Cysharp/MemoryPack) by default (it doesn't require runtime IL Emit), though you can also use [MessagePack](https://github.com/MessagePack-CSharp/MessagePack-CSharp) (it's slightly faster, but requires IL Emit) or anything else you prefer.
 - All critical execution paths in Fusion are heavily optimized. The [archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/servicetitan/Stl.Fusion/) shows that the performance of local compute services is currently 10x better than it was a few years ago.
 

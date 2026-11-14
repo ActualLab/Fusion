@@ -10,22 +10,22 @@ Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.co
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| Regular Service | 171.05K calls/s | |
-| Fusion Service | 344.98M calls/s | **~2,017x** |
+| Regular Service | 161.23K calls/s | |
+| Fusion Service | 330.53M calls/s | **~2,050x** |
 
 **Remote Services:**
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| HTTP Client → Regular Service | 102.82K calls/s | |
-| HTTP Client → Fusion Service | 304.87K calls/s | **~3.0x** |
-| ActualLab.Rpc Client → Fusion Service | 7.82M calls/s | **~76x** |
-| Fusion Client → Fusion Service | 230.16M calls/s | **~2,239x** |
+| HTTP Client → Regular Service | 103.88K calls/s | |
+| HTTP Client → Fusion Service | 365.18K calls/s | **~3.5x** |
+| ActualLab.Rpc Client → Fusion Service | 7.81M calls/s | **~75x** |
+| Fusion Client → Fusion Service | 226.05M calls/s | **~2,176x** |
 
 ## Key Takeaways
 
 - A tiny EF Core-based service exposed via ASP.NET Core serves about **100K** requests per second — mostly because its data set fully fits in RAM.
-- The same service with Fusion (`[ComputeMethod]` and `Invalidation.Begin` calls) boosts this to **~305K** requests per second when accessed via HTTP — a **~3x performance boost** with minimal code changes.
+- The same service with Fusion (`[ComputeMethod]` and `Invalidation.Begin` calls) boosts this to **~365K** requests per second when accessed via HTTP — a **~3.5x performance boost** with minimal code changes.
 - [Similarly to incremental builds](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b), the more complex your logic is, the more you are expected to gain.
 
 ## Learn More

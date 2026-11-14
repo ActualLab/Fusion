@@ -73,7 +73,7 @@ public class UserService : IComputeService
 - Computed values that automatically stay fresh
 - Real-time updates pushed to clients
 - Preventing stale data bugs that plague manual caching
-- **38x faster** for remote access, **1,506x faster** for local (see [Performance](#performance))
+- **39x faster** for remote access, **1,443x faster** for local (see [Performance](#performance))
 
 ### Redis is better at
 
@@ -102,7 +102,7 @@ Fusion dramatically outperforms Redis — both for remote and local cache access
 
 | Benchmark | ActualLab.Rpc | Redis | Speedup |
 |-----------|---------------|-------|---------|
-| GetUser / GET | 8.75M calls/s | 229K req/s | **~38x** |
+| GetUser / GET | 8.91M calls/s | 229K req/s | **~39x** |
 
 Redis benchmark: `redis-benchmark` with optimal client count (12), best of 5 runs.
 See [Performance Benchmarks](/Performance) for details.
@@ -111,9 +111,9 @@ See [Performance Benchmarks](/Performance) for details.
 
 | Benchmark | Fusion | Redis | Speedup |
 |-----------|--------|-------|---------|
-| Cached lookup | 344.98M calls/s | 229K req/s | **~1,506x** |
+| Cached lookup | 330.53M calls/s | 229K req/s | **~1,443x** |
 
-Fusion's in-process cache eliminates network round-trips entirely. Even comparing Fusion's remote RPC access against Redis's local access, Fusion wins by 38x.
+Fusion's in-process cache eliminates network round-trips entirely. Even comparing Fusion's remote RPC access against Redis's local access, Fusion wins by 39x.
 
 ### Why is Fusion faster?
 

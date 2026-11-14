@@ -1,7 +1,7 @@
 # Performance
 
-**Updated:** 2026-07-18<br/>
-**ActualLab.Fusion Version:** 14.0.17
+**Updated:** 2026-11-14<br/>
+**ActualLab.Fusion Version:** 15.1.38
 
 This page summarizes results of Fusion performance benchmarks.
 
@@ -12,7 +12,7 @@ This page summarizes results of Fusion performance benchmarks.
 | **CPU** | AMD Ryzen 9 9950X3D 16-Core Processor |
 | **RAM** | 96 GB DDR5 |
 | **OS** | Windows 11 |
-| **.NET** | 10.0.8 |
+| **.NET** | 11.0.0 |
 
 Note that Ryzen 9 9950X3D has 32 logical cores due to SMT.
 
@@ -24,12 +24,12 @@ overhead). `Calls/s per core` = `1 / Mean`.
 
 | Operation | Calls/s per core | Mean | Allocated |
 |-----------|------------------|------|-----------|
-| Cached hit, `long` key<br/>`Service.Get(0L, default)` | 50.68M | 19.73 ns | 32 B |
-| Cached hit, `string` key<br/>`Service.Get("key", default)` | 34.90M | 28.65 ns | 32 B |
-| Invalidation (activate + 1 call)<br/>`using (Invalidation.Begin())`<br/>`    Service.Get(key, default)` | 18.77M | 53.28 ns | 112 B |
-| Recompute + cache (fresh key each call)<br/>`Service.Get(i++, default)` | 2.04M | 490.1 ns | 1007 B |
+| Cached hit, `long` key<br/>`Service.Get(0L, default)` | 47.08M | 21.24 ns | 32 B |
+| Cached hit, `string` key<br/>`Service.Get("key", default)` | 34.35M | 29.11 ns | 32 B |
+| Invalidation (activate + 1 call)<br/>`using (Invalidation.Begin())`<br/>`    Service.Get(key, default)` | 19.74M | 50.65 ns | 112 B |
+| Recompute + cache (fresh key each call)<br/>`Service.Get(i++, default)` | 2.02M | 495.3 ns | 1021 B |
 
-A cache hit costs ~20 ns and a single `ArgumentList` allocation — this is the ~50M calls/s per core that
+A cache hit costs ~21 ns and a single `ArgumentList` allocation — this is the ~47M calls/s per core that
 Fusion sustains for cached compute-method calls.
 
 ## Interception & Proxy Overhead
@@ -40,11 +40,11 @@ method's default result), single-threaded:
 
 | Proxy variant | Calls/s per core | Mean | Allocated |
 |---------------|------------------|------|-----------|
-| No proxy (direct virtual call) | 763.7M | 1.31 ns | – |
-| [ActualLab, simple interceptor](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks) | 386.0M | 2.59 ns | 24 B |
-| [Castle DynamicProxy, simple](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks) | 61.94M | 16.15 ns | 128 B |
+| No proxy (direct virtual call) | 869.1M | 1.15 ns | – |
+| [ActualLab, simple interceptor](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks) | 404.0M | 2.48 ns | 24 B |
+| [Castle DynamicProxy, simple](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks) | 63.30M | 15.80 ns | 128 B |
 
-ActualLab's interception is **~5-7x faster than Castle DynamicProxy** — and only **~2-3x slower than a
+ActualLab's interception is **~4-6x faster than Castle DynamicProxy** — and only **~2-4x slower than a
 plain virtual call** — while allocating far less. That's why Fusion can afford to wrap every compute
 method and RPC call in a proxy. See the full breakdown (sync/async, pass-through, no-handler variants) in
 the source report linked at the bottom of this page.
@@ -73,23 +73,23 @@ multiple iterations, and the best result from 3 runs is reported.
 | Test | SQLite | PostgreSQL |
 |------|--------|------------|
 | Without Fusion | 155.68K calls/s | 38.61K calls/s |
-| With Fusion | 498.92M calls/s | 533.85M calls/s |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">3,205x</span> | <span style="color: #22c55e; font-weight: bold;">13,827x</span> |
+| With Fusion | 476.00M calls/s | 510.40M calls/s |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">3,058x</span> | <span style="color: #22c55e; font-weight: bold;">13,219x</span> |
 
 ### Single Reader, No Mutators
 
 | Test | SQLite | PostgreSQL |
 |------|--------|------------|
 | Without Fusion | 55.70K calls/s | 1.78K calls/s |
-| With Fusion | 26.77M calls/s | 26.74M calls/s |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">481x</span> | <span style="color: #22c55e; font-weight: bold;">15,022x</span> |
+| With Fusion | 23.18M calls/s | 26.07M calls/s |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">416x</span> | <span style="color: #22c55e; font-weight: bold;">14,646x</span> |
 
 ### Key Observations
 
 - **With Fusion + concurrent readers**: ~500M calls/s regardless of the database,
   because most calls are served from Fusion's in-memory cache.
-  That's roughly <span style="color: #22c55e; font-weight: bold;">13,800x faster</span> than direct PostgreSQL access
-  and <span style="color: #22c55e; font-weight: bold;">3,200x faster</span> than direct SQLite access under the same concurrent load.
+  That's roughly <span style="color: #22c55e; font-weight: bold;">13,200x faster</span> than direct PostgreSQL access
+  and <span style="color: #22c55e; font-weight: bold;">3,100x faster</span> than direct SQLite access under the same concurrent load.
 
 - **Without Fusion**: Performance is entirely database-bound.
   SQLite (in-process) outperforms PostgreSQL (network round-trip) significantly,
@@ -107,17 +107,17 @@ The benchmark measures throughput of a simple repository-style user lookup servi
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| Regular Service | 171.05K calls/s | |
-| Fusion Service | 344.98M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,017x</span> |
+| Regular Service | 161.23K calls/s | |
+| Fusion Service | 330.53M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,050x</span> |
 
 ### Remote Services
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| HTTP Client → Regular Service | 102.82K calls/s | |
-| HTTP Client → Fusion Service | 304.87K calls/s | <span style="color: #22c55e; font-weight: bold;">~3.0x</span> |
-| ActualLab.Rpc Client → Fusion Service | 7.82M calls/s | <span style="color: #22c55e; font-weight: bold;">~76x</span> |
-| Fusion Client → Fusion Service | 230.16M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,239x</span> |
+| HTTP Client → Regular Service | 103.88K calls/s | |
+| HTTP Client → Fusion Service | 365.18K calls/s | <span style="color: #22c55e; font-weight: bold;">~3.5x</span> |
+| ActualLab.Rpc Client → Fusion Service | 7.81M calls/s | <span style="color: #22c55e; font-weight: bold;">~75x</span> |
+| Fusion Client → Fusion Service | 226.05M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,176x</span> |
 
 Wondering what each of these scenarios means (HTTP vs ActualLab.Rpc vs Fusion client)? See
 [What each scenario means](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#what-each-scenario-means)
@@ -133,18 +133,23 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
 |------|---------------|------|---------|---------|
-| Sum | **9.91M calls/s** | 1.28M calls/s | 4.85M calls/s | <span style="color: #22c55e; font-weight: bold;">2.0..7.7x</span> |
-| GetUser | **8.75M calls/s** | 1.24M calls/s | 4.05M calls/s | <span style="color: #22c55e; font-weight: bold;">2.2..7.1x</span> |
-| SayHello | **6.04M calls/s** | 1.16M calls/s | 2.16M calls/s | <span style="color: #22c55e; font-weight: bold;">2.8..5.2x</span> |
+| Sum | **9.97M calls/s** | 842.95K calls/s | 4.84M calls/s | <span style="color: #22c55e; font-weight: bold;">2.1..11.8x</span> |
+| GetUser | **8.91M calls/s** | 848.30K calls/s | 4.28M calls/s | <span style="color: #22c55e; font-weight: bold;">2.1..10.5x</span> |
+| SayHello | **5.95M calls/s** | 808.67K calls/s | 2.23M calls/s | <span style="color: #22c55e; font-weight: bold;">2.7..7.4x</span> |
+
+_gRPC call throughput is lower on .NET 11.0.0 than it was on .NET 10.0.8 (1.28M / 1.24M / 1.16M calls/s
+with the same benchmark), even with the
+[pipe scheduler fix](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#net-11-pipe-scheduler-fix)
+this benchmark applies on .NET 11._
 
 <ClientOnly>
   <BarChart
     title="RPC Calls (Million/s)"
     :labels="['Sum', 'GetUser', 'SayHello']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [9.91, 8.75, 6.04], backgroundColor: '#22c55e' },
-      { label: 'SignalR', data: [4.85, 4.05, 2.16], backgroundColor: '#3b82f6' },
-      { label: 'gRPC', data: [1.28, 1.24, 1.16], backgroundColor: '#f59e0b' }
+      { label: 'ActualLab.Rpc', data: [9.97, 8.91, 5.95], backgroundColor: '#22c55e' },
+      { label: 'SignalR', data: [4.84, 4.28, 2.23], backgroundColor: '#3b82f6' },
+      { label: 'gRPC', data: [0.84, 0.85, 0.81], backgroundColor: '#f59e0b' }
     ]"
     :yMax="11"
     yLabel="M calls/s"
@@ -155,9 +160,9 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
 |------|---------------|------|---------|---------|
-| Stream1 | **99.96M items/s** | 43.78M items/s | 17.97M items/s | <span style="color: #22c55e; font-weight: bold;">2.3..5.6x</span> |
-| Stream100 | **44.89M items/s** | 25.87M items/s | 13.90M items/s | <span style="color: #22c55e; font-weight: bold;">1.7..3.2x</span> |
-| Stream10K | **807.84K items/s** | 572.76K items/s | 432.00K items/s | <span style="color: #22c55e; font-weight: bold;">1.4..1.9x</span> |
+| Stream1 | **104.98M items/s** | 39.51M items/s | 22.36M items/s | <span style="color: #22c55e; font-weight: bold;">2.7..4.7x</span> |
+| Stream100 | **45.89M items/s** | 19.94M items/s | 14.78M items/s | <span style="color: #22c55e; font-weight: bold;">2.3..3.1x</span> |
+| Stream10K | **808.92K items/s** | 648.00K items/s | 402.48K items/s | <span style="color: #22c55e; font-weight: bold;">1.2..2.0x</span> |
 
 Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte items, Stream10K = 10KB items.
 
@@ -165,18 +170,18 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 
 | Test | ActualLab.Rpc | gRPC | SignalR |
 |------|---------------|------|---------|
-| Stream1 | **99.96 MB/s** | 43.78 MB/s | 17.97 MB/s |
-| Stream100 | **4.49 GB/s** | 2.59 GB/s | 1.39 GB/s |
-| Stream10K | **8.27 GB/s** | 5.86 GB/s | 4.42 GB/s |
+| Stream1 | **104.98 MB/s** | 39.51 MB/s | 22.36 MB/s |
+| Stream100 | **4.59 GB/s** | 1.99 GB/s | 1.48 GB/s |
+| Stream10K | **8.28 GB/s** | 6.64 GB/s | 4.12 GB/s |
 
 <ClientOnly>
   <BarChart
     title="RPC Streams Throughput (GB/s)"
     :labels="['Stream100', 'Stream10K']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [4.49, 8.27], backgroundColor: '#22c55e' },
-      { label: 'gRPC', data: [2.59, 5.86], backgroundColor: '#f59e0b' },
-      { label: 'SignalR', data: [1.39, 4.42], backgroundColor: '#3b82f6' }
+      { label: 'ActualLab.Rpc', data: [4.59, 8.28], backgroundColor: '#22c55e' },
+      { label: 'gRPC', data: [1.99, 6.64], backgroundColor: '#f59e0b' },
+      { label: 'SignalR', data: [1.48, 4.12], backgroundColor: '#3b82f6' }
     ]"
     :yMax="10"
     yLabel="GB/s"
@@ -192,35 +197,35 @@ ensuring the server is the bottleneck. This setup matches [grpc_bench](https://g
 > **External cross-check.** grpc_bench's own
 > [.NET gRPC result on an i9-13900KF @ 5.5 GHz](https://github.com/LesnyRumcajs/grpc_bench/discussions/441)
 > (4-CPU server — a desktop CPU with per-core throughput close to the 9950X3D) is **~402K req/s**,
-> essentially identical to our `SayHello` gRPC figure of **399.32K** below. Same library (grpc-dotnet),
+> close to our `SayHello` gRPC figure of **441.37K** below. Same library (grpc-dotnet),
 > same 4-CPU setup — which confirms our gRPC numbers are measured fairly. gRPC-dotnet is the *fastest*
-> framework in that grpc_bench run, and ActualLab.Rpc's `SayHello` (**2.52M**) is still **~6.3× faster**
+> framework in that grpc_bench run, and ActualLab.Rpc's `SayHello` (**2.46M**) is still **~6.1× faster**
 > than it.
 
 ### Docker Calls
 
 | Framework | Sum | GetUser | SayHello |
 |-----------|-----|---------|----------|
-| ActualLab.Rpc | **4.77M calls/s** | **4.38M calls/s** | **2.52M calls/s** |
-| SignalR | 2.38M calls/s | 1.94M calls/s | 862.07K calls/s |
-| gRPC | 437.85K calls/s | 441.44K calls/s | 399.32K calls/s |
-| MagicOnion | 392.59K calls/s | 402.85K calls/s | 362.84K calls/s |
-| StreamJsonRpc | 279.62K calls/s | 231.86K calls/s | 99.09K calls/s |
-| HTTP | 105.25K calls/s | 103.12K calls/s | 88.18K calls/s |
+| ActualLab.Rpc | **5.25M calls/s** | **4.13M calls/s** | **2.46M calls/s** |
+| SignalR | 2.42M calls/s | 2.02M calls/s | 931.18K calls/s |
+| gRPC | 483.52K calls/s | 467.10K calls/s | 441.37K calls/s |
+| MagicOnion | 351.54K calls/s | 342.24K calls/s | 329.68K calls/s |
+| StreamJsonRpc | 332.66K calls/s | 263.40K calls/s | 114.41K calls/s |
+| HTTP | 93.08K calls/s | 93.87K calls/s | 92.56K calls/s |
 
 <ClientOnly>
   <BarChart
     title="Docker RPC Calls - 4 CPU Server (Million/s)"
     :labels="['Sum', 'GetUser', 'SayHello']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [4.77, 4.38, 2.52], backgroundColor: '#22c55e' },
-      { label: 'SignalR', data: [2.38, 1.94, 0.86], backgroundColor: '#3b82f6' },
-      { label: 'gRPC', data: [0.44, 0.44, 0.40], backgroundColor: '#f59e0b' },
-      { label: 'MagicOnion', data: [0.39, 0.40, 0.36], backgroundColor: '#a855f7' },
-      { label: 'StreamJsonRpc', data: [0.28, 0.23, 0.10], backgroundColor: '#ec4899' },
-      { label: 'HTTP', data: [0.11, 0.10, 0.09], backgroundColor: '#6b7280' }
+      { label: 'ActualLab.Rpc', data: [5.25, 4.13, 2.46], backgroundColor: '#22c55e' },
+      { label: 'SignalR', data: [2.42, 2.02, 0.93], backgroundColor: '#3b82f6' },
+      { label: 'gRPC', data: [0.48, 0.47, 0.44], backgroundColor: '#f59e0b' },
+      { label: 'MagicOnion', data: [0.35, 0.34, 0.33], backgroundColor: '#a855f7' },
+      { label: 'StreamJsonRpc', data: [0.33, 0.26, 0.11], backgroundColor: '#ec4899' },
+      { label: 'HTTP', data: [0.09, 0.09, 0.09], backgroundColor: '#6b7280' }
     ]"
-    :yMax="5"
+    :yMax="6"
     yLabel="M calls/s"
   />
 </ClientOnly>
@@ -231,22 +236,22 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 
 | Framework | Stream1 | Stream100 | Stream10K |
 |-----------|---------|-----------|-----------|
-| ActualLab.Rpc | **35.17M items/s** | **12.97M items/s** | **279.72K items/s** |
-| gRPC | 11.79M items/s | 6.19M items/s | 140.40K items/s |
-| SignalR | 8.89M items/s | 5.08M items/s | 106.20K items/s |
-| StreamJsonRpc | 120.96K items/s | 120.96K items/s | 60.48K items/s |
+| ActualLab.Rpc | **37.77M items/s** | **13.33M items/s** | **285.12K items/s** |
+| gRPC | 13.42M items/s | 7.27M items/s | 149.04K items/s |
+| SignalR | 9.71M items/s | 5.50M items/s | 155.52K items/s |
+| StreamJsonRpc | 127.44K items/s | 127.44K items/s | 63.72K items/s |
 
 <ClientOnly>
   <BarChart
     title="Docker RPC Streams - 4 CPU Server (Million items/s)"
     :labels="['Stream1', 'Stream100']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [35.17, 12.97], backgroundColor: '#22c55e' },
-      { label: 'gRPC', data: [11.79, 6.19], backgroundColor: '#f59e0b' },
-      { label: 'SignalR', data: [8.89, 5.08], backgroundColor: '#3b82f6' },
-      { label: 'StreamJsonRpc', data: [0.12, 0.12], backgroundColor: '#ec4899' }
+      { label: 'ActualLab.Rpc', data: [37.77, 13.33], backgroundColor: '#22c55e' },
+      { label: 'gRPC', data: [13.42, 7.27], backgroundColor: '#f59e0b' },
+      { label: 'SignalR', data: [9.71, 5.50], backgroundColor: '#3b82f6' },
+      { label: 'StreamJsonRpc', data: [0.13, 0.13], backgroundColor: '#ec4899' }
     ]"
-    :yMax="36"
+    :yMax="40"
     yLabel="M items/s"
   />
 </ClientOnly>
