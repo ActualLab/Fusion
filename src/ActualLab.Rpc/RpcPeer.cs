@@ -271,6 +271,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var lastHandshake = (RpcHandshake?)null;
         var peerChangedCts = cancellationToken.CreateLinkedTokenSource();
         var peerChangedToken = peerChangedCts.Token;
+        RegisterInboundCallAbortion(peerChangedToken);
         try {
             if (ConnectionKind is RpcPeerConnectionKind.Local) {
                 // It's a fake RpcPeer that exists solely to be "available"
@@ -390,6 +391,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             peerChangedCts.CancelAndDisposeSilently();
                             peerChangedCts = cancellationToken.CreateLinkedTokenSource();
                             peerChangedToken = peerChangedCts.Token;
+                            RegisterInboundCallAbortion(peerChangedToken);
                             await Reset(Errors.PeerChanged()).ConfigureAwait(false);
                         }
                     }
@@ -512,6 +514,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
         }
         finally {
+            // Goes first: nothing below may prevent the cancellation of running inbound calls
+            peerChangedCts.CancelAndDisposeSilently();
             Log.LogInformation("'{Route}': Stopping", Route);
 
             // Make sure the sequence of ConnectionStates terminates
@@ -531,7 +535,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 }
             }
 
-            peerChangedCts.CancelAndDisposeSilently(); // Terminates all running ProcessMessage calls
             await Reset(error!, isStopped: true).SilentAwait(false);
 
             var removeDelay = Options.PeerRemoveDelayProvider.Invoke(this);
@@ -547,19 +550,27 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected internal async Task Reset(Exception error, bool isStopped = false)
     {
+        // Reset is also called without peerChangedToken's cancellation (see RpcSharedObjectTracker),
+        // so the regular inbound calls it removes must be cancelled here. Goes first: nothing below may prevent it.
+        InboundCalls.Abort();
         RemoteObjects.Abort();
         await SharedObjects.Abort(error).ConfigureAwait(false);
         if (isStopped)
             OutboundCalls.Abort(error, assumeCancelled: true);
-        // Inbound calls are auto-aborted via peerChangedToken from OnRun,
-        // which becomes RpcInboundCallContext.CancellationToken.
-        InboundCalls.Clear();
         if (isStopped)
             OutboundCalls.ClearCallMetrics();
         else
             OutboundCalls.ClearInboundCallMetrics();
         Log.LogInformation("'{Route}': {Action} ({Reason})",
             Route, isStopped ? "Stopped" : "Reset", error.Message);
+    }
+
+    // Regular inbound calls aren't linked to peerChangedToken: this single registration cancels them
+    // right when the token is cancelled, on the cancelling thread - as the per-call links did
+    private void RegisterInboundCallAbortion(CancellationToken peerChangedToken)
+    {
+        using var _ = ExecutionContextExt.TrySuppressFlow();
+        peerChangedToken.Register(static state => ((RpcPeer)state!).InboundCalls.Abort(), this);
     }
 
     protected RpcInboundContext? ProcessMessage(

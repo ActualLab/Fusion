@@ -71,8 +71,14 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
         // NoWait should always return true here!
         => call.NoWait || Calls.TryRemove(call.Id, call);
 
-    public void Clear()
-        => Calls.Clear();
+    // Removes calls one by one rather than clearing, so a concurrently registered call is either
+    // cancelled here or stays registered - RpcInboundCall.Process handles the latter
+    public void Abort()
+    {
+        foreach (var (id, call) in Calls)
+            if (Calls.TryRemove(id, call))
+                call.Cancel();
+    }
 }
 
 /// <summary>

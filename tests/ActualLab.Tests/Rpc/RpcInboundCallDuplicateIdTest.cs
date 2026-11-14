@@ -20,7 +20,7 @@ public class RpcInboundCallDuplicateIdTest(ITestOutputHelper @out) : RpcLocalTes
     }
 
     [Fact]
-    public async Task DuplicateCallIdsDontLeakLinkedSources()
+    public async Task DuplicateCallIdsDontLeakSources()
     {
         await using var services = CreateServices();
         var peer = GetServerPeer(services);
@@ -44,9 +44,9 @@ public class RpcInboundCallDuplicateIdTest(ITestOutputHelper @out) : RpcLocalTes
         peer.InboundCalls.Get(CallId).Should().BeSameAs(winner);
         duplicates.Should().AllSatisfy(x => x.ResultTask.Should().BeNull());
 
-        // Cancelling the peer-change token cancels every source still linked to it,
-        // so an undisposed duplicate source is directly observable here
+        // A peer change cancels registered calls only, so the duplicates must stay untouched
         peerChangedCts.Cancel();
+        peer.InboundCalls.Abort();
         winner.CallCancelToken.IsCancellationRequested.Should().BeTrue();
         duplicates.Should().AllSatisfy(x => x.CallCancelToken.IsCancellationRequested.Should().BeFalse());
 
@@ -110,6 +110,7 @@ public class RpcInboundCallDuplicateIdTest(ITestOutputHelper @out) : RpcLocalTes
         peer.InboundCalls.Get(CallId).Should().BeSameAs(winner);
 
         peerChangedCts.Cancel();
+        peer.InboundCalls.Abort();
         otherMethodCall.CallCancelToken.IsCancellationRequested.Should().BeFalse();
         otherCallTypeCall.CallCancelToken.IsCancellationRequested.Should().BeFalse();
         await winnerTask.WaitAsync(TimeSpan.FromSeconds(5));

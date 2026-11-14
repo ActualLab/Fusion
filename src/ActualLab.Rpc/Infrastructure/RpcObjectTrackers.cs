@@ -267,9 +267,9 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
                 if (GetCountLimitError() is { } countLimitError) {
                     // Reset first: it's what frees the trackers even if the same client reconnects
-                    // (an unchanged peer never hits the RpcPeer.Reset call in OnRun). The Disconnect
-                    // that follows cancels the reader token, which aborts in-flight inbound calls,
-                    // and ends this loop - the next connection starts a fresh Maintain.
+                    // (an unchanged peer never hits the RpcPeer.Reset call in OnRun). Reset also aborts
+                    // in-flight inbound calls. The Disconnect that follows cancels the reader token,
+                    // which ends this loop - the next connection starts a fresh Maintain.
                     await Peer.Reset(countLimitError).ConfigureAwait(false);
                     await Peer.Disconnect(countLimitError, cancellationToken).ConfigureAwait(false);
                     return;

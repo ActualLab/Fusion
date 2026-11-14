@@ -56,11 +56,12 @@ public abstract class RpcInboundCall : RpcCall
     {
         Context = context;
         Id = NoWait ? 0 : context.Message.RelatedId;
-        var peerChangedToken = Context.PeerChangedToken;
         if (NoWait)
-            CallCancelToken = peerChangedToken;
+            CallCancelToken = Context.PeerChangedToken;
         else {
-            CallCancelSource = peerChangedToken.CreateLinkedTokenSource();
+            // Not linked to PeerChangedToken: a link costs a registration on a token shared by every call
+            // of the peer. RpcPeer.RegisterInboundCallAbortion cancels registered calls instead.
+            CallCancelSource = new CancellationTokenSource();
             CallCancelToken = CallCancelSource.Token;
         }
     }
@@ -122,8 +123,7 @@ public abstract class RpcInboundCall : RpcCall
 
         var existingCall = context.Peer.InboundCalls.GetOrRegister(this);
         if (existingCall != this) {
-            // This instance never got registered, so its token was never handed to anything: the source
-            // must be disposed rather than cancelled to release its PeerChangedToken registration.
+            // This instance never got registered, so its token was never handed to anything
             CallCancelSource.DisposeSilently();
             var existingMessage = existingCall.Context.Message;
             var message = context.Message;
@@ -137,6 +137,13 @@ public abstract class RpcInboundCall : RpcCall
                 ?? existingCall.WhenProcessed
                 ?? Task.CompletedTask;
         }
+
+        // The abort triggered by PeerChangedToken sees registered calls only, so a call registered
+        // after the token's cancellation has to cancel itself. The barrier orders the registration
+        // above against this read, so either that abort sees the call, or the call sees the cancellation.
+        Interlocked.MemoryBarrier();
+        if (context.PeerChangedToken.IsCancellationRequested)
+            CallCancelSource.CancelSilently();
 
         lock (Lock) {
             try {
@@ -295,8 +302,9 @@ public abstract class RpcInboundCall : RpcCall
             // Otherwise the call is gone already (completed, cancelled or the peer was reset): nobody waits for it
         }
 
-        Log.LogWarning("Dropping {Call}: the peer is disconnected or the call is gone", this);
+        // Goes first: the call is unregistered, so nothing else can cancel it anymore
         CallCancelSource.CancelAndDisposeSilently();
+        Log.LogWarning("Dropping {Call}: the peer is disconnected or the call is gone", this);
         return true;
     }
 
