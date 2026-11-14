@@ -233,7 +233,7 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
-| Local service, minimal writes | 38.6K calls/s | **521.4M calls/s** | <span style="color: #22c55e; font-weight: bold;">13,504x</span> |
+| Local service, minimal writes | 38.6K calls/s | **535.4M calls/s** | <span style="color: #22c55e; font-weight: bold;">13,867x</span> |
 | Local service, continuous writes | 161.2K calls/s | **330.5M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,050x</span> |
 | Remote service, continuous writes | 103.9K calls/s (REST) | **226.0M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,176x</span> |
 

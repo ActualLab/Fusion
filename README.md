@@ -89,7 +89,7 @@ Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 500 millio
 
 | Scenario                                       | Without Fusion        | With Fusion     | Speedup      |
 |------------------------------------------------|-----------------------|-----------------|--------------|
-| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 521.39M calls/s | **>13,000x** |
+| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 535.40M calls/s | **>13,000x** |
 | Local repo-like service, non-stop writes       | 161.23K calls/s       | 330.53M calls/s | **~2,050x**  |
 | Remote repo-like service, non-stop writes      | 103.88K calls/s (REST)| 226.05M calls/s | **~2,176x**  |
 

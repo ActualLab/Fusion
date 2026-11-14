@@ -73,22 +73,22 @@ multiple iterations, and the best result from 3 runs is reported.
 | Test | SQLite | PostgreSQL |
 |------|--------|------------|
 | Without Fusion | 155.68K calls/s | 38.61K calls/s |
-| With Fusion | 487.46M calls/s | 521.39M calls/s |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">3,131x</span> | <span style="color: #22c55e; font-weight: bold;">13,504x</span> |
+| With Fusion | 487.46M calls/s | 535.40M calls/s |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">3,131x</span> | <span style="color: #22c55e; font-weight: bold;">13,867x</span> |
 
 ### Single Reader, No Mutators
 
 | Test | SQLite | PostgreSQL |
 |------|--------|------------|
 | Without Fusion | 55.70K calls/s | 1.78K calls/s |
-| With Fusion | 23.18M calls/s | 26.25M calls/s |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">416x</span> | <span style="color: #22c55e; font-weight: bold;">14,747x</span> |
+| With Fusion | 23.74M calls/s | 26.97M calls/s |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">426x</span> | <span style="color: #22c55e; font-weight: bold;">15,152x</span> |
 
 ### Key Observations
 
 - **With Fusion + concurrent readers**: ~500M calls/s regardless of the database,
   because most calls are served from Fusion's in-memory cache.
-  That's roughly <span style="color: #22c55e; font-weight: bold;">13,500x faster</span> than direct PostgreSQL access
+  That's roughly <span style="color: #22c55e; font-weight: bold;">13,900x faster</span> than direct PostgreSQL access
   and <span style="color: #22c55e; font-weight: bold;">3,100x faster</span> than direct SQLite access under the same concurrent load.
 
 - **Without Fusion**: Performance is entirely database-bound.
