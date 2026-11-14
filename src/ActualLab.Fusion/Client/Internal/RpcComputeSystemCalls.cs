@@ -28,6 +28,9 @@ public class RpcComputeSystemCalls(IServiceProvider services)
         if (peer.OutboundCalls.Get(outboundCallId) is RpcOutboundComputeCall outboundCall) {
             const string reason =
                 $"<FusionRpc>.{nameof(Invalidate)}";
+            // Invalidation handlers run synchronously here, and whatever they start
+            // must not inherit the ExecutionContext of the peer's message processing loop
+            using var _ = ExecutionContextExt.TrySuppressFlow();
             outboundCall.SetInvalidated(context, reason);
         }
         return RpcNoWait.Tasks.Completed;

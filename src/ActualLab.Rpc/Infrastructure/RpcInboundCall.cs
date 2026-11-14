@@ -96,6 +96,9 @@ public abstract class RpcInboundCall : RpcCall
     {
         var context = Context;
         var peer = context.Peer;
+        if (NoWait && MethodDef.IsSystem)
+            return ProcessSystemNoWait();
+
         RpcInboundContext.Current = context;
         if (NoWait) {
             try {
@@ -368,6 +371,35 @@ public abstract class RpcInboundCall : RpcCall
         static Result<TResult> InvocationIsStillInProgressErrorResult()
             => new(default!, ActualLab.Internal.Errors.InternalError(
                 "Something is off: remote method isn't completed yet, but the result is requested to be sent."));
+    }
+
+    // Private methods
+
+    private Task ProcessSystemNoWait()
+    {
+        var context = Context;
+        var peer = context.Peer;
+        var oldContext = RpcInboundContext.CurrentSystemCallContext;
+        RpcInboundContext.CurrentSystemCallContext = context;
+        try {
+            try {
+                Arguments ??= DeserializeArguments();
+                if (Arguments is null)
+                    return Task.CompletedTask; // The related call is already gone
+            }
+            catch (Exception error) {
+                throw ProcessArgumentDeserializationError(error);
+            }
+
+            if (peer.CallLogger.IsLogged(this))
+                peer.CallLogger.LogInbound(this);
+
+            return MethodDef.InboundCallInvoker.Invoke(this);
+        }
+        finally {
+            context.Message.ArgumentData = default; // ArgumentData is available while we're in a synchronous part
+            RpcInboundContext.CurrentSystemCallContext = oldContext;
+        }
     }
 }
 

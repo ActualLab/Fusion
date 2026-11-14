@@ -11,10 +11,19 @@ namespace ActualLab.Rpc.Infrastructure;
 public sealed class RpcInboundContext
 {
     private static readonly AsyncLocal<RpcInboundContext?> CurrentLocal = new();
+    // Set while a NoWait system call runs, since an AsyncLocal write allocates an ExecutionContext per call.
+    // It's visible on the current thread only, so a system call handler must read Current before its first await.
+    [ThreadStatic]
+    private static RpcInboundContext? _currentSystemCallContext;
 
     public static RpcInboundContext? Current {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => CurrentLocal.Value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _currentSystemCallContext ?? CurrentLocal.Value;
         [MethodImpl(MethodImplOptions.AggressiveInlining)] set => CurrentLocal.Value = value;
+    }
+
+    internal static RpcInboundContext? CurrentSystemCallContext {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _currentSystemCallContext;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] set => _currentSystemCallContext = value;
     }
 
     public readonly RpcPeer Peer;
@@ -26,7 +35,7 @@ public sealed class RpcInboundContext
     public object? RelatedObject; // IRpcPolymorphicArgumentHandler and the actual call handler may use this field
 
     public static RpcInboundContext GetCurrent()
-        => CurrentLocal.Value ?? throw Errors.NoCurrentRpcInboundContext();
+        => Current ?? throw Errors.NoCurrentRpcInboundContext();
 
     public RpcInboundContext(RpcPeer peer, RpcInboundMessage message, CancellationToken peerChangedToken)
     {
