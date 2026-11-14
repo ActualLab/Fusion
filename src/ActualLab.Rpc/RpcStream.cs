@@ -110,7 +110,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private readonly object _lock = new();
 #endif
     private readonly IAsyncEnumerable<T>? _localSource;
-    private Channel<T>? _remoteChannel;
+    private Channel<ItemOrBatch>? _remoteChannel;
     private long _nextIndex;
     private long _consumedIndex;
     private bool _isRegistered;
@@ -194,7 +194,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             if (Peer is null)
                 throw Errors.InternalError("RpcStream.Peer is null.");
 
-            _remoteChannel = Channel.CreateUnbounded<T>(RemoteChannelOptions);
+            _remoteChannel = Channel.CreateUnbounded<ItemOrBatch>(RemoteChannelOptions);
             if (_nextIndex == long.MaxValue) // Marked as missing
                 _remoteChannel.Writer.TryComplete(Internal.Errors.RpcStreamNotFoundOrDisconnected());
             else {
@@ -291,7 +291,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             }
 
             // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
-            _remoteChannel.Writer.TryWrite((T)item!); // Must always succeed for unbounded channel
+            _remoteChannel.Writer.TryWrite(new ItemOrBatch((T)item!)); // Must always succeed for unbounded channel
             _nextIndex++;
         }
     }
@@ -321,10 +321,10 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 return;
             }
 
-            foreach (var item in typedItems) {
-                // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
-                _remoteChannel.Writer.TryWrite(item); // Must always succeed for unbounded channel
-                _nextIndex++;
+            if (typedItems.Length != 0) {
+                // Must always succeed for unbounded channel
+                _remoteChannel.Writer.TryWrite(new ItemOrBatch(typedItems));
+                _nextIndex += typedItems.Length;
             }
         }
     }
@@ -443,11 +443,33 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     // Nested types
 
     /// <summary>
+    /// A remote stream's channel entry: either a single item or a non-empty batch of items,
+    /// so that a batch takes one channel write and a single item needs no array.
+    /// </summary>
+    [StructLayout(LayoutKind.Auto)]
+    private readonly struct ItemOrBatch
+    {
+        public readonly T Item;
+        public readonly T[]? Batch;
+
+        public ItemOrBatch(T item)
+            => Item = item;
+
+        public ItemOrBatch(T[] batch)
+        {
+            Item = default!;
+            Batch = batch;
+        }
+    }
+
+    /// <summary>
     /// Enumerates items from a remote <see cref="RpcStream{T}"/>, sending acknowledgements as items are consumed.
     /// </summary>
     private sealed class RemoteChannelEnumerator : IAsyncEnumerator<T>
     {
-        private readonly ChannelReader<T> _reader;
+        private readonly ChannelReader<ItemOrBatch> _reader;
+        private T[] _batch = [];
+        private int _batchIndex;
         private long _nextIndex;
         private Result<T> _current;
         private readonly RpcStream<T> _stream;
@@ -490,11 +512,21 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             if (_current.Error is { } error)
                 return GetMoveNextValueTask(error);
 
+            var batch = _batch;
+            var batchIndex = _batchIndex;
+            if ((uint)batchIndex < (uint)batch.Length) {
+                _current = batch[batchIndex];
+                _batchIndex = batchIndex + 1;
+                _stream.OnItemConsumed(_nextIndex++);
+                return ValueTaskExt.TrueTask;
+            }
+
+            _batch = []; // Releases the consumed batch
             try {
-                if (!_reader.TryRead(out var current))
+                if (!_reader.TryRead(out var entry))
                     return CompleteMoveNextAsync(); // Never throws directly (i.e. only via ValueTask.Result)
 
-                _current = current;
+                SetCurrent(entry);
             }
             catch (Exception e) {
                 _current = Result.NewError<T>(e);
@@ -505,6 +537,19 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         }
 
         // Private methods
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetCurrent(ItemOrBatch entry)
+        {
+            if (entry.Batch is not { } batch) {
+                _current = entry.Item;
+                return;
+            }
+
+            _batch = batch;
+            _batchIndex = 1;
+            _current = batch[0];
+        }
 
         private static ValueTask<bool> GetMoveNextValueTask(Exception? error)
             => error is null
@@ -524,11 +569,10 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                     return false;
                 }
 
-                if (!_reader.TryRead(out var current1))
+                if (!_reader.TryRead(out var entry))
                     throw Errors.InternalError("Couldn't read after successful WaitToReadAsync call.");
 
-                // await _stream.MaybeSendAckFromLock(_nextIndex).ConfigureAwait(false);
-                _current = current1;
+                SetCurrent(entry);
                 _nextIndex++;
                 return true;
             }

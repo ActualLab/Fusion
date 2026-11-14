@@ -284,11 +284,11 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 {
     /// <inheritdoc />
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T? ValueOrDefault { get; }
+    public T? ValueOrDefault { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
     /// <inheritdoc />
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public Exception? Error { get; }
+    public Exception? Error { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public ExceptionInfo? ExceptionInfo => Error?.ToExceptionInfo();
@@ -326,6 +326,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
     /// </summary>
     /// <param name="valueOrDefault"><see cref="ValueOrDefault"/> value.</param>
     /// <param name="error"><see cref="Error"/> value.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result(T valueOrDefault, Exception? error = null)
     {
         if (error is not null)
