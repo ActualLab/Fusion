@@ -42,6 +42,55 @@ public class RpcInboundCallAbortTest(ITestOutputHelper @out) : RpcLocalTestBase(
     }
 
     [Fact]
+    public async Task SamePeerReconnectShouldKeepRunningInboundCalls()
+    {
+        // arrange
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var serverPeer = connection.ServerPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        var callTask = client.Delay(TimeSpan.FromSeconds(1.5));
+        await TestExt.When(
+            () => serverPeer.InboundCalls.Count.Should().Be(1),
+            TimeSpan.FromSeconds(5));
+        var call = serverPeer.InboundCalls.Single();
+
+        // act
+        await connection.Reconnect();
+        (await client.Add(1, 1)).Should().Be(2); // Ensures the reconnect is fully processed
+
+        // assert
+        call.CallCancelToken.IsCancellationRequested.Should().BeFalse();
+        (await callTask.WaitAsync(TimeSpan.FromSeconds(10))).Should().Be(TimeSpan.FromSeconds(1.5));
+    }
+
+    [Fact(Timeout = 30_000)]
+    public async Task CallCountLimitResetShouldCancelRunningInboundCalls()
+    {
+        // arrange
+        const int callCountLimit = 2;
+        await using var services = CreateServices(services => services.AddSingleton(_ => new RpcLimits(false) {
+            CallCountLimit = callCountLimit,
+            ObjectReleasePeriod = TimeSpan.FromSeconds(1),
+        }));
+        var serverPeer = GetServerPeer(services);
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        // act
+        for (var i = 0; i < callCountLimit + 3; i++)
+            _ = client.Delay(TimeSpan.FromSeconds(30));
+        await TestExt.When(
+            () => serverPeer.InboundCalls.Count.Should().BeGreaterThan(callCountLimit),
+            TimeSpan.FromSeconds(5));
+        var calls = serverPeer.InboundCalls.ToList();
+
+        // assert
+        await TestExt.When(
+            () => calls.Should().AllSatisfy(x => x.CallCancelToken.IsCancellationRequested.Should().BeTrue()),
+            TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
     public async Task CallRegisteredAfterPeerChangeShouldBeCancelled()
     {
         // arrange

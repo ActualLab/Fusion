@@ -44,11 +44,13 @@ public class RpcInboundCallDuplicateIdTest(ITestOutputHelper @out) : RpcLocalTes
         peer.InboundCalls.Get(CallId).Should().BeSameAs(winner);
         duplicates.Should().AllSatisfy(x => x.ResultTask.Should().BeNull());
 
-        // A peer change cancels registered calls only, so the duplicates must stay untouched
-        peerChangedCts.Cancel();
+        // A duplicate never gets registered, so its source must be disposed right away:
+        // WaitHandle is what throws on a disposed source
+        duplicates.Should().AllSatisfy(x
+            => Assert.Throws<ObjectDisposedException>(() => x.CallCancelToken.WaitHandle));
+
         peer.InboundCalls.Abort();
         winner.CallCancelToken.IsCancellationRequested.Should().BeTrue();
-        duplicates.Should().AllSatisfy(x => x.CallCancelToken.IsCancellationRequested.Should().BeFalse());
 
         await winnerTask.WaitAsync(TimeSpan.FromSeconds(5));
         await Task.WhenAll(duplicateTasks).WaitAsync(TimeSpan.FromSeconds(5));
@@ -109,10 +111,11 @@ public class RpcInboundCallDuplicateIdTest(ITestOutputHelper @out) : RpcLocalTes
         peer.InboundCalls.Count.Should().Be(1);
         peer.InboundCalls.Get(CallId).Should().BeSameAs(winner);
 
-        peerChangedCts.Cancel();
+        // Rejected calls never get registered, so their sources must be disposed right away
+        Assert.Throws<ObjectDisposedException>(() => otherMethodCall.CallCancelToken.WaitHandle);
+        Assert.Throws<ObjectDisposedException>(() => otherCallTypeCall.CallCancelToken.WaitHandle);
+
         peer.InboundCalls.Abort();
-        otherMethodCall.CallCancelToken.IsCancellationRequested.Should().BeFalse();
-        otherCallTypeCall.CallCancelToken.IsCancellationRequested.Should().BeFalse();
         await winnerTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
