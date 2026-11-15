@@ -258,13 +258,41 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 
 ## Reference: Redis Benchmark
 
-Reference benchmark using `redis-benchmark` tool on the same machine (500K requests, best of 5 runs). Optimal client count (12) was determined via binary search over 1-1000 range.
+Redis is one of the fastest network servers you can put next to ActualLab.Rpc, so we use it as a
+reference point. We ran `redis-benchmark` (Redis 8.10.3, `GET` only) on the same machine and in the same
+setup as the Docker RPC benchmarks above: the server container is limited to 4 CPUs, and the clients run in
+separate containers with their own cores.
 
-| Operation | Result |
-|-----------|--------|
-| PING_INLINE | 231.59K req/s |
-| GET | 229.25K req/s |
-| SET | 229.67K req/s |
+The numbers below are the peak throughput we could get from Redis under that limit, with the server's
+CPU saturated.
+
+| Redis configuration | Pipelining | GET throughput | Per core | Server CPU |
+|---------------------|------------|----------------|----------|------------|
+| Single thread (default) | none | 77.33K req/s | 77K | 100% (1 core) |
+| Single thread (default) | 16 commands | 1.30M req/s | 1.30M | 98% (1 core) |
+| 6 I/O threads | none | 212.91K req/s | 53K | 405% (4 cores) |
+| 6 I/O threads | 16 commands | **2.48M req/s** | 621K | 416% (4 cores) |
+
+For comparison, ActualLab.Rpc under the same 4-core limit (see Docker Calls above):
+
+| Test | Throughput | Per core |
+|------|------------|----------|
+| GetUser | 4.13M calls/s | 1.03M |
+| Sum | 5.25M calls/s | 1.31M |
+
+**This is not an apples-to-apples comparison, and it favors Redis.** With pipelining,
+`redis-benchmark` builds batches of 16 commands by hand and sends them back-to-back on every
+connection, so the server reads 16 commands and writes 16 replies per network operation. In our RPC
+benchmarks every caller makes a single call and awaits its result; batching happens automatically in
+the transport, and only when calls happen to queue up. The fair counterpart of our numbers is the
+"none" rows; the pipelined rows are a best case that a real application rarely reaches.
+
+Redis also scales less than linearly here: one core handles 1.30M pipelined requests per second, but
+four saturated cores handle 2.48M, or 621K per core. Its I/O threads take over reading, parsing and
+writing, while command execution stays on a single thread.
+
+Each figure is the best of two 10-second runs. Totals for multi-client runs are the sum of per-client
+rates, so they are accurate to within a few percent.
 
 ---
 

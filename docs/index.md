@@ -40,7 +40,7 @@ features:
     details: "Fusion <span style='color:var(--hl-feat);'>caches every compute method call</span> and <span style='color:var(--hl-feat);'>tracks what depends on what</span>. When a cached value is marked changed, the <span style='color:var(--hl-feat);'>invalidation cascades</span> through the dependency graph, evicting every <span style='color:var(--hl-feat);'>local and <span style='text-decoration:underline;'>remote</span> dependent.</span>"
   - icon: 🚀
     title: Unbeatable Speed
-    details: "<span style='color:var(--hl-feat);'>At least 40x faster than Redis</span> — and <span style='color:var(--hl-feat);'>up to 1,400x</span> when the locally cached value is still consistent. The fastest RPC available: <span style='color:var(--hl-feat);'>2–11x faster than gRPC and SignalR.</span>"
+    details: "<span style='color:var(--hl-feat);'>About 20x faster than Redis</span> on remote calls — and <span style='color:var(--hl-feat);'>up to 600x</span> per core when the locally cached value is still consistent. The fastest RPC available: <span style='color:var(--hl-feat);'>2–11x faster than gRPC and SignalR.</span>"
     link: /Performance#results
     linkText: See benchmarks
   - icon: ✈️
