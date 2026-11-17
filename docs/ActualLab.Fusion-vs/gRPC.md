@@ -147,22 +147,8 @@ public class StockService : IComputeService
 
 ## Performance
 
-ActualLab.Rpc (Fusion's RPC layer) outperforms gRPC in benchmarks:
-
-| Benchmark | ActualLab.Rpc | gRPC | Speedup |
-|-----------|---------------|------|---------|
-| RPC calls (Sum) | 9.97M calls/s | 842.95K calls/s | ~11.8x |
-| RPC calls (GetUser) | 8.91M calls/s | 848.30K calls/s | ~10.5x |
-| Streaming (1-byte items) | 104.98M items/s | 39.51M items/s | ~2.7x |
-| Streaming (100-byte items) | 45.89M items/s | 19.94M items/s | ~2.3x |
-| Streaming (10KB items) | 808.92K items/s | 648.00K items/s | ~1.2x |
-
-These are the results of the native run, where the client and the server share all 32 logical CPUs
-of the test machine. See [Performance Benchmarks](/Performance) for full details and test environment.
-
-### On a 4-CPU Server
-
-With the server limited to 4 CPUs in a Docker container and no TLS, which is the setup
+ActualLab.Rpc (Fusion's RPC layer) outperforms gRPC in benchmarks. The server is limited to 4 CPUs
+in a Docker container and the connections don't use TLS, which is the setup
 [grpc_bench](https://github.com/LesnyRumcajs/grpc_bench) uses:
 
 | Benchmark | ActualLab.Rpc | gRPC (grpc-dotnet) | Speedup |
@@ -173,6 +159,8 @@ With the server limited to 4 CPUs in a Docker container and no TLS, which is the
 | Streaming (1-byte items) | 40.19M items/s | 15.40M items/s | ~2.6x |
 | Streaming (100-byte items) | 18.64M items/s | 9.42M items/s | ~2.0x |
 | Streaming (10KB items) | 492.15K items/s | 328.92K items/s | ~1.5x |
+
+See [Performance Benchmarks](/Performance) for full details and test environment.
 
 ### Compared with gRPC Servers in Other Languages
 
@@ -191,7 +179,12 @@ versions of their libraries and with the load generator tuned until each server 
 | go_grpc (Go, grpc-go) | 340K | ~7.5x |
 
 The method, the full list of servers, their versions and the effect of TLS are in
-[Benchmarking gRPC Servers Across Languages and RPC Libraries on .NET](../posts/261116-grpc-bench.md)
+[Benchmarking gRPC Servers Across Languages and RPC Libraries on .NET](../posts/261116-grpc-bench.md).
+
+The two sets of numbers come from different load generators: the gRPC servers were loaded by a Rust
+client that replicates grpc_bench's `ghz`, ActualLab.Rpc by RpcBenchmark's own .NET client. The same
+RpcBenchmark client measures grpc-dotnet at 567K calls/s, so the ~4.5x figure above is the
+like-for-like one.
 
 ## The Key Insight
 
