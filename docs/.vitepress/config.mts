@@ -49,6 +49,22 @@ function deriveDescription(srcDir: string, relativePath: string): string {
 }
 
 // https://vitepress.dev/reference/site-config
+// Lists docs/posts/YYMMDD-title.md files, newest first. The post list on /posts/ comes from
+// posts/posts.data.mts, which reads the same files.
+function getPostSidebarItems(maxCount: number) {
+  const dir = fileURLToPath(new URL("../posts", import.meta.url));
+  return fs.readdirSync(dir)
+    .filter(name => /^\d{6}-.+\.md$/.test(name))
+    .sort()
+    .reverse()
+    .slice(0, maxCount)
+    .map(name => {
+      const src = fs.readFileSync(path.join(dir, name), "utf-8");
+      const title = /^shortTitle:\s*(.+)$/m.exec(src)?.[1] ?? /^#\s+(.+)$/m.exec(src)?.[1] ?? name;
+      return { text: title.trim(), link: `/posts/${name.replace(/\.md$/, "")}` };
+    });
+}
+
 export default defineConfig({
   lang: "en-US",
   title: "ActualLab.Fusion",
@@ -364,6 +380,15 @@ gtag('config', 'G-PX4G7HX4CM');`],
       {
         text: "Extras",
         items: [
+          {
+            text: "Posts",
+            link: "/posts/",
+            collapsed: false,
+            items: [
+              ...getPostSidebarItems(5),
+              { text: "All Posts", link: "/posts/" },
+            ],
+          },
           { text: "Glossary", link: "/glossary" },
           { text: "API Index", link: "/api-index-full" },
           { text: "NuGet Packages", link: "/NuGet-Packages" },

@@ -1,6 +1,6 @@
 # Performance
 
-**Updated:** 2026-11-14<br/>
+**Updated:** 2026-11-16<br/>
 **ActualLab.Fusion Version:** 15.1.38
 
 This page summarizes results of Fusion performance benchmarks.
@@ -191,39 +191,44 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 ## Docker-Based RPC Benchmarks
 
 These benchmarks run in Docker containers with CPU limits to measure **4-core server performance**.
-The server container is limited to 4 CPUs while client containers have 24 CPUs available,
+The server container is limited to 4 CPUs while the client container has 24 CPUs available,
 ensuring the server is the bottleneck. This setup matches [grpc_bench](https://github.com/LesnyRumcajs/grpc_bench), `SayHello` w/ `gRPC` is identical to what `grpc_bench` measures.
 
-> **External cross-check.** grpc_bench's own
-> [.NET gRPC result on an i9-13900KF @ 5.5 GHz](https://github.com/LesnyRumcajs/grpc_bench/discussions/441)
-> (4-CPU server — a desktop CPU with per-core throughput close to the 9950X3D) is **~402K req/s**,
-> close to our `SayHello` gRPC figure of **441.37K** below. Same library (grpc-dotnet),
-> same 4-CPU setup — which confirms our gRPC numbers are measured fairly. gRPC-dotnet is the *fastest*
-> framework in that grpc_bench run, and ActualLab.Rpc's `SayHello` (**2.46M**) is still **~6.1× faster**
-> than it.
+These figures were measured on 2026-11-16 **without TLS**, as grpc_bench does (`RpcBenchmark` runs
+without TLS by default now, `-tls` turns it on), and with fixed worker and concurrency parameters
+instead of the parameter search. With TLS, calls are 3-10% slower for ActualLab.Rpc and SignalR and
+17-20% slower for gRPC and MagicOnion.
+
+> **Comparison with other gRPC servers.** We ran 26 servers from grpc_bench on the same machine in
+> the same 4-CPU setup, on current versions of their libraries and with the load generator tuned
+> until each server is saturated. The fastest of them, `rust_ntex`, reaches **1.06M** `SayHello`
+> calls/s, and grpc_bench's own grpc-dotnet server reaches **670K**, which agrees with the **567K**
+> our gRPC test measures below with a less favorable client. ActualLab.Rpc's `SayHello` (**2.54M**)
+> is **2.4x** the fastest of these gRPC servers. See
+> [Benchmarking gRPC Servers Across Languages and RPC Libraries on .NET](./posts/261116-grpc-bench.md)
 
 ### Docker Calls
 
 | Framework | Sum | GetUser | SayHello |
 |-----------|-----|---------|----------|
-| ActualLab.Rpc | **5.25M calls/s** | **4.13M calls/s** | **2.46M calls/s** |
-| SignalR | 2.42M calls/s | 2.02M calls/s | 931.18K calls/s |
-| gRPC | 483.52K calls/s | 467.10K calls/s | 441.37K calls/s |
-| MagicOnion | 351.54K calls/s | 342.24K calls/s | 329.68K calls/s |
-| StreamJsonRpc | 332.66K calls/s | 263.40K calls/s | 114.41K calls/s |
-| HTTP | 93.08K calls/s | 93.87K calls/s | 92.56K calls/s |
+| ActualLab.Rpc | **5.62M calls/s** | **4.36M calls/s** | **2.54M calls/s** |
+| SignalR | 2.71M calls/s | 2.24M calls/s | 999.19K calls/s |
+| gRPC | 625.64K calls/s | 602.70K calls/s | 567.12K calls/s |
+| MagicOnion | 582.60K calls/s | 563.39K calls/s | 518.14K calls/s |
+| StreamJsonRpc | 396.57K calls/s | 306.24K calls/s | 134.15K calls/s |
+| HTTP | 146.06K calls/s | 147.05K calls/s | 130.46K calls/s |
 
 <ClientOnly>
   <BarChart
     title="Docker RPC Calls - 4 CPU Server (Million/s)"
     :labels="['Sum', 'GetUser', 'SayHello']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [5.25, 4.13, 2.46], backgroundColor: '#22c55e' },
-      { label: 'SignalR', data: [2.42, 2.02, 0.93], backgroundColor: '#3b82f6' },
-      { label: 'gRPC', data: [0.48, 0.47, 0.44], backgroundColor: '#f59e0b' },
-      { label: 'MagicOnion', data: [0.35, 0.34, 0.33], backgroundColor: '#a855f7' },
-      { label: 'StreamJsonRpc', data: [0.33, 0.26, 0.11], backgroundColor: '#ec4899' },
-      { label: 'HTTP', data: [0.09, 0.09, 0.09], backgroundColor: '#6b7280' }
+      { label: 'ActualLab.Rpc', data: [5.62, 4.36, 2.54], backgroundColor: '#22c55e' },
+      { label: 'SignalR', data: [2.71, 2.24, 1.00], backgroundColor: '#3b82f6' },
+      { label: 'gRPC', data: [0.63, 0.60, 0.57], backgroundColor: '#f59e0b' },
+      { label: 'MagicOnion', data: [0.58, 0.56, 0.52], backgroundColor: '#a855f7' },
+      { label: 'StreamJsonRpc', data: [0.40, 0.31, 0.13], backgroundColor: '#ec4899' },
+      { label: 'HTTP', data: [0.15, 0.15, 0.13], backgroundColor: '#6b7280' }
     ]"
     :yMax="6"
     yLabel="M calls/s"
@@ -233,25 +238,26 @@ ensuring the server is the bottleneck. This setup matches [grpc_bench](https://g
 ### Docker Streams
 
 Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte items, Stream10K = 10KB items.
+Stream tests count the items received inside the measurement window.
 
 | Framework | Stream1 | Stream100 | Stream10K |
 |-----------|---------|-----------|-----------|
-| ActualLab.Rpc | **37.77M items/s** | **13.33M items/s** | **285.12K items/s** |
-| gRPC | 13.42M items/s | 7.27M items/s | 149.04K items/s |
-| SignalR | 9.71M items/s | 5.50M items/s | 155.52K items/s |
-| StreamJsonRpc | 127.44K items/s | 127.44K items/s | 63.72K items/s |
+| ActualLab.Rpc | **40.19M items/s** | **18.64M items/s** | **492.15K items/s** |
+| gRPC | 15.40M items/s | 9.42M items/s | 328.92K items/s |
+| SignalR | 12.01M items/s | 6.97M items/s | 239.28K items/s |
+| StreamJsonRpc | 162.62K items/s | 163.20K items/s | 94.63K items/s |
 
 <ClientOnly>
   <BarChart
     title="Docker RPC Streams - 4 CPU Server (Million items/s)"
     :labels="['Stream1', 'Stream100']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [37.77, 13.33], backgroundColor: '#22c55e' },
-      { label: 'gRPC', data: [13.42, 7.27], backgroundColor: '#f59e0b' },
-      { label: 'SignalR', data: [9.71, 5.50], backgroundColor: '#3b82f6' },
-      { label: 'StreamJsonRpc', data: [0.13, 0.13], backgroundColor: '#ec4899' }
+      { label: 'ActualLab.Rpc', data: [40.19, 18.64], backgroundColor: '#22c55e' },
+      { label: 'gRPC', data: [15.40, 9.42], backgroundColor: '#f59e0b' },
+      { label: 'SignalR', data: [12.01, 6.97], backgroundColor: '#3b82f6' },
+      { label: 'StreamJsonRpc', data: [0.16, 0.16], backgroundColor: '#ec4899' }
     ]"
-    :yMax="40"
+    :yMax="45"
     yLabel="M items/s"
   />
 </ClientOnly>

@@ -57,6 +57,8 @@ for (const rel of htmlFiles) {
       : `/${rel.slice(0, -".html".length)}`;
   pageRules.push(`${legacy}  ${clean}  301`);
 }
+// Pages that moved: the old clean URL keeps working.
+pageRules.push("/Posts  /posts/  301");
 pageRules.sort();
 
 // SPA fallbacks: a bare-deck -> trailing-slash 301 plus a splat rewrite that

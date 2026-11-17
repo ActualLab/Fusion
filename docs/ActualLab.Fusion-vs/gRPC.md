@@ -157,7 +157,41 @@ ActualLab.Rpc (Fusion's RPC layer) outperforms gRPC in benchmarks:
 | Streaming (100-byte items) | 45.89M items/s | 19.94M items/s | ~2.3x |
 | Streaming (10KB items) | 808.92K items/s | 648.00K items/s | ~1.2x |
 
-See [Performance Benchmarks](/Performance) for full details and test environment.
+These are the results of the native run, where the client and the server share all 32 logical CPUs
+of the test machine. See [Performance Benchmarks](/Performance) for full details and test environment.
+
+### On a 4-CPU Server
+
+With the server limited to 4 CPUs in a Docker container and no TLS, which is the setup
+[grpc_bench](https://github.com/LesnyRumcajs/grpc_bench) uses:
+
+| Benchmark | ActualLab.Rpc | gRPC (grpc-dotnet) | Speedup |
+|-----------|---------------|--------------------|---------|
+| RPC calls (Sum) | 5.62M calls/s | 625.64K calls/s | ~9.0x |
+| RPC calls (GetUser) | 4.36M calls/s | 602.70K calls/s | ~7.2x |
+| RPC calls (SayHello, the grpc_bench message) | 2.54M calls/s | 567.12K calls/s | ~4.5x |
+| Streaming (1-byte items) | 40.19M items/s | 15.40M items/s | ~2.6x |
+| Streaming (100-byte items) | 18.64M items/s | 9.42M items/s | ~2.0x |
+| Streaming (10KB items) | 492.15K items/s | 328.92K items/s | ~1.5x |
+
+### Compared with gRPC Servers in Other Languages
+
+We also ran 26 gRPC servers from grpc_bench on the same machine in the same 4-CPU setup, on current
+versions of their libraries and with the load generator tuned until each server is saturated.
+`SayHello` calls per second:
+
+| Server | Calls/s | ActualLab.Rpc is faster by |
+|--------|---------|----------------------------|
+| ActualLab.Rpc | 2.54M | - |
+| rust_ntex (Rust), the fastest gRPC server tested | 1.06M | ~2.4x |
+| java_vertx_grpc (Java, Vert.x) | 672K | ~3.8x |
+| dotnet_grpc (grpc-dotnet in grpc_bench) | 670K | ~3.8x |
+| java_quarkus (Java, Quarkus) | 632K | ~4.0x |
+| rust_tonic_mt (Rust, tonic) | 491K | ~5.2x |
+| go_grpc (Go, grpc-go) | 340K | ~7.5x |
+
+The method, the full list of servers, their versions and the effect of TLS are in
+[Benchmarking gRPC Servers Across Languages and RPC Libraries on .NET](../posts/261116-grpc-bench.md)
 
 ## The Key Insight
 

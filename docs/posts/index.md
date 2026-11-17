@@ -1,6 +1,32 @@
-# Posts And Other Content
+# Posts
 
-A collection of blog posts and articles about Fusion:
+<script setup>
+import { data as posts } from "./posts.data.mts";
+
+const recent = posts.slice(0, 5);
+const years = [...new Set(posts.map(p => p.year))];
+</script>
+
+## Recent
+
+<ul>
+  <li v-for="post in recent" :key="post.url">
+    {{ post.date }}: <a :href="post.url">{{ post.title }}</a>
+  </li>
+</ul>
+
+<template v-for="year in years" :key="year">
+  <h2 :id="`posts-${year}`">{{ year }}</h2>
+  <ul>
+    <li v-for="post in posts.filter(p => p.year === year)" :key="post.url">
+      {{ post.date }}: <a :href="post.url">{{ post.title }}</a>
+    </li>
+  </ul>
+</template>
+
+## Elsewhere
+
+Blog posts and articles about Fusion published on other sites:
 
 - [Popular UI architectures compared & how Blazor+Fusion UI fits in there](https://itnext.io/the-most-popular-ui-architectures-and-how-fusion-based-ui-fits-in-there-fb47e45038a7?source=friends_link&sk=bef676ccd1f3c6e6148178bf05346852)
 - [The Ungreen Web: Why our web apps are terribly inefficient?](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b)
