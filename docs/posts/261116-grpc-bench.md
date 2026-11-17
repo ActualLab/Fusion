@@ -80,8 +80,8 @@ garbage collector mode on. Turning DATAS off, which is what my benchmark does, g
 the cost of about 270 MB of memory.
 
 The upgraded servers, the new ones and the Rust client are all in the
-[`upgrade-2026-11` branch](https://github.com/ActualLab/grpc_bench/tree/upgrade-2026-11) of a fork
-of grpc_bench, proposed upstream as a pull request.
+[`dev` branch](https://github.com/ActualLab/grpc_bench/tree/dev) of a fork
+of grpc_bench, which I'm proposing upstream as a series of pull requests.
 
 Everything here runs on one machine, so the calls never leave the Docker network. I'll follow up
 with the same tests over a real network, with the clients on a separate machine.
