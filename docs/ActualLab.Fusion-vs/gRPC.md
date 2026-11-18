@@ -179,12 +179,31 @@ versions of their libraries and with the load generator tuned until each server 
 | go_grpc (Go, grpc-go) | 340K | ~7.5x |
 
 The method, the full list of servers, their versions and the effect of TLS are in
-[Benchmarking gRPC Servers Across Languages and RPC Libraries on .NET](../posts/261116-grpc-bench.md).
+[The Fastest .NET RPC Servers vs the Fastest gRPC Servers](../posts/261116-grpc-bench.md).
 
 The two sets of numbers come from different load generators: the gRPC servers were loaded by a Rust
 client that replicates grpc_bench's `ghz`, ActualLab.Rpc by RpcBenchmark's own .NET client. The same
 RpcBenchmark client measures grpc-dotnet at 567K calls/s, so the ~4.5x figure above is the
 like-for-like one.
+
+### Over a Real Network
+
+We also ran the benchmarks over a 5 Gbit/s LAN between two machines, with the server limited to 2 CPUs
+(a Docker container in a VM) and a separate client PC. `SayHello` calls per second:
+
+| Server | Calls/s | ActualLab.Rpc is faster by |
+|--------|---------|----------------------------|
+| ActualLab.Rpc | 1.07M | - |
+| rust_ntex (Rust), the fastest gRPC server tested | 400.7K | ~2.7x |
+| java_vertx_grpc (Java, Vert.x) | 318.9K | ~3.4x |
+| gRPC (grpc-dotnet, RpcBenchmark client) | 313.9K | ~3.4x |
+| dotnet_grpc (grpc-dotnet in grpc_bench) | 284.8K | ~3.8x |
+| go_vtgrpc (Go, grpc-go) | 179.3K | ~6.0x |
+
+The other call tests and streams show the same pattern: ActualLab.Rpc is 3.4-6.1x faster than gRPC on
+calls, and 2.4x (1-byte items) and 1.2x (100-byte items) faster on streams. The 100-byte test is
+close to the link's limit. See [Real-Network RPC Benchmarks](/Performance#real-network-rpc-benchmarks)
+for the setup and all the results.
 
 ## The Key Insight
 

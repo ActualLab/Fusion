@@ -205,7 +205,7 @@ instead of the parameter search. With TLS, calls are 3-10% slower for ActualLab.
 > calls/s, and grpc_bench's own grpc-dotnet server reaches **670K**, which agrees with the **567K**
 > our gRPC test measures below with a less favorable client. ActualLab.Rpc's `SayHello` (**2.54M**)
 > is **2.4x** the fastest of these gRPC servers. See
-> [Benchmarking gRPC Servers Across Languages and RPC Libraries on .NET](./posts/261116-grpc-bench.md)
+> [The Fastest .NET RPC Servers vs the Fastest gRPC Servers](./posts/261116-grpc-bench.md)
 
 ### Docker Calls
 
@@ -261,6 +261,98 @@ Stream tests count the items received inside the measurement window.
     yLabel="M items/s"
   />
 </ClientOnly>
+
+## Real-Network RPC Benchmarks
+
+The Docker benchmarks above run the client and the server on one machine. These run over a real
+**5 Gbit/s LAN** between two machines, without TLS, and were measured on 2026-11-17. The server is
+limited to **2 CPUs**, and the client is a separate PC with 32 logical CPUs, so the server is the bottleneck.
+
+| | Client | Server |
+|-|--------|--------|
+| **Machine** | AMD Ryzen AI MAX+ PRO 395 (16 cores / 32 logical CPUs), 96 GB RAM | VM (16 vCPUs, 26 GB RAM) on Proxmox VE 9.0.3, on an AMD Ryzen 7 8745HS host |
+| **OS** | Windows 11 Pro | Ubuntu 24.04.5 |
+| **Network** | Realtek USB 5GbE adapter | Realtek USB 5GbE adapter, Linux bridge, virtio NIC with 8 queues |
+| **Runtime** | .NET 11.0.0, native process | .NET 11.0.0, Docker container with `--cpus 2 --memory 8g` |
+
+`iperf3` measures 4.74 Gbit/s of TCP throughput on this link. The server runs in a container, inside a
+VM, on a Proxmox host, so the network path is longer than in the Docker tests. These figures are not
+comparable with the Docker ones: the server has 2 CPUs instead of 4, its CPU is slower, and the
+client is a different machine. The full setup, the commands, and the traffic and CPU measurements are in
+[Real Network RPC Benchmarks](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#real-network-rpc-benchmarks).
+
+### Network Calls
+
+| Framework | Sum | GetUser | SayHello |
+|-----------|-----|---------|----------|
+| ActualLab.Rpc | **2.22M calls/s** | **1.71M calls/s** | **1.07M calls/s** |
+| SignalR | 1.06M calls/s | 764.92K calls/s | 416.16K calls/s |
+| gRPC | 364.40K calls/s | 355.75K calls/s | 313.92K calls/s |
+| HTTP | 98.42K calls/s | 103.78K calls/s | 81.52K calls/s |
+
+Every call test is limited by the server's 2 CPUs (187-196% usage), and none of them uses more than a
+quarter of the link. ActualLab.Rpc is 2.1-2.6x faster than SignalR, 3.4-6.1x faster than gRPC and
+12-23x faster than HTTP.
+
+<ClientOnly>
+  <BarChart
+    title="Network RPC Calls - 2 CPU Server (Million/s)"
+    :labels="['Sum', 'GetUser', 'SayHello']"
+    :datasets="[
+      { label: 'ActualLab.Rpc', data: [2.22, 1.71, 1.07], backgroundColor: '#22c55e' },
+      { label: 'SignalR', data: [1.06, 0.76, 0.42], backgroundColor: '#3b82f6' },
+      { label: 'gRPC', data: [0.36, 0.36, 0.31], backgroundColor: '#f59e0b' },
+      { label: 'HTTP', data: [0.10, 0.10, 0.08], backgroundColor: '#6b7280' }
+    ]"
+    :yMax="2.5"
+    yLabel="M calls/s"
+  />
+</ClientOnly>
+
+`SayHello` latency (p50 / p95 / p99) at these loads: ActualLab.Rpc 14.3 / 25.4 / 45.3 ms, SignalR
+32.6 / 250.5 / 260.1 ms, gRPC 3.6 / 5.1 / 23.6 ms, HTTP 15.1 / 244.6 / 246.9 ms. Latency grows with the
+number of calls in flight, so compare it together with the worker count: ActualLab.Rpc runs with
+about 15x more concurrent calls than gRPC here.
+
+### Network Streams
+
+Stream10K wasn't run, because it saturates the 5 Gbit/s NICs at any server speed.
+
+| Framework | Stream1 | Stream100 | Stream100 traffic (client rx) |
+|-----------|---------|-----------|-------------------------------|
+| ActualLab.Rpc | **18.51M items/s** | **5.45M items/s** | 4.91 Gbit/s |
+| gRPC | 7.79M items/s | 4.54M items/s | 4.37 Gbit/s |
+| SignalR | 4.98M items/s | 2.63M items/s | 4.53 Gbit/s |
+
+- **Stream1** is limited by the server's CPU for all three frameworks.
+- **Stream100:** ActualLab.Rpc reaches 92% of the link's 5.93M items/s ceiling (4.74 Gbit/s with no
+  framing at all) and has CPU to spare. gRPC runs out of CPU at 4.54M items/s. SignalR's default JSON
+  protocol encodes the 100 bytes as base64, so it needs about twice as many bytes per item.
+
+### Compared with gRPC Servers in Other Languages
+
+The 7 servers from [grpc_bench](https://github.com/LesnyRumcajs/grpc_bench) that are the fastest in
+their languages in the [4-CPU tests](./posts/261116-grpc-bench.md) ran in the same LAN setup with the
+same 2-CPU limit. A Rust client (`tonic_client`) on the client PC loaded them. `SayHello`:
+
+| Server | Client | Calls/s | ActualLab.Rpc is faster by |
+|--------|--------|---------|----------------------------|
+| ActualLab.Rpc | RpcBenchmark | 1.07M | - |
+| SignalR | RpcBenchmark | 416.2K | 2.6x |
+| rust_ntex (Rust) | tonic_client | 400.7K | 2.7x |
+| java_vertx_grpc (Java) | tonic_client | 318.9K | 3.4x |
+| gRPC (grpc-dotnet) | RpcBenchmark | 313.9K | 3.4x |
+| dotnet_grpc (grpc-dotnet) | tonic_client | 284.8K | 3.8x |
+| go_vtgrpc (Go) | tonic_client | 179.3K | 6.0x |
+| scala_akka (Scala) | tonic_client | 153.9K | 7.0x |
+| cpp_grpc_mt (C++) | tonic_client | 150.9K | 7.1x |
+| swift_grpc (Swift) | tonic_client | 92.3K | 11.6x |
+| HTTP | RpcBenchmark | 89.3K | 12.0x |
+
+Each `RpcBenchmark` row is the better of its two parameter sets for `SayHello`. The two groups are not
+measured identically: `RpcBenchmark` figures are the best of six 5-second tries, and grpc_bench figures
+are single 15-second runs, which favors the `RpcBenchmark` rows. The details are in
+[Benchmarks-gRPC.md](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks-gRPC.md#real-network).
 
 ## Reference: Redis Benchmark
 

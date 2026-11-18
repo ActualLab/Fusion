@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="13">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8f98"/>
+    </marker>
+  </defs>
+
+  <!-- Client PC -->
+  <rect x="10" y="90" width="180" height="120" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="100" y="116" text-anchor="middle" font-weight="700" fill="#1e3a8a">Client PC</text>
+  <text x="100" y="138" text-anchor="middle" fill="#1e3a8a">Windows 11</text>
+  <text x="100" y="156" text-anchor="middle" fill="#1e3a8a">32 logical CPUs</text>
+  <text x="100" y="174" text-anchor="middle" fill="#1e3a8a">RpcBenchmark client or</text>
+  <text x="100" y="192" text-anchor="middle" fill="#1e3a8a">tonic_client (native)</text>
+
+  <!-- Client -> Switch -->
+  <line x1="192" y1="150" x2="232" y2="150" stroke="#8a8f98" stroke-width="2" marker-end="url(#arr)" marker-start="url(#arr)"/>
+  <text x="212" y="138" text-anchor="middle" fill="#8a8f98" font-size="11">5 Gbit/s</text>
+
+  <!-- Switch -->
+  <rect x="234" y="112" width="100" height="76" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="284" y="138" text-anchor="middle" font-weight="700" fill="#1f2937">Switch</text>
+  <text x="284" y="156" text-anchor="middle" fill="#1f2937" font-size="11">10 Gbit/s ports</text>
+  <text x="284" y="172" text-anchor="middle" fill="#1f2937" font-size="11">100 Gbit/s total</text>
+
+  <!-- Switch -> Host -->
+  <line x1="336" y1="150" x2="388" y2="150" stroke="#8a8f98" stroke-width="2" marker-end="url(#arr)" marker-start="url(#arr)"/>
+  <text x="362" y="138" text-anchor="middle" fill="#8a8f98" font-size="11">5 Gbit/s</text>
+
+  <!-- Proxmox host -->
+  <rect x="390" y="10" width="500" height="280" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="404" y="32" font-weight="700" fill="#78350f">Proxmox VE host</text>
+  <text x="404" y="50" fill="#78350f" font-size="12">AMD Ryzen 7 8745HS (16 logical CPUs)</text>
+  <text x="404" y="68" fill="#78350f" font-size="12">USB 5GbE adapter, Linux bridge, vhost-net</text>
+
+  <!-- VM -->
+  <rect x="410" y="84" width="470" height="196" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="424" y="106" font-weight="700" fill="#14532d">Ubuntu 24.04 VM</text>
+  <text x="424" y="124" fill="#14532d" font-size="12">16 vCPUs, 26 GB RAM, virtio NIC with 8 queues</text>
+  <text x="424" y="142" fill="#14532d" font-size="12">Docker bridge network, published ports</text>
+
+  <!-- Container -->
+  <rect x="610" y="156" width="256" height="112" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="738" y="182" text-anchor="middle" font-weight="700" fill="#4c1d95">Server container</text>
+  <text x="738" y="204" text-anchor="middle" fill="#4c1d95" font-size="12">--cpus 2 --memory 8g</text>
+  <text x="738" y="222" text-anchor="middle" fill="#4c1d95" font-size="12">RpcBenchmark server or</text>
+  <text x="738" y="240" text-anchor="middle" fill="#4c1d95" font-size="12">grpc_bench server</text>
+</svg>
