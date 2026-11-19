@@ -127,7 +127,7 @@ public class RadixHeapSetTest(ITestOutputHelper @out) : TestBase(@out)
                     }
 
                     var minSet = heap.ExtractMinSet(cursor);
-                    var expected = model.Where(x => x.Value == cursor).Select(x => x.Key).ToHashSet();
+                    var expected = new HashSet<int>(model.Where(x => x.Value == cursor).Select(x => x.Key));
                     minSet.Keys.Should().BeEquivalentTo(expected);
                     foreach (var value in expected)
                         model.Remove(value);
@@ -152,7 +152,7 @@ public class RadixHeapSetTest(ITestOutputHelper @out) : TestBase(@out)
                 bound.Should().BeLessThanOrEqualTo(min);
                 cursor = Math.Max(cursor, bound);
                 var minSet = heap.ExtractMinSet(cursor);
-                var expected = model.Where(x => x.Value == cursor).Select(x => x.Key).ToHashSet();
+                var expected = new HashSet<int>(model.Where(x => x.Value == cursor).Select(x => x.Key));
                 minSet.Keys.Should().BeEquivalentTo(expected);
                 foreach (var value in expected)
                     model.Remove(value);

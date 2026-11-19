@@ -3,8 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <ProjectKind>Other</ProjectKind>
-    <TargetFramework>$(LatestTargetFramework)</TargetFramework>
-    <UseMultitargeting>false</UseMultitargeting>
+    <!-- TargetFrameworks, not TargetFramework: -p:UseMultitargeting=true is a global property, so setting
+         UseMultitargeting here can't stop tests/Directory.Build.props from adding every target framework -->
+    <TargetFrameworks>$(LatestTargetFramework)</TargetFrameworks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 

@@ -21,7 +21,7 @@ public class TaskErrorObservationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         // act
         var isObserved = await IsErrorObserved(async error => {
-            var source = TaskCompletionSourceExt.New();
+            var source = TaskCompletionSourceExt.New<bool>(); // The untyped one is .NET 5+ only
             _ = Task.Delay(50).ContinueWith(
                 _ => source.TrySetException(error),
                 CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
