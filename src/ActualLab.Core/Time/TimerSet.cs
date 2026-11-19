@@ -148,7 +148,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
                 _wakeUpSource = null;
                 // Nothing is due before the earliest timer, so the quanta up to it (or up to now) can be skipped.
                 // The loop's "dueAt += Quanta" turns the start of the new current quantum into its end.
-                var minPriority = _timers.TryGetMinPriority(out var p) ? p : long.MaxValue;
+                var minPriority = _timers.TryGetMinPriorityLowerBound(out var p) ? p : long.MaxValue;
                 var priority = GetPriority(Clock.Now);
                 // Clock.Delay may end the sleep a bit before the quantum it targets,
                 // and processing that quantum from the previous one costs an extra tick
@@ -171,7 +171,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
         lock (_lock) {
             minSet = _timers.ExtractMinSet(_minPriority);
             ++_minPriority;
-            wakeUpPriority = _timers.TryGetMinPriority(out var p) ? p : long.MaxValue;
+            wakeUpPriority = _timers.TryGetMinPriorityLowerBound(out var p) ? p : long.MaxValue;
             if (wakeUpPriority > _minPriority) {
                 _wakeUpSource = AsyncTaskMethodBuilderExt.New();
                 _wakeUpPriority = wakeUpPriority;
