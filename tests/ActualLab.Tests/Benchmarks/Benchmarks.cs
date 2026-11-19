@@ -24,14 +24,6 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
             }
             return sum;
         });
-        RunOne("Read CoarseSystemClock.Now.EpochOffsetTicks", baseOpCount, opCount => {
-            var sum = 0L;
-            var clock = CoarseSystemClock.Instance;
-            for (; opCount > 0; opCount--) {
-                sum += clock.Now.EpochOffsetTicks;
-            }
-            return sum;
-        });
         RunOne("Read Environment.TickCount64", baseOpCount, opCount => {
             var sum = 0L;
             for (; opCount > 0; opCount--) {

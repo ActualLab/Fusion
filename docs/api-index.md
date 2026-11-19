@@ -18,8 +18,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `CpuClock` — monotonic high-resolution clock (Stopwatch-based)
 - `ServerClock` — clock with offset from base clock (for client-side server time)
 - `SystemClock` — real UTC clock via `DateTime.UtcNow`
-- `CoarseSystemClock` — low-overhead periodically-updated clock
-- `MomentClockSet` — set of related clocks (system, CPU, server, coarse)
+- `MomentClockSet` — set of related clocks (system, CPU, server)
 - `TimerSet<T>` — priority-based timer set backed by radix heap
 - `ConcurrentTimerSet<T>` — sharded concurrent version of `TimerSet`
 - `TickSource` — shared coalesced timer tick for multiple consumers

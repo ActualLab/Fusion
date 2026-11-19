@@ -189,8 +189,6 @@ public abstract class MomentClock
 |-------|-------------|
 | `SystemClock` | Uses `DateTime.UtcNow` — standard wall-clock time |
 | `CpuClock` | Uses `Stopwatch` — high-resolution, monotonic |
-| `CoarseSystemClock` | Cached `SystemClock` — lower precision, higher performance |
-| `CoarseCpuClock` | Cached `CpuClock` — lower precision, higher performance |
 | `ServerClock` | Tracks server time offset from local time |
 
 ### MomentClockSet
@@ -203,8 +201,6 @@ public class MomentClockSet
     public MomentClock SystemClock { get; }
     public MomentClock CpuClock { get; }
     public ServerClock ServerClock { get; }
-    public MomentClock CoarseSystemClock { get; }
-    public MomentClock CoarseCpuClock { get; }
 }
 
 // Access via DI
@@ -220,24 +216,6 @@ public class MyService(MomentClockSet clocks)
 // Or via extension method
 var clocks = services.Clocks();
 ```
-
-### Coarse Clocks
-
-Coarse clocks cache time values and update periodically (typically every 1-20ms).
-Use them when:
-- Reading time in tight loops
-- Precision below ~20ms isn't needed
-- Performance is critical
-
-```cs
-// High-frequency time reads
-for (int i = 0; i < 1_000_000; i++) {
-    var now = CoarseCpuClock.Instance.Now;  // Cached, very fast
-    // vs
-    var precise = CpuClock.Instance.Now;     // Calls Stopwatch each time
-}
-```
-
 
 ## Timers and Scheduling
 

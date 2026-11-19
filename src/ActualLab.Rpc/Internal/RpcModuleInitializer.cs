@@ -22,7 +22,6 @@ internal static class RpcModuleInitializer
         // to their methods w/o type initializer check further.
         _ = SystemClock.Instance.Now;
         _ = CpuClock.Instance.Now;
-        _ = CoarseSystemClock.Instance.Now;
         _ = Timeouts.TickSource;
         _ = RpcInstruments.Meter;
         _ = new RpcOutboundCallSetup();
