@@ -11,6 +11,76 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.59+cf3d01506 | npm: 15.1.59
+
+Release date: 2026-11-19
+
+An idle-CPU release for the .NET packages, worth taking for mobile and other battery-powered clients:
+an idle app on Fusion no longer wakes up several times per second. Thanks to Dmitrii Filippov for
+finding and fixing the idle wakeups ([#174](https://github.com/ActualLab/Fusion/pull/174)) and for
+reporting the `GetStateOptions` issue ([#167](https://github.com/ActualLab/Fusion/issues/167)).
+The npm packages are identical to 15.1.38 except for the version.
+
+### Breaking Changes
+
+- **Core:** `CoarseSystemClock`, `CoarseClockHelper`, `NonCapturingTimer` and
+  `MomentClockSet.CoarseSystemClock` are removed, and the `MomentClockSet` constructor no longer takes
+  a coarse clock. Fusion never read this clock, yet every process using RPC ran its 20 Hz timer. If you
+  used it, switch to `MomentClockSet.SystemClock`. If you need something cheaper than `Moment.Now`:
+  - pair `CpuTimestamp` with `Moment.Now`, re-reading `Moment.Now` periodically;
+  - or use `Environment.TickCount64` for a very cheap value straight from the OS. It changes every
+    ~15.6 ms on Windows and every 4 ms on a 250 Hz Linux kernel, and doesn't advance during device
+    sleep on Android or on Windows with .NET 11.
+
+  Read costs (BenchmarkDotNet, .NET 11, Windows x64, Ryzen 9 9950X3D): `Environment.TickCount64`
+  1.77 ns, `CpuTimestamp.Now` 15.30 ns, `Moment.Now` 20.31 ns.
+
+### Performance
+
+- **Core:** an idle `TimerSet` sleeps until its earliest timer instead of ticking every quantum.
+  `Timeouts.KeepAlive` and `Timeouts.Generic` used to wake up 5 times per second for the whole
+  process lifetime, since on a client neither of them ever empties.
+  ([#174](https://github.com/ActualLab/Fusion/pull/174) by Dmitrii Filippov)
+- **Core:** an idle `BatchProcessor` (e.g. the one behind every `DbEntityResolver`) checks its queue
+  once per `CollectorCycle` (5 s) instead of every 150 ms. The first item dequeued after idle wakes
+  it up, so the start of a load is still noticed within ~150 ms.
+  ([#174](https://github.com/ActualLab/Fusion/pull/174) by Dmitrii Filippov)
+
+  Together with the coarse clock removal, this took an idle, backgrounded Android app from 6.9% to
+  ~1.15% CPU, and its .NET timer thread from ~123 to ~5.6 wakeups per second. Android kills cached
+  processes that exceed 2-25% CPU, which is how this was found.
+
+### Added
+
+- **Blazor:** in a Debug build, `ComputedStateComponent.GetStateOptions(Type, factory)` throws
+  `InvalidOperationException` when the factory captures the component instance or a local. Options
+  are cached per component type, so such a factory gave every later instance the first instance's
+  options. Set `ComputedStateComponent.StateOptionsFactoryValidator = null` to turn the check off.
+  ([#175](https://github.com/ActualLab/Fusion/pull/175), reported by Dmitrii Filippov in
+  [#167](https://github.com/ActualLab/Fusion/issues/167))
+- **Core:** `TimerSetOptions.MaxSleepDuration` (30 s by default, at most 1 hour, zero = tick every
+  quantum) caps how long an idle `TimerSet` sleeps. It's also the longest a change of `Clock.Now`
+  that `Clock.Delay` doesn't see (a `ServerClock` offset change, a system sleep on Windows) may
+  delay a timer.
+- **Core:** `AssemblyExt.IsDebugBuild()`, `DelegateExt.IsCaptureFree()` and
+  `RadixHeapSet.TryGetMinPriorityLowerBound()`.
+
+### Changed
+
+- **Core:** a `TimerSet` fires a quantum's timers only once `Clock.Now` reaches its end, so a set
+  on a paused or slowed clock (e.g. `TestClock`) now waits, where it used to fire one quantum per
+  real tick.
+- **Core:** `RadixHeapSet.ExtractMinSet(priority)` on an empty heap raises `MinPriority`, so adding
+  a lower priority after it throws, as it does on a non-empty heap.
+- **Core:** an idle `BatchProcessor` notices a `WorkerPolicy` change after up to `CollectorCycle`
+  (was ~150 ms).
+
+### Documentation
+
+- Benchmark pages use .NET 11 and Fusion 15.1.38 numbers, and a new post compares Fusion RPC with
+  gRPC and other .NET RPC stacks.
+
+
 ## 15.1.38+b373fd2eb | npm: 15.1.38
 
 Release date: 2026-11-13
