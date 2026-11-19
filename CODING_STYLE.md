@@ -17,6 +17,23 @@ This document describes the coding conventions used in ActualLab.Fusion project 
   - etc.
 - When in Doubt, examine existing code in the same area and match its style.
 
+## Encapsulation and tests
+
+**Do not widen a private member's visibility solely for testing.** Test through
+existing observable behavior rather than exposing an implementation step. Do not
+make a member `internal`, `protected`, or `public`, add a test-only wrapper, or use
+reflection to bypass its visibility just so a test can call it.
+
+Every project under `src/` ships as a NuGet package, so anything `public` there is
+public to every app that references it, and removing it later breaks them. Make a
+member `public` only when other code needs it at runtime; a test is not such a reason.
+Don't switch to `internal` + `InternalsVisibleTo` instead either: that describes a
+test's needs, not the design.
+
+Extract an internal component only when it represents a meaningful responsibility,
+not merely to give tests access to a private method. A comment explaining that a
+member is exposed for tests does not justify the visibility change.
+
 ## Regular comments, docstrings, XML documentation comments
 
 This section applies to **C# and TypeScript** equally. Claude has a strong
@@ -223,6 +240,11 @@ Search for `<Using>` to get the full list. Avoid adding explicit usings for glob
   `Now`/`Sync`/etc. Next to `[ComputeMethod] virtual Task<T> Foo(...)` the
   non-reactive accessor — typically reading `MutableState.Value` or other state that
   is never `Use`d — is `FooNonComputed`; the compute method keeps the bare name.
+- **Services**: refer to a service by its type name, never by a shorthand. Prefer a
+  member named after the type (`Commander`, `StateFactory`, `RpcHub`), and if a local
+  is still needed — say, to read the service once before a loop — the local is the
+  type name in camelCase (`commander`, `stateFactory`, `rpcHub`). Not `cmd`, `svc`,
+  `hub`, `sf`: one service must have one name in every file.
 
 ### Braces and Formatting
 
@@ -365,6 +387,8 @@ protected override async Task OnRun(CancellationToken cancellationToken)
 
 ### Code Style Preferences
 
+- **Local functions** are declared at the very end of the method (preferred,
+  see rule 4 above) or at its very beginning, never between its statements.
 - **Expression-bodied members**: preferred for **all member types**
   including methods and constructors (default only suggests for properties/accessors).
   The `=>` arrow for one-line methods should be on the same line as return expression,
@@ -373,6 +397,10 @@ protected override async Task OnRun(CancellationToken cancellationToken)
 - **Braces for single statements** are not required,
   typically they're used only if the statement is prefixed with a comment,
   or when it significantly improves the readability.
+- **Collection expressions** are preferred over constructor-plus-`Add` code
+  whenever they perform the same: `HashSet<T> set = [with(capacity), ..items];`
+  compiles to the same `new HashSet<T>(capacity)` and `Add` calls. Keep the
+  explicit form only where it's measurably cheaper — which matters on hot paths.
 - **`=> field ??= ...;` in a `record`**: the generated `Equals` compares every
   field and the copy constructor copies them, so an instance that's been read
   differs from one that hasn't, and `with` carries a stale value. Either drop
@@ -680,6 +708,44 @@ public override async Task Require(CancellationToken cancellationToken)
 8. **Prefer `LogFor(GetType())` over `LogFor<T>()`** for the current type in non-static context.
 
 9. **Prefer primary constructors for services** when acceptable.
+
+10. **Linearize nested expressions to lower the reader's load.** A sequence is easy
+    to read: chained calls (`.Where(...).Select(...).ToList()`), especially with one
+    call per line, and consecutive statements, each read once and set aside.
+    Nesting is hard: in `Method2(Method1(...))` the reader has to hold the outer call
+    open while parsing the inner one, and the cost grows with depth and with the size
+    of what's nested — a record-like construction, an object initializer, a lambda.
+    So when an expression nests something non-trivial, consider declaring the inner
+    part in a local first, and keep that version if it reads more easily. This isn't a
+    rule with a right and a wrong form; it's a question of which version the reader
+    parses with less effort.
+
+    `Commander` calls nearly always benefit, because the command is usually the bulky
+    part and the call is the part that matters. Build the command in a local named
+    after it, then make the call:
+    ```csharp
+    // Nested: the call is split around the command's construction
+    await Commander.Call(new Todos_AddOrUpdate(
+        session, new TodoItem(id, title, isDone)), cancellationToken).ConfigureAwait(false);
+
+    // Linear: construct, then call
+    var addOrUpdateCmd = new Todos_AddOrUpdate(session, new TodoItem(id, title, isDone));
+    await Commander.Call(addOrUpdateCmd, cancellationToken).ConfigureAwait(false);
+    ```
+    The same applies to an `await` buried in a condition or in another expression
+    (`if (!await IsReady(...).ConfigureAwait(false))`, `(await ...).ToHashSet()`):
+    await into a named local, then use it.
+
+    An exception is an awaited result that only feeds a chain of calls. It can stay
+    inline when it's formatted as one chain: one call per line inside the parentheses,
+    and the closing `)` opening the line that continues the chain:
+    ```csharp
+    var activeKeys = (await Store
+        .ListKeySuffixes(shard, prefix, pageRef, cancellationToken: cancellationToken)
+        .ConfigureAwait(false)
+        ).Where(k => !k.StartsWith('_'))
+        .ToList();
+    ```
 
 
 ### Test Conventions
