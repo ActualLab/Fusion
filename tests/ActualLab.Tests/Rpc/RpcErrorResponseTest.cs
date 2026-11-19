@@ -97,12 +97,17 @@ public class RpcErrorResponseTest(ITestOutputHelper @out) : RpcLocalTestBase(@ou
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();
+        // The $sys.Error below is sent with SendNoWait, which drops it if the server peer isn't connected yet,
+        // and then the call below waits for its 10-minute delay. So the connection must be fully established.
+        await client.Div(6, 2);
+        await clientPeer.WhenConnected(TimeSpan.FromSeconds(10));
+        await connection.ServerPeer.WhenConnected(TimeSpan.FromSeconds(10));
 
         var callTask = client.Delay(TimeSpan.FromMinutes(10));
         var call = await WaitForOutboundCall(clientPeer);
         SendError(services, connection.ServerPeer, call.Id, ExceptionInfo.None);
 
-        await Assert.ThrowsAsync<RpcException>(() => callTask);
+        await Assert.ThrowsAsync<RpcException>(() => callTask.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     // Private methods
