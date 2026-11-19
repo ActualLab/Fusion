@@ -40,7 +40,7 @@ features:
     details: "Fusion <span style='color:var(--hl-feat);'>caches every compute method call</span> and <span style='color:var(--hl-feat);'>tracks what depends on what</span>. When a cached value is marked changed, the <span style='color:var(--hl-feat);'>invalidation cascades</span> through the dependency graph, evicting every <span style='color:var(--hl-feat);'>local and <span style='text-decoration:underline;'>remote</span> dependent.</span>"
   - icon: 🚀
     title: Unbeatable Speed
-    details: "<span style='color:var(--hl-feat);'>About 20x faster than Redis</span> on remote calls — and <span style='color:var(--hl-feat);'>up to 600x</span> per core when the locally cached value is still consistent. The fastest RPC available: <span style='color:var(--hl-feat);'>2–11x faster than gRPC and SignalR.</span>"
+    details: "<span style='color:var(--hl-feat);'>~20 ns for cache hits</span>, while a Redis lookup takes milliseconds. On a miss, blazingly fast RPC brings the remote computation result <span style='color:var(--hl-feat);'>faster than anything else</span> (2–11x faster than gRPC and SignalR)."
     link: /Performance#results
     linkText: See benchmarks
   - icon: ✈️
@@ -233,9 +233,9 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
-| Local service, minimal writes | 38.6K calls/s | **535.4M calls/s** | <span style="color: #22c55e; font-weight: bold;">13,867x</span> |
-| Local service, continuous writes | 161.2K calls/s | **330.5M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,050x</span> |
-| Remote service, continuous writes | 103.9K calls/s (REST) | **226.0M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,176x</span> |
+| Local service, minimal writes | 38.6K calls/s | **535.4M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑13,867</span> |
+| Local service, continuous writes | 161.2K calls/s | **330.5M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,050</span> |
+| Remote service, continuous writes | 103.9K calls/s (REST) | **226.0M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,176</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -248,7 +248,7 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 | **ActualLab.Rpc** | **9.97M** | **104.98M** |
 | SignalR | 4.84M | 22.36M |
 | gRPC | 0.84M | 39.51M |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">2.1..11.8x</span> | <span style="color: #22c55e; font-weight: bold;">2.7..4.7x</span> |
+| **Speedup** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.1..11.8</span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7..4.7</span> |
 
 <p style="font-size: 0.85em; color: #666;">
 11.8x faster than gRPC for calls. 4.7x faster than SignalR for streaming.
