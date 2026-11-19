@@ -158,8 +158,10 @@
     <Using Include="Microsoft.Extensions.DependencyInjection" />
     <Using Include="Microsoft.Extensions.Logging" />
     <Using Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
 
-    <!-- Testing-related global usings -->
+  <!-- Testing-related global usings; BenchmarkDotNet generates its harness project in a .bdn subfolder -->
+  <ItemGroup Condition="!$(MSBuildProjectDirectory.Contains('.bdn'))">
     <Using Include="ActualLab.Tests.TestHelpers" Static="True" />
     <Using Include="AwesomeAssertions" />
     <Using Include="ActualLab.Testing" />
