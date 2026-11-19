@@ -11,16 +11,16 @@ Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.co
 | Test | Result | Speedup |
 |------|--------|---------|
 | Regular Service | 161.23K calls/s | |
-| Fusion Service | 330.53M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,050</span> |
+| Fusion Service | 330.53M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,050×</span> |
 
 **Remote Services:**
 
 | Test | Result | Speedup |
 |------|--------|---------|
 | HTTP Client → Regular Service | 103.88K calls/s | |
-| HTTP Client → Fusion Service | 365.18K calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.5</span> |
-| ActualLab.Rpc Client → Fusion Service | 7.81M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑75</span> |
-| Fusion Client → Fusion Service | 226.05M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,176</span> |
+| HTTP Client → Fusion Service | 365.18K calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.5×</span> |
+| ActualLab.Rpc Client → Fusion Service | 7.81M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑75×</span> |
+| Fusion Client → Fusion Service | 226.05M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,176×</span> |
 
 ## Key Takeaways
 

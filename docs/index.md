@@ -233,9 +233,9 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
-| Local service, minimal writes | 38.6K calls/s | **535.4M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑13,867</span> |
-| Local service, continuous writes | 161.2K calls/s | **330.5M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,050</span> |
-| Remote service, continuous writes | 103.9K calls/s (REST) | **226.0M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,176</span> |
+| Local service, minimal writes | 38.6K calls/s | **535.4M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑13,867×</span> |
+| Local service, continuous writes | 161.2K calls/s | **330.5M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,050×</span> |
+| Remote service, continuous writes | 103.9K calls/s (REST) | **226.0M calls/s** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,176×</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -248,7 +248,7 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 | **ActualLab.Rpc** | **9.97M** | **104.98M** |
 | SignalR | 4.84M | 22.36M |
 | gRPC | 0.84M | 39.51M |
-| **Speedup** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.1..11.8</span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7..4.7</span> |
+| **Speedup** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.1..11.8×</span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7..4.7×</span> |
 
 <p style="font-size: 0.85em; color: #666;">
 11.8x faster than gRPC for calls. 4.7x faster than SignalR for streaming.
