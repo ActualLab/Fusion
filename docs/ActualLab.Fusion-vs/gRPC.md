@@ -183,7 +183,7 @@ versions of their libraries and with the load generator tuned until each server 
 | go_grpc (Go, grpc-go) | <span style="white-space: nowrap;">340K <span style="background: rgb(161,46,46); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.5×</span></span> |
 
 The method, the full list of servers, their versions and the effect of TLS are in
-[The Fastest .NET RPC Servers vs the Fastest gRPC Servers](../posts/261116-grpc-bench.md).
+[The Fastest .NET RPC Libraries vs the Fastest gRPC Libraries](../posts/261116-grpc-bench.md).
 
 The two sets of numbers come from different load generators: the gRPC servers were loaded by a Rust
 client that replicates grpc_bench's `ghz`, ActualLab.Rpc by RpcBenchmark's own .NET client. The same

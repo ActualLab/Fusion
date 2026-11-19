@@ -1,6 +1,13 @@
-# The Fastest .NET RPC Servers vs the Fastest gRPC Servers
+---
+description: 26 gRPC servers from grpc_bench in 10 languages, upgraded to current versions, vs the RPC libraries for .NET 11 (ActualLab.Rpc, SignalR, grpc-dotnet, MagicOnion, StreamJsonRpc). Same call, same 4 CPUs, plus a 5 Gbps LAN test.
+image: /img/og/261116-grpc-bench.jpg
+---
+
+# The Fastest .NET RPC Libraries vs the Fastest gRPC Libraries
 
 **Published:** 2026-11-16 by Alex Yakunin
+
+<img src="/img/og/261116-grpc-bench.jpg" alt="26 gRPC servers in 10 languages and 6 .NET RPC libraries, tested with the same call on the same 4 CPUs" style="width: 100%; max-width: 900px; border-radius: 8px;" />
 
 > **Disclosure:** I am the author of ActualLab.Rpc and of `RpcBenchmark`, so I am not a neutral party,
 > and Claude helped write some of the conclusions. The code is open source, and I welcome you to read it,

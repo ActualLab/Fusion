@@ -119,7 +119,11 @@ gtag('config', 'G-PX4G7HX4CM');`],
       .replace(/\.md$/, "");
     const url = `${hostname}/${pagePath}`;
     const desc = description || siteDescription;
-    const image = `${hostname}/og-image.jpg`;
+    // A page can set its own preview image with `image: /img/...` in its frontmatter.
+    const pageImage = pageData.frontmatter.image as string | undefined;
+    const image = pageImage
+      ? (/^https?:\/\//.test(pageImage) ? pageImage : `${hostname}${pageImage.startsWith("/") ? "" : "/"}${pageImage}`)
+      : `${hostname}/og-image.jpg`;
     const head: HeadConfig[] = [
       ["link", { rel: "canonical", href: url }],
       ["meta", { property: "og:type", content: "website" }],

@@ -212,7 +212,7 @@ instead of the parameter search. With TLS, calls are 3-10% slower for ActualLab.
 > calls/s, and grpc_bench's own grpc-dotnet server reaches **670K**, which agrees with the **567K**
 > our gRPC test measures below with a less favorable client. ActualLab.Rpc's `SayHello` (**2.54M**)
 > is **2.4x** the fastest of these gRPC servers. See
-> [The Fastest .NET RPC Servers vs the Fastest gRPC Servers](./posts/261116-grpc-bench.md)
+> [The Fastest .NET RPC Libraries vs the Fastest gRPC Libraries](./posts/261116-grpc-bench.md)
 
 ### Docker Calls
 
