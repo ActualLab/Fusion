@@ -20,6 +20,8 @@ static file class BatchProcessor
 public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item> queue) : ProcessorBase
 {
     private IBatchProcessorWorkerPolicy _workerPolicy = BatchProcessorWorkerPolicy.Default;
+    private int _hasDequeuedItems;
+    private AsyncTaskMethodBuilder? _collectorWakeUpSource;
 
     protected readonly Channel<Item> Queue = queue;
     protected int PlannedWorkerCount;
@@ -197,9 +199,20 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
             var longCycle = wp.CollectorCycle;
             var shortCycle = wp.Cooldown + TimeSpan.FromMilliseconds(50);
             var nextCycle = longCycle;
+            var whenWokenUp = (Task?)null;
             while (!StopToken.IsCancellationRequested)
                 try {
-                    await Task.Delay(nextCycle, StopToken).ConfigureAwait(false);
+                    if (whenWokenUp is null)
+                        await Task.Delay(nextCycle, StopToken).ConfigureAwait(false);
+                    else {
+                        // An idle collector sleeps for the long cycle, but the first dequeued item wakes it up,
+                        // so the onset of load is measured as quickly as by a collector on the short cycle
+                        _ = await whenWokenUp.WaitResultAsync(nextCycle, StopToken).ConfigureAwait(false);
+                        StopToken.ThrowIfCancellationRequested();
+                        if (whenWokenUp.IsCompleted)
+                            await Task.Delay(shortCycle, StopToken).ConfigureAwait(false);
+                        whenWokenUp = null;
+                    }
 
                     // Measure queue time
                     var item = new Item(default!, StopToken) { IsMeasureOnlyItem = true };
@@ -211,13 +224,28 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
                     var delta = WorkerPolicy.GetWorkerCountDelta(minQueueTime);
                     await AddOrRemoveWorkers(delta, true).ConfigureAwait(false);
 
-                    // Decide on how quickly to run the next cycle
-                    nextCycle = delta < 0 ? shortCycle : longCycle;
+                    // Decide on how quickly to run the next cycle: an idle queue always asks to remove
+                    // workers, so at MinWorkerCount keep the short cycle only while items are processed
+                    nextCycle = longCycle;
+                    if (delta < 0) {
+                        lock (Lock) {
+                            var hasDequeuedItems = _hasDequeuedItems != 0;
+                            _hasDequeuedItems = 0;
+                            if (hasDequeuedItems || PlannedWorkerCount > wp.MinWorkerCount)
+                                nextCycle = shortCycle;
+                            else {
+                                var wakeUpSource = AsyncTaskMethodBuilderExt.New();
+                                _collectorWakeUpSource = wakeUpSource;
+                                whenWokenUp = wakeUpSource.Task;
+                            }
+                        }
+                    }
                     if (!ReferenceEquals(WorkerPolicy, wp))
                         break;
                 }
                 catch {
                     nextCycle = shortCycle;
+                    whenWokenUp = null;
                 }
         }
     }
@@ -240,6 +268,8 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
                         item.TrySetResult(default(TResult)!);
                         continue;
                     }
+                    if (Volatile.Read(ref _hasDequeuedItems) == 0)
+                        OnFirstDequeuedItem();
                     var queueTime = item.DequeuedAt - item.QueuedAt;
                     minQueueTime = TimeSpanExt.Min(queueTime, minQueueTime);
                     if (++reportCounter >= BatchSize) {
@@ -298,6 +328,17 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
     }
 
     // Private methods
+
+    private void OnFirstDequeuedItem()
+    {
+        AsyncTaskMethodBuilder? wakeUpSource;
+        lock (Lock) {
+            _hasDequeuedItems = 1;
+            wakeUpSource = _collectorWakeUpSource;
+            _collectorWakeUpSource = null;
+        }
+        wakeUpSource?.TrySetResult();
+    }
 
     private static async Task CompleteProcessBatchAsync(List<Item> batch, Task resultTask)
     {
