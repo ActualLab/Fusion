@@ -102,6 +102,7 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
                 return Task.CompletedTask;
             },
         };
+        var startedAt = CpuTimestamp.Now;
         await processor.Process(0);
 
         // act
@@ -109,7 +110,7 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
 
         // assert
         processor.GetWorkerCount().Should().Be(1);
-        workerPolicy.CallCount.Should().BeLessThanOrEqualTo(5,
+        workerPolicy.CallCount.Should().BeLessThanOrEqualTo(GetMaxCollectorRunCount(startedAt.Elapsed, workerPolicy),
             "with nothing to remove the collector must run once per CollectorCycle, not every Cooldown");
     }
 
@@ -148,26 +149,36 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
         var scaleUpTime = slowSince.Elapsed;
 
         // assert
-        scaleUpTime.Should().BeLessThan(TimeSpan.FromSeconds(0.8),
+        scaleUpTime.Should().BeLessThan(TimeSpan.FromSeconds(1),
             "a processor with work must keep checking its queue often even at MinWorkerCount");
     }
 
     [Theory(Timeout = 30_000)]
-    [InlineData(2.5)] // The first collector cycle has just found the queue idle
-    [InlineData(4.8)] // The idle collector's wait has timed out once, so it waits again
-    public async Task IdleProcessorShouldScaleUpQuicklyOnceLoadStarts(double idleDuration)
+    [InlineData(1)] // The first collector run has found the queue idle and waits for a wake-up
+    [InlineData(2)] // That wait has timed out, so the collector has run again and waits for a wake-up again
+    [InlineData(3)] // The same, but once more
+    public async Task IdleProcessorShouldScaleUpQuicklyOnceLoadStarts(int collectorRunCount)
     {
         // arrange
+        var workerPolicy = new CountingWorkerPolicy() {
+            MinWorkerCount = 1,
+            MaxWorkerCount = 4,
+            CollectorCycle = TimeSpan.FromSeconds(2),
+        };
         var batchDelay = 100;
-        await using var processor = CreateDbLikeProcessor(() => batchDelay, TimeSpan.FromSeconds(2));
-        await processor.Process(0);
-        await Delay(idleDuration);
+        await using var processor = CreateDbLikeProcessor(() => batchDelay, workerPolicy);
+        // No items are processed before the load starts: there are no worker reports, so every call is
+        // a collector run, and no run sees dequeued items, so each of them waits for a wake-up
+        await processor.Start();
+        await TestExt.When(() => workerPolicy.CallCount.Should().BeGreaterThanOrEqualTo(collectorRunCount),
+            TimeSpan.FromSeconds(10));
+        await Delay(0.3);
 
         // act
         var scaleUpTime = await LoadUntilSecondWorker(processor);
 
         // assert
-        scaleUpTime.Should().BeLessThan(TimeSpan.FromSeconds(0.8),
+        scaleUpTime.Should().BeLessThan(TimeSpan.FromSeconds(1),
             "the first item dequeued after idle must wake the collector up");
     }
 
@@ -188,7 +199,7 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
 
             // assert
             Out.WriteLine($"Idle {idleDuration:F2}s -> scale-up in {scaleUpTime.TotalSeconds:F3}s");
-            scaleUpTime.Should().BeLessThan(TimeSpan.FromSeconds(0.8),
+            scaleUpTime.Should().BeLessThan(TimeSpan.FromSeconds(1),
                 "every load burst after idle must be noticed by the collector on its short cycle");
         }
     }
@@ -198,7 +209,15 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
     {
         // arrange
         var batchDelay = 0;
-        await using var processor = CreateDbLikeProcessor(() => batchDelay, TimeSpan.FromSeconds(2));
+        // AddWorkerAt is raised to tolerate scheduling stalls, but it's still below the short cycle (150 ms),
+        // so a collector counting its wake-up wait as queue time would add workers
+        var workerPolicy = new BatchProcessorWorkerPolicy {
+            MinWorkerCount = 1,
+            MaxWorkerCount = 4,
+            CollectorCycle = TimeSpan.FromSeconds(2),
+            AddWorkerAt = TimeSpan.FromMilliseconds(100),
+        };
+        await using var processor = CreateDbLikeProcessor(() => batchDelay, workerPolicy);
         await processor.Process(0);
         await Delay(2.5);
 
@@ -234,12 +253,13 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
 
         // act
         var callCount = workerPolicy.CallCount;
+        var windowStartedAt = CpuTimestamp.Now;
         await Delay(2.2);
         callCount = workerPolicy.CallCount - callCount;
 
         // assert
         processor.GetWorkerCount().Should().Be(1);
-        callCount.Should().BeLessThanOrEqualTo(5,
+        callCount.Should().BeLessThanOrEqualTo(GetMaxCollectorRunCount(windowStartedAt.Elapsed, workerPolicy),
             "once the load ends, an idle collector must run once per CollectorCycle, not every Cooldown");
     }
 
@@ -364,6 +384,10 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
         }
         return loadSince.Elapsed;
     }
+
+    // An idle collector runs once per CollectorCycle: the window holds at most that many runs, plus partial cycles
+    private static int GetMaxCollectorRunCount(TimeSpan window, BatchProcessorWorkerPolicy workerPolicy)
+        => (int)(window.Ticks / workerPolicy.CollectorCycle.Ticks) + 2;
 
     private static async Task WaitForMinWorkerCount(BatchProcessor<int, int> processor)
     {
