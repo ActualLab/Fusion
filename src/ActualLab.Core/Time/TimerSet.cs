@@ -7,7 +7,7 @@ public record TimerSetOptions
 {
     public static readonly TickSource DefaultTickSource = new(TimeSpan.FromSeconds(1));
     public static readonly TimeSpan MinQuanta = TimeSpan.FromMilliseconds(10);
-    public static readonly TimeSpan MaxMaxSleepDuration = TimeSpan.FromDays(1);
+    public static readonly TimeSpan MaxMaxSleepDuration = TimeSpan.FromHours(1);
     public static readonly TimerSetOptions Default = new();
 
     public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
@@ -18,16 +18,16 @@ public record TimerSetOptions
             : throw new ArgumentOutOfRangeException(nameof(TickSource));
     } = DefaultTickSource;
     public TimeSpan Quanta => TickSource.Period;
-    // How long an idle set may sleep instead of ticking. Clock.Delay can't notice a change of Clock.Now
-    // that its timer doesn't see (e.g. a ServerClock offset change, or a system sleep that only one of them
-    // counts), and this is the longest such a change may delay a timer for.
-    // Null means 1 minute for CpuClock and zero (tick every quantum) for any other clock.
-    public TimeSpan? MaxSleepDuration {
+    // How long an idle set may sleep when no timer is due sooner; zero means it ticks every quantum.
+    // Clock.Delay can't notice a change of Clock.Now that its timer doesn't see (e.g. a ServerClock offset
+    // change, or a system sleep that only one of them counts), and this is the longest such a change
+    // may delay a timer for.
+    public TimeSpan MaxSleepDuration {
         get;
-        init => field = value is not { } v || (v >= TimeSpan.Zero && v <= MaxMaxSleepDuration)
+        init => field = value >= TimeSpan.Zero && value <= MaxMaxSleepDuration
             ? value
             : throw new ArgumentOutOfRangeException(nameof(MaxSleepDuration));
-    }
+    } = TimeSpan.FromSeconds(30);
 }
 
 /// <summary>
@@ -67,8 +67,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
         Clock = options.Clock;
         TickSource = options.TickSource;
         Quanta = options.Quanta;
-        MaxSleepDuration = options.MaxSleepDuration
-            ?? (Clock is CpuClock ? TimeSpan.FromMinutes(1) : TimeSpan.Zero);
+        MaxSleepDuration = options.MaxSleepDuration;
         _fireHandler = fireHandler;
         _start = start ?? Clock.Now;
 #pragma warning disable MA0040
