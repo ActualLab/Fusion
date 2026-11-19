@@ -26,6 +26,8 @@ public record TimerSetOptions
 public sealed class TimerSet<TTimer> : WorkerBase
     where TTimer : notnull
 {
+    private static readonly TimeSpan MaxSleepDuration = TimeSpan.FromHours(1);
+
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
 #else
@@ -35,6 +37,9 @@ public sealed class TimerSet<TTimer> : WorkerBase
     private readonly RadixHeapSet<TTimer> _timers = new(45);
     private readonly Moment _start;
     private long _minPriority;
+    // Set while OnRun sleeps until the quantum of its earliest timer (_wakeUpPriority) instead of ticking
+    private AsyncTaskMethodBuilder? _wakeUpSource;
+    private long _wakeUpPriority;
 
     public MomentClock Clock { get; }
     public TickSource TickSource { get; }
@@ -66,8 +71,13 @@ public sealed class TimerSet<TTimer> : WorkerBase
         => AddOrUpdate(timer, GetPriority(time));
     public void AddOrUpdate(TTimer timer, long priority)
     {
-        lock (_lock)
-            _timers.AddOrUpdate(FixPriorityFromLock(priority), timer);
+        AsyncTaskMethodBuilder? wakeUpSource;
+        lock (_lock) {
+            priority = FixPriorityFromLock(priority);
+            _timers.AddOrUpdate(priority, timer);
+            wakeUpSource = TakeWakeUpSourceFromLock(priority);
+        }
+        wakeUpSource?.TrySetResult();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,8 +85,15 @@ public sealed class TimerSet<TTimer> : WorkerBase
         => AddOrUpdateToEarlier(timer, GetPriority(time));
     public bool AddOrUpdateToEarlier(TTimer timer, long priority)
     {
-        lock (_lock)
-            return _timers.AddOrUpdateToLower(FixPriorityFromLock(priority), timer);
+        AsyncTaskMethodBuilder? wakeUpSource;
+        bool isAddedOrUpdated;
+        lock (_lock) {
+            priority = FixPriorityFromLock(priority);
+            isAddedOrUpdated = _timers.AddOrUpdateToLower(priority, timer);
+            wakeUpSource = isAddedOrUpdated ? TakeWakeUpSourceFromLock(priority) : null;
+        }
+        wakeUpSource?.TrySetResult();
+        return isAddedOrUpdated;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -84,8 +101,15 @@ public sealed class TimerSet<TTimer> : WorkerBase
         => AddOrUpdateToLater(timer, GetPriority(time));
     public bool AddOrUpdateToLater(TTimer timer, long priority)
     {
-        lock (_lock)
-            return _timers.AddOrUpdateToHigher(FixPriorityFromLock(priority), timer);
+        AsyncTaskMethodBuilder? wakeUpSource;
+        bool isAddedOrUpdated;
+        lock (_lock) {
+            priority = FixPriorityFromLock(priority);
+            isAddedOrUpdated = _timers.AddOrUpdateToHigher(priority, timer);
+            wakeUpSource = isAddedOrUpdated ? TakeWakeUpSourceFromLock(priority) : null;
+        }
+        wakeUpSource?.TrySetResult();
+        return isAddedOrUpdated;
     }
 
     public bool Remove(TTimer timer)
@@ -107,27 +131,77 @@ public sealed class TimerSet<TTimer> : WorkerBase
                 // CancellationToken registration/de-registration.
                 await TickSource.WhenNextTick().ConfigureAwait(false);
 
-            IReadOnlyDictionary<TTimer, long> minSet;
-            lock (_lock) {
-                minSet = _timers.ExtractMinSet(_minPriority);
-                ++_minPriority;
+            var whenWokenUp = FireDueTimers(out var wakeUpPriority);
+            if (whenWokenUp is null)
+                continue;
+
+            var sleepDuration = wakeUpPriority == long.MaxValue
+                ? MaxSleepDuration
+                : TimeSpanExt.Min(MaxSleepDuration,
+                    _start + TimeSpan.FromTicks(Quanta.Ticks * wakeUpPriority) - Clock.Now);
+            if (sleepDuration > TimeSpan.Zero) {
+                // Times out unless an earlier timer is added. Neither the timeout nor the cancellation throws here:
+                // the loop rechecks cancellation right after.
+                _ = await whenWokenUp.WaitResultAsync(Clock, sleepDuration, cancellationToken).ConfigureAwait(false);
             }
-            if (_fireHandler is not null && minSet.Count != 0) {
-                foreach (var (timer, _) in minSet) {
-                    try {
-                        _fireHandler(timer);
-                    }
-                    catch {
-                        // Intended suppression
-                    }
-                }
+            lock (_lock) {
+                _wakeUpSource = null;
+                // Nothing is due before the earliest timer, so the quanta up to it (or up to now) can be skipped.
+                // The loop's "dueAt += Quanta" turns the start of the new current quantum into its end.
+                var minPriority = _timers.TryGetMinPriority(out var p) ? p : long.MaxValue;
+                var priority = GetPriority(Clock.Now);
+                // Clock.Delay may end the sleep a bit before the quantum it targets,
+                // and processing that quantum from the previous one costs an extra tick
+                if (priority + 1 == wakeUpPriority)
+                    priority = wakeUpPriority;
+                _minPriority = Math.Max(_minPriority, Math.Min(minPriority, priority));
+                dueAt = _start + TimeSpan.FromTicks(Quanta.Ticks * _minPriority);
             }
         }
     }
 
     // Private methods
 
+    // Not inlined into OnRun on purpose: the fired timers would then live in its state machine
+    // (in Debug builds) and stay referenced while it sleeps, which may take up to MaxSleepDuration
+    private Task? FireDueTimers(out long wakeUpPriority)
+    {
+        IReadOnlyDictionary<TTimer, long> minSet;
+        Task? whenWokenUp = null;
+        lock (_lock) {
+            minSet = _timers.ExtractMinSet(_minPriority);
+            ++_minPriority;
+            wakeUpPriority = _timers.TryGetMinPriority(out var p) ? p : long.MaxValue;
+            if (wakeUpPriority > _minPriority) {
+                _wakeUpSource = AsyncTaskMethodBuilderExt.New();
+                _wakeUpPriority = wakeUpPriority;
+                whenWokenUp = _wakeUpSource.Value.Task;
+            }
+        }
+        if (_fireHandler is not null && minSet.Count != 0) {
+            foreach (var (timer, _) in minSet) {
+                try {
+                    _fireHandler(timer);
+                }
+                catch {
+                    // Intended suppression
+                }
+            }
+        }
+        return whenWokenUp;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private long FixPriorityFromLock(long priority)
         => Math.Max(_minPriority, priority);
+
+    private AsyncTaskMethodBuilder? TakeWakeUpSourceFromLock(long priority)
+    {
+        var wakeUpSource = _wakeUpSource;
+        if (wakeUpSource is null || priority >= _wakeUpPriority)
+            return null;
+
+        _wakeUpSource = null;
+        return wakeUpSource;
+    }
 }
