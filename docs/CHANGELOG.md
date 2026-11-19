@@ -11,6 +11,22 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.1.62+bbb4b64e4 | npm: 15.1.62
+
+Release date: 2026-11-19
+
+A small cleanup release for `ActualLab.Fusion.Blazor`: clearer exception messages, no behavior
+changes. The npm packages are identical to 15.1.59 except for the version.
+
+### Changed
+
+- **Blazor:** `ComponentInfo` and `ParameterComparerProvider` reject a type that isn't an
+  `IComponent` / a `ParameterComparer` with an `ArgumentOutOfRangeException` that names the
+  expected type; before, it had no message.
+- **Blazor:** its exceptions with messages are created by the new
+  `ActualLab.Fusion.Blazor.Internal.Errors`; the messages are unchanged.
+
+
 ## 15.1.59+cf3d01506 | npm: 15.1.59
 
 Release date: 2026-11-19
