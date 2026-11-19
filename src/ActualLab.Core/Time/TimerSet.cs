@@ -7,6 +7,7 @@ public record TimerSetOptions
 {
     public static readonly TickSource DefaultTickSource = new(TimeSpan.FromSeconds(1));
     public static readonly TimeSpan MinQuanta = TimeSpan.FromMilliseconds(10);
+    public static readonly TimeSpan MaxMaxSleepDuration = TimeSpan.FromDays(1);
     public static readonly TimerSetOptions Default = new();
 
     public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
@@ -17,6 +18,16 @@ public record TimerSetOptions
             : throw new ArgumentOutOfRangeException(nameof(TickSource));
     } = DefaultTickSource;
     public TimeSpan Quanta => TickSource.Period;
+    // How long an idle set may sleep instead of ticking. Clock.Delay can't notice a change of Clock.Now
+    // that its timer doesn't see (e.g. a ServerClock offset change, or a system sleep that only one of them
+    // counts), and this is the longest such a change may delay a timer for.
+    // Null means 1 minute for CpuClock and zero (tick every quantum) for any other clock.
+    public TimeSpan? MaxSleepDuration {
+        get;
+        init => field = value is not { } v || (v >= TimeSpan.Zero && v <= MaxMaxSleepDuration)
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaxSleepDuration));
+    }
 }
 
 /// <summary>
@@ -26,7 +37,7 @@ public record TimerSetOptions
 public sealed class TimerSet<TTimer> : WorkerBase
     where TTimer : notnull
 {
-    private static readonly TimeSpan MaxSleepDuration = TimeSpan.FromHours(1);
+    private static readonly TimeSpan MinRemainderDelay = TimeSpan.FromMilliseconds(1);
 
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
@@ -44,6 +55,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     public MomentClock Clock { get; }
     public TickSource TickSource { get; }
     public TimeSpan Quanta { get; }
+    public TimeSpan MaxSleepDuration { get; }
     public int Count {
         get {
             lock (_lock) return _timers.Count;
@@ -55,6 +67,8 @@ public sealed class TimerSet<TTimer> : WorkerBase
         Clock = options.Clock;
         TickSource = options.TickSource;
         Quanta = options.Quanta;
+        MaxSleepDuration = options.MaxSleepDuration
+            ?? (Clock is CpuClock ? TimeSpan.FromMinutes(1) : TimeSpan.Zero);
         _fireHandler = fireHandler;
         _start = start ?? Clock.Now;
 #pragma warning disable MA0040
@@ -123,22 +137,44 @@ public sealed class TimerSet<TTimer> : WorkerBase
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
         var dueAt = _start + Quanta;
+        var isAfterSleep = false;
         for (;; dueAt += Quanta) {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (dueAt > Clock.Now)
-                // We intentionally don't use CancellationToken here:
-                // the delay is supposed to be short & we want to save on
-                // CancellationToken registration/de-registration.
-                await TickSource.WhenNextTick().ConfigureAwait(false);
+            // A quantum's timers never fire before it ends. Ticks keep this loop in phase with the TickSource,
+            // but after a sleep it's out of phase, and the TickSource may be shared with other sets,
+            // so its next tick may come any time - that's why the end of the quantum is rechecked.
+            while (true) {
+                cancellationToken.ThrowIfCancellationRequested();
+                var dueIn = dueAt - Clock.Now;
+                if (dueIn <= TimeSpan.Zero)
+                    break;
+
+                if (isAfterSleep) {
+                    // The rest of the quantum. Clock.Now may change meanwhile, so the wait is capped like a sleep.
+                    // Delay(TimeSpan) truncates to whole ms, and Clock.Delay may complete before the clock reaches
+                    // dueAt, so a short real-time delay prevents this loop from spinning.
+                    var delayTask = Clock.Delay(TimeSpanExt.Min(dueIn, MaxSleepDuration), cancellationToken);
+                    if (delayTask.IsCompleted)
+                        delayTask = Task.Delay(MinRemainderDelay, cancellationToken);
+                    await delayTask.ConfigureAwait(false);
+                }
+                else {
+                    // We intentionally don't use CancellationToken here:
+                    // the delay is supposed to be short & we want to save on
+                    // CancellationToken registration/de-registration.
+                    await TickSource.WhenNextTick().ConfigureAwait(false);
+                }
+            }
+            isAfterSleep = false;
 
             var whenWokenUp = FireDueTimers(out var wakeUpPriority);
             if (whenWokenUp is null)
                 continue;
 
+            // Sleep until the end of the quantum of the earliest timer
             var sleepDuration = wakeUpPriority == long.MaxValue
                 ? MaxSleepDuration
                 : TimeSpanExt.Min(MaxSleepDuration,
-                    _start + TimeSpan.FromTicks(Quanta.Ticks * wakeUpPriority) - Clock.Now);
+                    _start + TimeSpan.FromTicks(Quanta.Ticks * (wakeUpPriority + 1)) - Clock.Now);
             if (sleepDuration > TimeSpan.Zero) {
                 // Times out unless an earlier timer is added. Neither the timeout nor the cancellation throws here:
                 // the loop rechecks cancellation right after.
@@ -150,13 +186,10 @@ public sealed class TimerSet<TTimer> : WorkerBase
                 // The loop's "dueAt += Quanta" turns the start of the new current quantum into its end.
                 var minPriority = _timers.TryGetMinPriorityLowerBound(out var p) ? p : long.MaxValue;
                 var priority = GetPriority(Clock.Now);
-                // Clock.Delay may end the sleep a bit before the quantum it targets,
-                // and processing that quantum from the previous one costs an extra tick
-                if (priority + 1 == wakeUpPriority)
-                    priority = wakeUpPriority;
                 _minPriority = Math.Max(_minPriority, Math.Min(minPriority, priority));
                 dueAt = _start + TimeSpan.FromTicks(Quanta.Ticks * _minPriority);
             }
+            isAfterSleep = true;
         }
     }
 
@@ -172,7 +205,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
             minSet = _timers.ExtractMinSet(_minPriority);
             ++_minPriority;
             wakeUpPriority = _timers.TryGetMinPriorityLowerBound(out var p) ? p : long.MaxValue;
-            if (wakeUpPriority > _minPriority) {
+            if (wakeUpPriority > _minPriority && MaxSleepDuration > TimeSpan.Zero) {
                 _wakeUpSource = AsyncTaskMethodBuilderExt.New();
                 _wakeUpPriority = wakeUpPriority;
                 whenWokenUp = _wakeUpSource.Value.Task;
