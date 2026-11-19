@@ -104,11 +104,7 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
     }
 
     protected virtual (State State, object? StateInitializeOptions) CreateState()
-#pragma warning disable MA0025
-        => throw new NotImplementedException(
-            "CreateState is called when SetParametersAsync doesn't call SetState. " +
-            "You must override either this method, OnInitialized, or SetParametersAsync to make sure State is set.");
-#pragma warning restore MA0025
+        => throw Internal.Errors.CreateStateIsNotOverridden();
 }
 
 /// <summary>

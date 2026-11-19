@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using ActualLab.Internal;
 using ActualLab.OS;
 using Microsoft.AspNetCore.Components;
 
@@ -30,7 +31,7 @@ public sealed class ComponentInfo
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
         if (!typeof(IComponent).IsAssignableFrom(type))
-            throw new ArgumentOutOfRangeException(nameof(type));
+            throw Errors.MustImplement<IComponent>(type, nameof(type));
 
         DebugLog?.LogDebug("[+] ComponentInfo({Type})", type.GetName());
 

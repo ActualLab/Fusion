@@ -37,7 +37,7 @@ public class ParameterComparerProvider
 
         return Cache.GetOrAdd(comparerType, static comparerType1 => {
             if (!typeof(ParameterComparer).IsAssignableFrom(comparerType1))
-                throw new ArgumentOutOfRangeException(nameof(comparerType));
+                throw Errors.MustBeAssignableTo<ParameterComparer>(comparerType1, nameof(comparerType));
             return (ParameterComparer)comparerType1.CreateInstance();
         });
     }

@@ -1,4 +1,5 @@
 using ActualLab.Caching;
+using ActualLab.Fusion.Blazor.Internal;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
@@ -54,11 +55,7 @@ public abstract partial class ComputedStateComponent
         if (optionsFactory.IsCaptureFree())
             return;
 
-        throw new InvalidOperationException(
-            $"{componentType.GetName()}: the options factory passed to GetStateOptions(Type, ...) captures "
-            + $"{optionsFactory.Target!.GetType().GetName()}, but its result is cached per component type "
-            + "and shared by all its instances. Make the factory static, or build per-instance options "
-            + "with `new() { ... }` instead.");
+        throw Errors.StateOptionsFactoryCapturesState(componentType, optionsFactory.Target!.GetType());
     }
 
     public static string GetStateCategory(Type componentType)
