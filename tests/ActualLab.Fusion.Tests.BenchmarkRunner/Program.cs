@@ -15,9 +15,15 @@ if (args.Length >= 2 && string.Equals(args[0], "--profile", StringComparison.Ord
 }
 
 var benchmarkSwitcher = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly);
+#if NET11_0_OR_GREATER
+var job = Job.ShortRun
+    .WithId("Short-.NET 11.0")
+    .WithRuntime(CoreRuntime.Core11_0);
+#else
 var job = Job.ShortRun
     .WithId("Short-.NET 10.0")
     .WithRuntime(CoreRuntime.Core10_0);
+#endif
 var config = ManualConfig.Create(DefaultConfig.Instance).AddJob(job);
 
 if (args.Length == 0)
