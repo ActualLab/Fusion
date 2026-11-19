@@ -81,6 +81,100 @@ public class RadixHeapSetTest(ITestOutputHelper @out) : TestBase(@out)
         heap.ExtractMin().Value.Value.Should().Be("a");
     }
 
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(-5000L)] // Priorities cross zero, so the sign bit differs
+    public void CursorExtractionModelTest(long startPriority)
+    {
+        // Mimics TimerSet: values are added at or after the cursor, the cursor advances by one,
+        // or jumps to any priority up to the minimum one (e.g. to TryGetMinPriorityLowerBound)
+        var rnd = new Random(42);
+        for (var iteration = 0; iteration < 100; iteration++) {
+            var heap = new RadixHeapSet<int>(65, startPriority);
+            var model = new Dictionary<int, long>();
+            var cursor = startPriority;
+            var nextValue = 0;
+            for (var step = 0; step < 300; step++) {
+                var action = rnd.Next(10);
+                if (action < 3) {
+                    // A cluster of values, often large enough for the lower bound to skip the exact scan
+                    var priority = cursor + (rnd.Next(4) == 0 ? rnd.Next(16) : 1L << rnd.Next(1, 20)) + rnd.Next(64);
+                    var count = rnd.Next(3) == 0 ? 40 : rnd.Next(1, 4);
+                    for (var i = 0; i < count; i++) {
+                        var value = nextValue++;
+                        var p = priority + rnd.Next(4);
+                        heap.AddOrUpdate(p, value);
+                        model[value] = p;
+                    }
+                }
+                else if (action == 3 && model.Count != 0) {
+                    var value = model.Keys.ElementAt(rnd.Next(model.Count));
+                    heap.Remove(value, out var p).Should().BeTrue();
+                    p.Should().Be(model[value]);
+                    model.Remove(value);
+                }
+                else {
+                    var trueMin = model.Count == 0 ? (long?)null : model.Values.Min();
+                    var hasBound = heap.TryGetMinPriorityLowerBound(out var bound);
+                    hasBound.Should().Be(model.Count != 0);
+                    if (hasBound) {
+                        bound.Should().BeLessThanOrEqualTo(trueMin!.Value);
+                        bound.Should().BeGreaterThanOrEqualTo(heap.MinPriority);
+                        // A cursor past the minimum priority is rejected
+                        var heapCopy = new RadixHeapSet<int>(heap);
+                        heapCopy.Invoking(h => h.ExtractMinSet(trueMin.Value + 1))
+                            .Should().Throw<ArgumentOutOfRangeException>();
+                    }
+
+                    var minSet = heap.ExtractMinSet(cursor);
+                    var expected = model.Where(x => x.Value == cursor).Select(x => x.Key).ToHashSet();
+                    minSet.Keys.Should().BeEquivalentTo(expected);
+                    foreach (var value in expected)
+                        model.Remove(value);
+                    heap.Count.Should().Be(model.Count);
+
+                    trueMin = model.Count == 0 ? (long?)null : model.Values.Min();
+                    var nextCursor = cursor + 1;
+                    if (trueMin is { } min && min > nextCursor) {
+                        nextCursor = rnd.Next(3) switch {
+                            0 => nextCursor,
+                            1 => heap.TryGetMinPriorityLowerBound(out var b) ? Math.Max(nextCursor, b) : nextCursor,
+                            _ => nextCursor + (long)(rnd.NextDouble() * (min - nextCursor + 1)),
+                        };
+                    }
+                    cursor = nextCursor;
+                }
+            }
+            // Drain
+            while (model.Count != 0) {
+                var min = model.Values.Min();
+                heap.TryGetMinPriorityLowerBound(out var bound).Should().BeTrue();
+                bound.Should().BeLessThanOrEqualTo(min);
+                cursor = Math.Max(cursor, bound);
+                var minSet = heap.ExtractMinSet(cursor);
+                var expected = model.Where(x => x.Value == cursor).Select(x => x.Key).ToHashSet();
+                minSet.Keys.Should().BeEquivalentTo(expected);
+                foreach (var value in expected)
+                    model.Remove(value);
+                cursor++;
+            }
+        }
+    }
+
+    [Fact]
+    public void MinPriorityLowerBoundShouldHandleSignBit()
+    {
+        var heap = new RadixHeapSet<int>(65, -1);
+        for (var i = 0; i < 40; i++)
+            heap.Add(100 + i, i); // All values are in the last bucket: they differ from -1 in the sign bit
+        heap.TryGetMinPriorityLowerBound(out var bound).Should().BeTrue();
+        bound.Should().Be(0);
+        heap.ExtractMinSet(0).Count.Should().Be(0);
+        heap.TryGetMinPriorityLowerBound(out bound).Should().BeTrue();
+        bound.Should().BeLessThanOrEqualTo(100);
+        heap.ExtractMinSet(100).Keys.Should().BeEquivalentTo([0]);
+    }
+
     [Fact]
     public void UpdateMinPriorityTest()
     {

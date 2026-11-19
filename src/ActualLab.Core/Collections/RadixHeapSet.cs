@@ -11,6 +11,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
 {
     private static readonly Option<(long Priority, T Value)> None = Option<(long Priority, T Value)>.None;
     private static readonly Dictionary<T, long> Empty = new();
+    private const int MaxExactMinPriorityScanCount = 32;
     private readonly Dictionary<T, int> _bucketIndexes;
     private readonly Dictionary<T, long>[] _buckets;
 
@@ -171,28 +172,32 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         return _buckets[0];
     }
 
-    // Unlike PeekMin, doesn't raise MinPriority, so values with lower priorities can still be added
-    public bool TryGetMinPriority(out long priority)
+    // Unlike PeekMin, doesn't raise MinPriority, so values with lower priorities can still be added.
+    // The result is exact unless the first non-empty bucket is large: scanning it on every call would cost
+    // O(bucket size), so in this case it's the lowest priority the bucket may hold.
+    public bool TryGetMinPriorityLowerBound(out long priority)
     {
-        for (var index = 0; index < _buckets.Length; index++) {
-            var bucket = _buckets[index];
-            if (bucket.Count == 0)
-                continue;
-
-            if (index == 0) {
-                priority = MinPriority;
-                return true;
-            }
-
-            priority = long.MaxValue;
-            foreach (var (_, p) in bucket)
-                if (p < priority)
-                    priority = p;
+        var index = GetFirstNonEmptyBucketIndex();
+        if (index < 0) {
+            priority = default;
+            return false;
+        }
+        if (index == 0) {
+            priority = MinPriority;
             return true;
         }
 
-        priority = default;
-        return false;
+        var bucket = _buckets[index];
+        if (bucket.Count > MaxExactMinPriorityScanCount) {
+            priority = GetBucketLowerBound(index);
+            return true;
+        }
+
+        priority = long.MaxValue;
+        foreach (var (_, p) in bucket)
+            if (p < priority)
+                priority = p;
+        return true;
     }
 
     public Option<(long Priority, T Value)> ExtractMin()
@@ -215,8 +220,12 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
 
     public IReadOnlyDictionary<T, long> ExtractMinSet(long priority)
     {
-        if (priority < MinPriority || Count == 0)
+        if (priority < MinPriority)
             return Empty;
+        if (Count == 0) {
+            MinPriority = priority;
+            return Empty;
+        }
         if (priority == MinPriority)
             return ExtractBucket0();
 
@@ -225,6 +234,11 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
             if (bucket.Count != 0) {
                 if (index == 0)
                     throw new ArgumentOutOfRangeException(nameof(priority));
+                if (priority < GetBucketLowerBound(index)) {
+                    // Every value keeps its bucket index relative to the new MinPriority, so there is nothing to move
+                    MinPriority = priority;
+                    return Empty;
+                }
                 var minPriority = long.MaxValue;
                 foreach (var (_, p) in bucket)
                     if (p < minPriority) minPriority = p;
@@ -245,6 +259,30 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
     }
 
     // Private methods
+
+    private int GetFirstNonEmptyBucketIndex()
+    {
+        if (Count == 0)
+            return -1;
+
+        for (var index = 0; index < _buckets.Length; index++)
+            if (_buckets[index].Count != 0)
+                return index;
+        throw Errors.InternalError(
+            $"{GetType().GetName()}: internal structure is corrupted.");
+    }
+
+    // The lowest priority whose highest bit differing from MinPriority is bit (index - 1).
+    // Bucket "index" is non-empty, so this bit is 0 in MinPriority; "| mask" sets the bits below it,
+    // and "+ 1" carries into it. For index == 64 and a negative MinPriority, the result is 0.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private long GetBucketLowerBound(int index)
+    {
+        unchecked {
+            var mask = (1L << (index - 1)) - 1;
+            return (MinPriority | mask) + 1;
+        }
+    }
 
     private void UpdateMinPriority()
     {
