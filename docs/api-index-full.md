@@ -1179,10 +1179,6 @@ Defines a handler that is invoked when a timeout fires.
 
 Abstract base class for clocks that produce `Moment` timestamps and support time conversion and delay operations.
 
-###### `CoarseSystemClock`
-
-A `MomentClock` that returns a periodically updated time value via `CoarseClockHelper`, trading precision for lower read overhead.
-
 ###### `ConcurrentFixedTimerSet<TItem>`, `ConcurrentFixedTimerSetOptions` (record)
 
 A concurrent, sharded version of `FixedTimerSet<TItem>` that reduces lock contention by distributing items across multiple internal timer sets.
@@ -1205,7 +1201,7 @@ Pairs an `IGenericTimeoutHandler` with an argument for use in timer sets.
 
 ###### `MomentClockSet`
 
-A set of related `MomentClock` instances (system, CPU, server, coarse) used as a single dependency for services that need multiple clock types.
+A set of related `MomentClock` instances (system, CPU, server) used as a single dependency for services that need multiple clock types.
 
 ###### `RetryDelaySeq` (record)
 
