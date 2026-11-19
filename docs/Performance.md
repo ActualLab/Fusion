@@ -12,6 +12,7 @@ This page summarizes results of Fusion performance benchmarks.
 | **CPU** | AMD Ryzen 9 9950X3D 16-Core Processor |
 | **RAM** | 96 GB DDR5 |
 | **OS** | Windows 11 |
+| **Docker** | Docker Desktop, WSL2 backend (32 CPUs, 25 GB). The server container runs with `--cpus 4 --memory 8g` |
 | **.NET** | 11.0.0 |
 
 Note that Ryzen 9 9950X3D has 32 logical cores due to SMT.
@@ -74,7 +75,7 @@ multiple iterations, and the best result from 3 runs is reported.
 |------|--------|------------|
 | Without Fusion | 155.68K calls/s | 38.61K calls/s |
 | With Fusion | 487.46M calls/s | 535.40M calls/s |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">3,131x</span> | <span style="color: #22c55e; font-weight: bold;">13,867x</span> |
+| **Speedup** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3,131</span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑13,867</span> |
 
 ### Single Reader, No Mutators
 
@@ -82,7 +83,7 @@ multiple iterations, and the best result from 3 runs is reported.
 |------|--------|------------|
 | Without Fusion | 55.70K calls/s | 1.78K calls/s |
 | With Fusion | 23.74M calls/s | 26.97M calls/s |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">426x</span> | <span style="color: #22c55e; font-weight: bold;">15,152x</span> |
+| **Speedup** | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑426</span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑15,152</span> |
 
 ### Key Observations
 
@@ -108,16 +109,16 @@ The benchmark measures throughput of a simple repository-style user lookup servi
 | Test | Result | Speedup |
 |------|--------|---------|
 | Regular Service | 161.23K calls/s | |
-| Fusion Service | 330.53M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,050x</span> |
+| Fusion Service | 330.53M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,050</span> |
 
 ### Remote Services
 
 | Test | Result | Speedup |
 |------|--------|---------|
 | HTTP Client → Regular Service | 103.88K calls/s | |
-| HTTP Client → Fusion Service | 365.18K calls/s | <span style="color: #22c55e; font-weight: bold;">~3.5x</span> |
-| ActualLab.Rpc Client → Fusion Service | 7.81M calls/s | <span style="color: #22c55e; font-weight: bold;">~75x</span> |
-| Fusion Client → Fusion Service | 226.05M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,176x</span> |
+| HTTP Client → Fusion Service | 365.18K calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.5</span> |
+| ActualLab.Rpc Client → Fusion Service | 7.81M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑75</span> |
+| Fusion Client → Fusion Service | 226.05M calls/s | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2,176</span> |
 
 Wondering what each of these scenarios means (HTTP vs ActualLab.Rpc vs Fusion client)? See
 [What each scenario means](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#what-each-scenario-means)
@@ -129,13 +130,19 @@ This benchmark compares **ActualLab.Rpc** with **gRPC**, **SignalR**, and other 
 The tables below include only **ActualLab.Rpc**, **gRPC**, and **SignalR**.
 Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so we omit them.
 
+A colored number after a result shows how many times slower it is than the fastest result in the same test:
+<span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span> is the fastest,
+<span style="background: rgb(163,116,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span> is half as fast,
+<span style="background: rgb(137,39,39); color: #fff; padding: 2px 6px; border-radius: 3px;">↓10</span> is ten times slower.
+The color goes from green (1x) through red (3x) to black (50x or more) on a log scale.
+
 ### Calls
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
-|------|---------------|------|---------|---------|
-| Sum | **9.97M calls/s** | 842.95K calls/s | 4.84M calls/s | <span style="color: #22c55e; font-weight: bold;">2.1..11.8x</span> |
-| GetUser | **8.91M calls/s** | 848.30K calls/s | 4.28M calls/s | <span style="color: #22c55e; font-weight: bold;">2.1..10.5x</span> |
-| SayHello | **5.95M calls/s** | 808.67K calls/s | 2.23M calls/s | <span style="color: #22c55e; font-weight: bold;">2.7..7.4x</span> |
+|---|---|---|---|---|
+| Sum | <span style="white-space: nowrap;">**9.97M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">842.95K calls/s <span style="background: rgb(122,35,35); color: #fff; padding: 2px 6px; border-radius: 3px;">↓12</span></span> | <span style="white-space: nowrap;">4.84M calls/s <span style="background: rgb(169,112,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.1..11.8</span> |
+| GetUser | <span style="white-space: nowrap;">**8.91M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">848.30K calls/s <span style="background: rgb(133,38,38); color: #fff; padding: 2px 6px; border-radius: 3px;">↓11</span></span> | <span style="white-space: nowrap;">4.28M calls/s <span style="background: rgb(171,111,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.1..10.5</span> |
+| SayHello | <span style="white-space: nowrap;">**5.95M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">808.67K calls/s <span style="background: rgb(163,46,46); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.4</span></span> | <span style="white-space: nowrap;">2.23M calls/s <span style="background: rgb(217,82,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7..7.4</span> |
 
 _gRPC call throughput is lower on .NET 11.0.0 than it was on .NET 10.0.8 (1.28M / 1.24M / 1.16M calls/s
 with the same benchmark), even with the
@@ -159,10 +166,10 @@ this benchmark applies on .NET 11._
 ### Streams
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
-|------|---------------|------|---------|---------|
-| Stream1 | **104.98M items/s** | 39.51M items/s | 22.36M items/s | <span style="color: #22c55e; font-weight: bold;">2.7..4.7x</span> |
-| Stream100 | **45.89M items/s** | 19.94M items/s | 14.78M items/s | <span style="color: #22c55e; font-weight: bold;">2.3..3.1x</span> |
-| Stream10K | **808.92K items/s** | 648.00K items/s | 402.48K items/s | <span style="color: #22c55e; font-weight: bold;">1.2..2.0x</span> |
+|---|---|---|---|---|
+| Stream1 | <span style="white-space: nowrap;">**104.98M items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">39.51M items/s <span style="background: rgb(216,82,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.7</span></span> | <span style="white-space: nowrap;">22.36M items/s <span style="background: rgb(201,57,57); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7..4.7</span> |
+| Stream100 | <span style="white-space: nowrap;">**45.89M items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">19.94M items/s <span style="background: rgb(190,99,74); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.3</span></span> | <span style="white-space: nowrap;">14.78M items/s <span style="background: rgb(236,67,67); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.1</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.3..3.1</span> |
+| Stream10K | <span style="white-space: nowrap;">**808.92K items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">648.00K items/s <span style="background: rgb(75,171,89); color: #fff; padding: 2px 6px; border-radius: 3px;">↓1.2</span></span> | <span style="white-space: nowrap;">402.48K items/s <span style="background: rgb(164,115,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑1.2..2.0</span> |
 
 Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte items, Stream10K = 10KB items.
 
@@ -210,13 +217,13 @@ instead of the parameter search. With TLS, calls are 3-10% slower for ActualLab.
 ### Docker Calls
 
 | Framework | Sum | GetUser | SayHello |
-|-----------|-----|---------|----------|
-| ActualLab.Rpc | **5.62M calls/s** | **4.36M calls/s** | **2.54M calls/s** |
-| SignalR | 2.71M calls/s | 2.24M calls/s | 999.19K calls/s |
-| gRPC | 625.64K calls/s | 602.70K calls/s | 567.12K calls/s |
-| MagicOnion | 582.60K calls/s | 563.39K calls/s | 518.14K calls/s |
-| StreamJsonRpc | 396.57K calls/s | 306.24K calls/s | 134.15K calls/s |
-| HTTP | 146.06K calls/s | 147.05K calls/s | 130.46K calls/s |
+|---|---|---|---|
+| ActualLab.Rpc | <span style="white-space: nowrap;">**5.62M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**4.36M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**2.54M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> |
+| SignalR | <span style="white-space: nowrap;">2.71M calls/s <span style="background: rgb(170,111,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> | <span style="white-space: nowrap;">2.24M calls/s <span style="background: rgb(158,119,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓1.9</span></span> | <span style="white-space: nowrap;">999.19K calls/s <span style="background: rgb(208,87,72); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.5</span></span> |
+| gRPC | <span style="white-space: nowrap;">625.64K calls/s <span style="background: rgb(146,41,41); color: #fff; padding: 2px 6px; border-radius: 3px;">↓9.0</span></span> | <span style="white-space: nowrap;">602.70K calls/s <span style="background: rgb(164,47,47); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.2</span></span> | <span style="white-space: nowrap;">567.12K calls/s <span style="background: rgb(205,58,58); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.5</span></span> |
+| MagicOnion | <span style="white-space: nowrap;">582.60K calls/s <span style="background: rgb(140,40,40); color: #fff; padding: 2px 6px; border-radius: 3px;">↓9.6</span></span> | <span style="white-space: nowrap;">563.39K calls/s <span style="background: rgb(158,45,45); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.7</span></span> | <span style="white-space: nowrap;">518.14K calls/s <span style="background: rgb(197,56,56); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.9</span></span> |
+| StreamJsonRpc | <span style="white-space: nowrap;">396.57K calls/s <span style="background: rgb(107,30,30); color: #fff; padding: 2px 6px; border-radius: 3px;">↓14</span></span> | <span style="white-space: nowrap;">306.24K calls/s <span style="background: rgb(107,30,30); color: #fff; padding: 2px 6px; border-radius: 3px;">↓14</span></span> | <span style="white-space: nowrap;">134.15K calls/s <span style="background: rgb(82,23,23); color: #fff; padding: 2px 6px; border-radius: 3px;">↓19</span></span> |
+| HTTP | <span style="white-space: nowrap;">146.06K calls/s <span style="background: rgb(22,6,6); color: #fff; padding: 2px 6px; border-radius: 3px;">↓38</span></span> | <span style="white-space: nowrap;">147.05K calls/s <span style="background: rgb(44,13,13); color: #fff; padding: 2px 6px; border-radius: 3px;">↓30</span></span> | <span style="white-space: nowrap;">130.46K calls/s <span style="background: rgb(80,23,23); color: #fff; padding: 2px 6px; border-radius: 3px;">↓19</span></span> |
 
 <ClientOnly>
   <BarChart
@@ -241,11 +248,11 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 Stream tests count the items received inside the measurement window.
 
 | Framework | Stream1 | Stream100 | Stream10K |
-|-----------|---------|-----------|-----------|
-| ActualLab.Rpc | **40.19M items/s** | **18.64M items/s** | **492.15K items/s** |
-| gRPC | 15.40M items/s | 9.42M items/s | 328.92K items/s |
-| SignalR | 12.01M items/s | 6.97M items/s | 239.28K items/s |
-| StreamJsonRpc | 162.62K items/s | 163.20K items/s | 94.63K items/s |
+|---|---|---|---|
+| ActualLab.Rpc | <span style="white-space: nowrap;">**40.19M items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**18.64M items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**492.15K items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> |
+| gRPC | <span style="white-space: nowrap;">15.40M items/s <span style="background: rgb(213,84,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.6</span></span> | <span style="white-space: nowrap;">9.42M items/s <span style="background: rgb(161,117,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span></span> | <span style="white-space: nowrap;">328.92K items/s <span style="background: rgb(109,150,84); color: #fff; padding: 2px 6px; border-radius: 3px;">↓1.5</span></span> |
+| SignalR | <span style="white-space: nowrap;">12.01M items/s <span style="background: rgb(230,65,65); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.3</span></span> | <span style="white-space: nowrap;">6.97M items/s <span style="background: rgb(218,81,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.7</span></span> | <span style="white-space: nowrap;">239.28K items/s <span style="background: rgb(169,112,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> |
+| StreamJsonRpc | <span style="white-space: nowrap;">162.62K items/s <span style="background: rgb(0,0,0); color: #fff; padding: 2px 6px; border-radius: 3px;">↓247</span></span> | <span style="white-space: nowrap;">163.20K items/s <span style="background: rgb(0,0,0); color: #fff; padding: 2px 6px; border-radius: 3px;">↓114</span></span> | <span style="white-space: nowrap;">94.63K items/s <span style="background: rgb(192,55,55); color: #fff; padding: 2px 6px; border-radius: 3px;">↓5.2</span></span> |
 
 <ClientOnly>
   <BarChart
@@ -270,10 +277,10 @@ limited to **2 CPUs**, and the client is a separate PC with 32 logical CPUs, so 
 
 | | Client | Server |
 |-|--------|--------|
-| **Machine** | AMD Ryzen AI MAX+ PRO 395 (16 cores / 32 logical CPUs), 96 GB RAM | VM (16 vCPUs, 26 GB RAM) on Proxmox VE 9.0.3, on an AMD Ryzen 7 8745HS host |
-| **OS** | Windows 11 Pro | Ubuntu 24.04.5 |
-| **Network** | Realtek USB 5GbE adapter | Realtek USB 5GbE adapter, Linux bridge, virtio NIC with 8 queues |
-| **Runtime** | .NET 11.0.0, native process | .NET 11.0.0, Docker container with `--cpus 2 --memory 8g` |
+| **Machine** | AMD Ryzen AI MAX+ PRO 395 (16 cores / 32 logical CPUs), 96 GB RAM | VM (16 vCPUs, 26 GB RAM) on Proxmox VE 9.0.3, on an AMD Ryzen 7 8745HS host (8 cores / 16 logical CPUs), 30 GB RAM |
+| **OS** | Windows 11 Pro | Ubuntu 24.04.5 (kernel 6.8.0-149) in the VM, kernel 6.14.8-2-pve on the host |
+| **Network** | Realtek USB 5GbE adapter | Realtek RTL8157 USB 5GbE adapter, Linux bridge, virtio NIC with 8 queues |
+| **Runtime** | .NET 11.0.0, native process | .NET 11.0.0, Docker 29.10.0, container with `--cpus 2 --memory 8g` |
 
 `iperf3` measures 4.74 Gbit/s of TCP throughput on this link. The server runs in a container, inside a
 VM, on a Proxmox host, so the network path is longer than in the Docker tests. These figures are not
@@ -284,11 +291,11 @@ client is a different machine. The full setup, the commands, and the traffic and
 ### Network Calls
 
 | Framework | Sum | GetUser | SayHello |
-|-----------|-----|---------|----------|
-| ActualLab.Rpc | **2.22M calls/s** | **1.71M calls/s** | **1.07M calls/s** |
-| SignalR | 1.06M calls/s | 764.92K calls/s | 416.16K calls/s |
-| gRPC | 364.40K calls/s | 355.75K calls/s | 313.92K calls/s |
-| HTTP | 98.42K calls/s | 103.78K calls/s | 81.52K calls/s |
+|---|---|---|---|
+| ActualLab.Rpc | <span style="white-space: nowrap;">**2.22M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**1.71M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**1.07M calls/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> |
+| SignalR | <span style="white-space: nowrap;">1.06M calls/s <span style="background: rgb(172,110,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> | <span style="white-space: nowrap;">764.92K calls/s <span style="background: rgb(184,103,75); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.2</span></span> | <span style="white-space: nowrap;">416.16K calls/s <span style="background: rgb(210,86,72); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.6</span></span> |
+| gRPC | <span style="white-space: nowrap;">364.40K calls/s <span style="background: rgb(179,51,51); color: #fff; padding: 2px 6px; border-radius: 3px;">↓6.1</span></span> | <span style="white-space: nowrap;">355.75K calls/s <span style="background: rgb(199,57,57); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.8</span></span> | <span style="white-space: nowrap;">313.92K calls/s <span style="background: rgb(228,65,65); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.4</span></span> |
+| HTTP | <span style="white-space: nowrap;">98.42K calls/s <span style="background: rgb(68,19,19); color: #fff; padding: 2px 6px; border-radius: 3px;">↓23</span></span> | <span style="white-space: nowrap;">103.78K calls/s <span style="background: rgb(94,27,27); color: #fff; padding: 2px 6px; border-radius: 3px;">↓16</span></span> | <span style="white-space: nowrap;">81.52K calls/s <span style="background: rgb(114,32,32); color: #fff; padding: 2px 6px; border-radius: 3px;">↓13</span></span> |
 
 Every call test is limited by the server's 2 CPUs (187-196% usage), and none of them uses more than a
 quarter of the link. ActualLab.Rpc is 2.1-2.6x faster than SignalR, 3.4-6.1x faster than gRPC and
@@ -319,10 +326,10 @@ about 15x more concurrent calls than gRPC here.
 Stream10K wasn't run, because it saturates the 5 Gbit/s NICs at any server speed.
 
 | Framework | Stream1 | Stream100 | Stream100 traffic (client rx) |
-|-----------|---------|-----------|-------------------------------|
-| ActualLab.Rpc | **18.51M items/s** | **5.45M items/s** | 4.91 Gbit/s |
-| gRPC | 7.79M items/s | 4.54M items/s | 4.37 Gbit/s |
-| SignalR | 4.98M items/s | 2.63M items/s | 4.53 Gbit/s |
+|---|---|---|---|
+| ActualLab.Rpc | <span style="white-space: nowrap;">**18.51M items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">**5.45M items/s** <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | 4.91 Gbit/s |
+| gRPC | <span style="white-space: nowrap;">7.79M items/s <span style="background: rgb(195,95,74); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.4</span></span> | <span style="white-space: nowrap;">4.54M items/s <span style="background: rgb(68,176,90); color: #fff; padding: 2px 6px; border-radius: 3px;">↓1.2</span></span> | 4.37 Gbit/s |
+| SignalR | <span style="white-space: nowrap;">4.98M items/s <span style="background: rgb(221,63,63); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.7</span></span> | <span style="white-space: nowrap;">2.63M items/s <span style="background: rgb(170,111,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> | 4.53 Gbit/s |
 
 - **Stream1** is limited by the server's CPU for all three frameworks.
 - **Stream100:** ActualLab.Rpc reaches 92% of the link's 5.93M items/s ceiling (4.74 Gbit/s with no
@@ -336,18 +343,18 @@ their languages in the [4-CPU tests](./posts/261116-grpc-bench.md) ran in the sa
 same 2-CPU limit. A Rust client (`tonic_client`) on the client PC loaded them. `SayHello`:
 
 | Server | Client | Calls/s | ActualLab.Rpc is faster by |
-|--------|--------|---------|----------------------------|
-| ActualLab.Rpc | RpcBenchmark | 1.07M | - |
-| SignalR | RpcBenchmark | 416.2K | 2.6x |
-| rust_ntex (Rust) | tonic_client | 400.7K | 2.7x |
-| java_vertx_grpc (Java) | tonic_client | 318.9K | 3.4x |
-| gRPC (grpc-dotnet) | RpcBenchmark | 313.9K | 3.4x |
-| dotnet_grpc (grpc-dotnet) | tonic_client | 284.8K | 3.8x |
-| go_vtgrpc (Go) | tonic_client | 179.3K | 6.0x |
-| scala_akka (Scala) | tonic_client | 153.9K | 7.0x |
-| cpp_grpc_mt (C++) | tonic_client | 150.9K | 7.1x |
-| swift_grpc (Swift) | tonic_client | 92.3K | 11.6x |
-| HTTP | RpcBenchmark | 89.3K | 12.0x |
+|---|---|---|---|
+| ActualLab.Rpc | RpcBenchmark | <span style="white-space: nowrap;">1.07M <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | - |
+| SignalR | RpcBenchmark | <span style="white-space: nowrap;">416.2K <span style="background: rgb(210,86,72); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.6</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.6</span> |
+| rust_ntex (Rust) | tonic_client | <span style="white-space: nowrap;">400.7K <span style="background: rgb(217,82,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7</span> |
+| java_vertx_grpc (Java) | tonic_client | <span style="white-space: nowrap;">318.9K <span style="background: rgb(229,65,65); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.4</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.4</span> |
+| gRPC (grpc-dotnet) | RpcBenchmark | <span style="white-space: nowrap;">313.9K <span style="background: rgb(228,65,65); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.4</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.4</span> |
+| dotnet_grpc (grpc-dotnet) | tonic_client | <span style="white-space: nowrap;">284.8K <span style="background: rgb(220,63,63); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.8</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.8</span> |
+| go_vtgrpc (Go) | tonic_client | <span style="white-space: nowrap;">179.3K <span style="background: rgb(181,51,51); color: #fff; padding: 2px 6px; border-radius: 3px;">↓6.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑6.0</span> |
+| scala_akka (Scala) | tonic_client | <span style="white-space: nowrap;">153.9K <span style="background: rgb(168,48,48); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑7.0</span> |
+| cpp_grpc_mt (C++) | tonic_client | <span style="white-space: nowrap;">150.9K <span style="background: rgb(166,47,47); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.1</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑7.1</span> |
+| swift_grpc (Swift) | tonic_client | <span style="white-space: nowrap;">92.3K <span style="background: rgb(124,35,35); color: #fff; padding: 2px 6px; border-radius: 3px;">↓12</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑11.6</span> |
+| HTTP | RpcBenchmark | <span style="white-space: nowrap;">89.3K <span style="background: rgb(121,35,35); color: #fff; padding: 2px 6px; border-radius: 3px;">↓12</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑12.0</span> |
 
 Each `RpcBenchmark` row is the better of its two parameter sets for `SayHello`. The two groups are not
 measured identically: `RpcBenchmark` figures are the best of six 5-second tries, and grpc_bench figures

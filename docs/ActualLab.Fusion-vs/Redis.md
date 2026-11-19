@@ -102,12 +102,16 @@ to 4 CPUs and saturated. See [Performance Benchmarks](/Performance#reference-red
 
 ### Remote Access
 
-Both servers are limited to 4 CPUs, with clients running on separate cores:
+Both servers are limited to 4 CPUs, with clients running on separate cores.
+
+A colored number after a result shows how many times slower it is than the fastest result in the same test:
+<span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span> is the fastest, <span style="background: rgb(163,116,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span> is half as fast, <span style="background: rgb(137,39,39); color: #fff; padding: 2px 6px; border-radius: 3px;">↓10</span> is ten times slower.
+The color goes from green (1x) through red (3x) to black (50x or more) on a log scale.
 
 | Benchmark | ActualLab.Rpc | Redis | Speedup |
-|-----------|---------------|-------|---------|
-| GetUser / GET, regular clients | 4.13M calls/s | 212.91K req/s | **~19x** |
-| GetUser / GET, Redis clients pipeline 16 commands | 4.13M calls/s | 2.48M req/s | **~1.7x** |
+|---|---|---|---|
+| GetUser / GET, regular clients | <span style="white-space: nowrap;">4.13M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">212.91K req/s <span style="background: rgb(80,23,23); color: #fff; padding: 2px 6px; border-radius: 3px;">↓19</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑19</span> |
+| GetUser / GET, Redis clients pipeline 16 commands | <span style="white-space: nowrap;">4.13M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">2.48M req/s <span style="background: rgb(129,137,82); color: #fff; padding: 2px 6px; border-radius: 3px;">↓1.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑1.7</span> |
 
 The second row is not a fair comparison, and it favors Redis: `redis-benchmark` builds batches of 16
 commands by hand, while every ActualLab.Rpc caller makes a single call and awaits its result. Batching
@@ -118,9 +122,9 @@ in ActualLab.Rpc happens automatically in the transport, so the first row is the
 Per core, since Fusion's cached lookup is an in-process call:
 
 | Benchmark | Fusion | Redis | Speedup |
-|-----------|--------|-------|---------|
-| Cached lookup vs GET, 16-command pipelines | 47.08M calls/s | 1.30M req/s | **~36x** |
-| Cached lookup vs GET, regular clients | 47.08M calls/s | 77.33K req/s | **~609x** |
+|---|---|---|---|
+| Cached lookup vs GET, 16-command pipelines | <span style="white-space: nowrap;">47.08M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">1.30M req/s <span style="background: rgb(27,8,8); color: #fff; padding: 2px 6px; border-radius: 3px;">↓36</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑36</span> |
+| Cached lookup vs GET, regular clients | <span style="white-space: nowrap;">47.08M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">77.33K req/s <span style="background: rgb(0,0,0); color: #fff; padding: 2px 6px; border-radius: 3px;">↓609</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑609</span> |
 
 Fusion's in-process cache eliminates network round-trips entirely: a cache hit takes about 21 ns.
 On all cores of the same machine, a Fusion service serves 330.53M cached calls/s.

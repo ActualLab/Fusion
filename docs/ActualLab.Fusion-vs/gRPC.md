@@ -149,16 +149,20 @@ public class StockService : IComputeService
 
 ActualLab.Rpc (Fusion's RPC layer) outperforms gRPC in benchmarks. The server is limited to 4 CPUs
 in a Docker container and the connections don't use TLS, which is the setup
-[grpc_bench](https://github.com/LesnyRumcajs/grpc_bench) uses:
+[grpc_bench](https://github.com/LesnyRumcajs/grpc_bench) uses.
+
+A colored number after a result shows how many times slower it is than the fastest result in the same test:
+<span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span> is the fastest, <span style="background: rgb(163,116,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span> is half as fast, <span style="background: rgb(137,39,39); color: #fff; padding: 2px 6px; border-radius: 3px;">↓10</span> is ten times slower.
+The color goes from green (1x) through red (3x) to black (50x or more) on a log scale.
 
 | Benchmark | ActualLab.Rpc | gRPC (grpc-dotnet) | Speedup |
-|-----------|---------------|--------------------|---------|
-| RPC calls (Sum) | 5.62M calls/s | 625.64K calls/s | ~9.0x |
-| RPC calls (GetUser) | 4.36M calls/s | 602.70K calls/s | ~7.2x |
-| RPC calls (SayHello, the grpc_bench message) | 2.54M calls/s | 567.12K calls/s | ~4.5x |
-| Streaming (1-byte items) | 40.19M items/s | 15.40M items/s | ~2.6x |
-| Streaming (100-byte items) | 18.64M items/s | 9.42M items/s | ~2.0x |
-| Streaming (10KB items) | 492.15K items/s | 328.92K items/s | ~1.5x |
+|---|---|---|---|
+| RPC calls (Sum) | <span style="white-space: nowrap;">5.62M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">625.64K calls/s <span style="background: rgb(146,41,41); color: #fff; padding: 2px 6px; border-radius: 3px;">↓9.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑9.0</span> |
+| RPC calls (GetUser) | <span style="white-space: nowrap;">4.36M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">602.70K calls/s <span style="background: rgb(164,47,47); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.2</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑7.2</span> |
+| RPC calls (SayHello, the grpc_bench message) | <span style="white-space: nowrap;">2.54M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">567.12K calls/s <span style="background: rgb(205,58,58); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.5</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑4.5</span> |
+| Streaming (1-byte items) | <span style="white-space: nowrap;">40.19M items/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">15.40M items/s <span style="background: rgb(213,84,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.6</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.6</span> |
+| Streaming (100-byte items) | <span style="white-space: nowrap;">18.64M items/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">9.42M items/s <span style="background: rgb(161,117,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.0</span> |
+| Streaming (10KB items) | <span style="white-space: nowrap;">492.15K items/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">328.92K items/s <span style="background: rgb(109,150,84); color: #fff; padding: 2px 6px; border-radius: 3px;">↓1.5</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑1.5</span> |
 
 See [Performance Benchmarks](/Performance) for full details and test environment.
 
@@ -169,22 +173,22 @@ versions of their libraries and with the load generator tuned until each server 
 `SayHello` calls per second:
 
 | Server | Calls/s | ActualLab.Rpc is faster by |
-|--------|---------|----------------------------|
-| ActualLab.Rpc | 2.54M | - |
-| rust_ntex (Rust), the fastest gRPC server tested | 1.06M | ~2.4x |
-| java_vertx_grpc (Java, Vert.x) | 672K | ~3.8x |
-| dotnet_grpc (grpc-dotnet in grpc_bench) | 670K | ~3.8x |
-| java_quarkus (Java, Quarkus) | 632K | ~4.0x |
-| rust_tonic_mt (Rust, tonic) | 491K | ~5.2x |
-| go_grpc (Go, grpc-go) | 340K | ~7.5x |
+|---|---|---|
+| ActualLab.Rpc | <span style="white-space: nowrap;">2.54M <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | - |
+| rust_ntex (Rust), the fastest gRPC server tested | <span style="white-space: nowrap;">1.06M <span style="background: rgb(197,94,73); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.4</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.4</span> |
+| java_vertx_grpc (Java, Vert.x) | <span style="white-space: nowrap;">672K <span style="background: rgb(219,62,62); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.8</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.8</span> |
+| dotnet_grpc (grpc-dotnet in grpc_bench) | <span style="white-space: nowrap;">670K <span style="background: rgb(219,62,62); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.8</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.8</span> |
+| java_quarkus (Java, Quarkus) | <span style="white-space: nowrap;">632K <span style="background: rgb(214,61,61); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑4.0</span> |
+| rust_tonic_mt (Rust, tonic) | <span style="white-space: nowrap;">491K <span style="background: rgb(193,55,55); color: #fff; padding: 2px 6px; border-radius: 3px;">↓5.2</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑5.2</span> |
+| go_grpc (Go, grpc-go) | <span style="white-space: nowrap;">340K <span style="background: rgb(161,46,46); color: #fff; padding: 2px 6px; border-radius: 3px;">↓7.5</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑7.5</span> |
 
 The method, the full list of servers, their versions and the effect of TLS are in
 [The Fastest .NET RPC Servers vs the Fastest gRPC Servers](../posts/261116-grpc-bench.md).
 
 The two sets of numbers come from different load generators: the gRPC servers were loaded by a Rust
 client that replicates grpc_bench's `ghz`, ActualLab.Rpc by RpcBenchmark's own .NET client. The same
-RpcBenchmark client measures grpc-dotnet at 567K calls/s, so the ~4.5x figure above is the
-like-for-like one.
+RpcBenchmark client measures grpc-dotnet at 567K calls/s, so the SayHello factor in the first table
+(↓4.5) is the like-for-like one.
 
 ### Over a Real Network
 
@@ -192,13 +196,13 @@ We also ran the benchmarks over a 5 Gbit/s LAN between two machines, with the se
 (a Docker container in a VM) and a separate client PC. `SayHello` calls per second:
 
 | Server | Calls/s | ActualLab.Rpc is faster by |
-|--------|---------|----------------------------|
-| ActualLab.Rpc | 1.07M | - |
-| rust_ntex (Rust), the fastest gRPC server tested | 400.7K | ~2.7x |
-| java_vertx_grpc (Java, Vert.x) | 318.9K | ~3.4x |
-| gRPC (grpc-dotnet, RpcBenchmark client) | 313.9K | ~3.4x |
-| dotnet_grpc (grpc-dotnet in grpc_bench) | 284.8K | ~3.8x |
-| go_vtgrpc (Go, grpc-go) | 179.3K | ~6.0x |
+|---|---|---|
+| ActualLab.Rpc | <span style="white-space: nowrap;">1.07M <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | - |
+| rust_ntex (Rust), the fastest gRPC server tested | <span style="white-space: nowrap;">400.7K <span style="background: rgb(217,82,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7</span> |
+| java_vertx_grpc (Java, Vert.x) | <span style="white-space: nowrap;">318.9K <span style="background: rgb(229,65,65); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.4</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.4</span> |
+| gRPC (grpc-dotnet, RpcBenchmark client) | <span style="white-space: nowrap;">313.9K <span style="background: rgb(228,65,65); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.4</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.4</span> |
+| dotnet_grpc (grpc-dotnet in grpc_bench) | <span style="white-space: nowrap;">284.8K <span style="background: rgb(220,63,63); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.8</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.8</span> |
+| go_vtgrpc (Go, grpc-go) | <span style="white-space: nowrap;">179.3K <span style="background: rgb(181,51,51); color: #fff; padding: 2px 6px; border-radius: 3px;">↓6.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑6.0</span> |
 
 The other call tests and streams show the same pattern: ActualLab.Rpc is 3.4-6.1x faster than gRPC on
 calls, and 2.4x (1-byte items) and 1.2x (100-byte items) faster on streams. The 100-byte test is

@@ -93,15 +93,19 @@ Fusion uses its own RPC layer (ActualLab.Rpc), but you can use SignalR alongside
 
 ## Performance
 
-ActualLab.Rpc (Fusion's RPC layer) outperforms SignalR in benchmarks:
+ActualLab.Rpc (Fusion's RPC layer) outperforms SignalR in benchmarks.
+
+A colored number after a result shows how many times slower it is than the fastest result in the same test:
+<span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span> is the fastest, <span style="background: rgb(163,116,78); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span> is half as fast, <span style="background: rgb(137,39,39); color: #fff; padding: 2px 6px; border-radius: 3px;">↓10</span> is ten times slower.
+The color goes from green (1x) through red (3x) to black (50x or more) on a log scale.
 
 | Benchmark | ActualLab.Rpc | SignalR | Speedup |
-|-----------|---------------|---------|---------|
-| RPC calls (GetUser) | 8.91M calls/s | 4.28M calls/s | ~2.1x |
-| RPC calls (SayHello) | 5.95M calls/s | 2.23M calls/s | ~2.7x |
-| Streaming (1-byte items) | 104.98M items/s | 22.36M items/s | ~4.7x |
-| Streaming (100-byte items) | 45.89M items/s | 14.78M items/s | ~3.1x |
-| Streaming (10KB items) | 808.92K items/s | 402.48K items/s | ~2.0x |
+|---|---|---|---|
+| RPC calls (GetUser) | <span style="white-space: nowrap;">8.91M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">4.28M calls/s <span style="background: rgb(171,111,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.1</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.1</span> |
+| RPC calls (SayHello) | <span style="white-space: nowrap;">5.95M calls/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">2.23M calls/s <span style="background: rgb(217,82,71); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.7</span> |
+| Streaming (1-byte items) | <span style="white-space: nowrap;">104.98M items/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">22.36M items/s <span style="background: rgb(201,57,57); color: #fff; padding: 2px 6px; border-radius: 3px;">↓4.7</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑4.7</span> |
+| Streaming (100-byte items) | <span style="white-space: nowrap;">45.89M items/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">14.78M items/s <span style="background: rgb(236,67,67); color: #fff; padding: 2px 6px; border-radius: 3px;">↓3.1</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑3.1</span> |
+| Streaming (10KB items) | <span style="white-space: nowrap;">808.92K items/s <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">=1.0</span></span> | <span style="white-space: nowrap;">402.48K items/s <span style="background: rgb(164,115,77); color: #fff; padding: 2px 6px; border-radius: 3px;">↓2.0</span></span> | <span style="background: rgb(34,197,94); color: #fff; padding: 2px 6px; border-radius: 3px;">↑2.0</span> |
 
 See [Performance Benchmarks](/Performance) for full details and test environment.
 
