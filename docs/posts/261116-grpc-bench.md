@@ -500,3 +500,12 @@ Pekko gRPC has no stable 2.x release; the JVM servers run on JDK 25, the current
 
 The `RpcBenchmark` libraries were the latest releases at the time. The load generators are `ghz` 0.114.0, the version grpc_bench
 uses, and the Rust client on tonic 0.14.9.
+
+## P.S.
+
+ActualLab.Rpc isn't only a benchmark entry: together with Fusion, it runs [Voxt](https://voxt.ai),
+which we're building to be **<u>the best chat for everyday communication</u>**. Here's its quick intro:
+
+<iframe style="width: 100%; max-width: 900px; aspect-ratio: 16 / 9; border: 0; border-radius: 8px;" src="https://www.youtube-nocookie.com/embed/qm9hdcmMKWg" title="Voxt intro" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+In one of the next posts, I'll explain why a chat app needs an RPC library this fast.
