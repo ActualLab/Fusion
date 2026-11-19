@@ -20,14 +20,46 @@ public abstract partial class ComputedStateComponent
 
     public static Func<Type, IComputedStateOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
 
+    // Invoked once per component type, on a GetStateOptions(Type, factory) cache miss with a non-null factory.
+    // The default one runs ValidateStateOptionsFactory only if the factory comes from a Debug build; null disables it.
+    public static Action<Type, Func<Type, IComputedStateOptions>>? StateOptionsFactoryValidator { get; set; }
+        = static (componentType, optionsFactory) => {
+            if (optionsFactory.Method.Module.Assembly.IsDebugBuild())
+                ValidateStateOptionsFactory(componentType, optionsFactory);
+        };
+
+    // The result is cached per component type, so optionsFactory must not read the component instance
     public static ComputedState<T>.Options GetStateOptions<T>(
         Type componentType, Func<Type, ComputedState<T>.Options>? optionsFactory = null)
-        => (ComputedState<T>.Options)StateOptionsCache.GetOrAdd(componentType,
-            optionsFactory as Func<Type, IComputedStateOptions> ?? DefaultStateOptionsFactory);
+        => (ComputedState<T>.Options)GetStateOptions(componentType,
+            (Func<Type, IComputedStateOptions>?)optionsFactory);
 
+    // The result is cached per component type, so optionsFactory must not read the component instance
     public static IComputedStateOptions GetStateOptions(
         Type componentType, Func<Type, IComputedStateOptions>? optionsFactory = null)
-        => StateOptionsCache.GetOrAdd(componentType, optionsFactory ?? DefaultStateOptionsFactory);
+    {
+        if (StateOptionsCache.TryGetValue(componentType, out var options))
+            return options;
+
+        if (optionsFactory is null)
+            optionsFactory = DefaultStateOptionsFactory;
+        else
+            StateOptionsFactoryValidator?.Invoke(componentType, optionsFactory);
+        return StateOptionsCache.GetOrAdd(componentType, optionsFactory);
+    }
+
+    public static void ValidateStateOptionsFactory(
+        Type componentType, Func<Type, IComputedStateOptions> optionsFactory)
+    {
+        if (optionsFactory.IsCaptureFree())
+            return;
+
+        throw new InvalidOperationException(
+            $"{componentType.GetName()}: the options factory passed to GetStateOptions(Type, ...) captures "
+            + $"{optionsFactory.Target!.GetType().GetName()}, but its result is cached per component type "
+            + "and shared by all its instances. Make the factory static, or build per-instance options "
+            + "with `new() { ... }` instead.");
+    }
 
     public static string GetStateCategory(Type componentType)
         => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.State");

@@ -4,12 +4,20 @@ using ActualLab.OS;
 namespace ActualLab.Diagnostics;
 
 /// <summary>
-/// Extension methods for <see cref="Assembly"/> to retrieve informational version.
+/// Extension methods for <see cref="Assembly"/> to retrieve its informational version
+/// and to tell whether it was built in Debug configuration.
 /// </summary>
 public static class AssemblyExt
 {
     private static readonly ConcurrentDictionary<Assembly, string?> InformationalVersions
         = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Assembly, bool> IsDebugBuildCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+
+    // True when the assembly was compiled without optimizations, i.e. typically in Debug configuration
+    public static bool IsDebugBuild(this Assembly assembly)
+        => IsDebugBuildCache.GetOrAdd(assembly,
+            static a => a.GetCustomAttribute<DebuggableAttribute>()?.IsJITOptimizerDisabled ?? false);
 
     public static string? GetInformationalVersion(this Assembly assembly)
         => InformationalVersionResolver.Invoke(assembly);

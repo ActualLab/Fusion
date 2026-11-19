@@ -261,6 +261,29 @@ To have a component that automatically updates once the output of some Compute S
 2. Override the `ComputeState` method to call your Compute Services
 3. Optionally override `GetStateOptions` to configure initial value, update delayer, etc.
 
+If your `GetStateOptions` override calls `ComputedStateComponent.GetStateOptions(GetType(), factory)`,
+keep in mind that its result is cached per component type: the factory runs once, for whichever instance
+gets there first, and all other instances of the type get the same options. So the factory must not read
+the instance. Build instance-dependent options with `new() { ... }` instead:
+
+```cs
+// Wrong: every instance starts from the InitialValue of the first one
+protected override ComputedState<Model>.Options GetStateOptions()
+    => ComputedStateComponent.GetStateOptions(GetType(),
+        t => new ComputedState<Model>.Options() { InitialValue = new Model(Title) });
+
+// Right: options are built per instance
+protected override ComputedState<Model>.Options GetStateOptions()
+    => new() { InitialValue = new Model(Title), Category = ComputedStateComponent.GetStateCategory(GetType()) };
+```
+
+When the factory comes from an assembly built in Debug configuration, `GetStateOptions(Type, factory)`
+checks it on the first call for each component type and throws `InvalidOperationException` if it captures
+anything: `this`, a local variable, or an instance method's target. Release builds skip the check.
+`ComputedStateComponent.StateOptionsFactoryValidator` controls this: set it to `null` to disable the check,
+or to your own `Action<Type, Func<Type, IComputedStateOptions>>`, which may call
+`ComputedStateComponent.ValidateStateOptionsFactory` (the unconditional version of the check) or log instead.
+
 Check out the [Counter.razor example](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Components/Pages/Counter.razor) from HelloBlazorServer sample to see this in action.
 
 
