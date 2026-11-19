@@ -202,9 +202,8 @@ public sealed class TimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         var quanta = TimeSpan.FromMilliseconds(50);
         var firedAt = new ConcurrentDictionary<int, Moment>();
         await using var timerSet = new TimerSet<int>(
-            new() { Clock = clock, TickSource = new TickSource(quanta) },
+            new() { Clock = clock, TickSource = new TickSource(quanta), MaxSleepDuration = TimeSpan.Zero },
             timer => firedAt[timer] = clock.Now);
-        timerSet.MaxSleepDuration.Should().Be(TimeSpan.Zero, "a set using a non-CpuClock clock must not sleep by default");
         timerSet.AddOrUpdate(1, clock.Now + TimeSpan.FromSeconds(10));
         await Delay(0.5);
 
@@ -247,6 +246,7 @@ public sealed class TimerSetTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var create = (TimeSpan value) => new TimerSetOptions { MaxSleepDuration = value };
 
+        new TimerSetOptions().MaxSleepDuration.Should().Be(TimeSpan.FromSeconds(30));
         create(TimeSpan.Zero).MaxSleepDuration.Should().Be(TimeSpan.Zero);
         create(TimerSetOptions.MaxMaxSleepDuration).MaxSleepDuration.Should().Be(TimerSetOptions.MaxMaxSleepDuration);
         create.Invoking(c => c(TimeSpan.FromTicks(-1))).Should().Throw<ArgumentOutOfRangeException>();
