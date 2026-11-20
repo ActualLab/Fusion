@@ -379,8 +379,6 @@ Even with the [disclaimer](#disclosure-and-fairness) in mind, the gap is hard to
   same number!
 - **Streams:** it processes <u>more than 10M one-byte items per second per core</u> (40.2M/s on
   4 CPUs). It's almost the same over the LAN: 9.3M per core, on a slightly slower CPU.
-- **What's next:** it serializes with MessagePack here, and the upcoming MessagePack 4 is expected to
-  be about twice as fast as the current version, so I expect the gap to grow.
 - **And that's very good news for all other library authors:** if a library written almost
   single-handedly beats every RPC stack in every language here by such a margin, all of them have huge
   room to improve. And many of them eventually will.
