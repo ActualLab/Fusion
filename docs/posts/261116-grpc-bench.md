@@ -41,20 +41,12 @@ the ActualLab.Rpc side is in
   and Python: 22 that grpc_bench already has, <u>upgraded to the current versions of their runtimes
   and libraries</u>, and 4 new ones. The [results table](#grpc_bench-tests) lists all of them,
   and [Library and Runtime Versions](#library-and-runtime-versions) lists what they run on.
-- **The local setup:** the server runs in a Docker container limited to 4 CPUs. Clients run in other
-  containers on the same Docker network and use the remaining 28 logical CPUs. This is the setup
-  of grpc_bench, and most of the post is about it; see [Local Tests, 4-Core Server](#local-tests-4-core-server).
-- **The LAN setup:** the same tests again over a real network. The client is a separate PC with 32
-  logical CPUs, the server is a Docker container limited to 2 CPUs inside a VM, and a 5 Gbit/s link
-  connects the machines. This covers 7 of the gRPC servers and the .NET libraries. See
-  [5 Gbps LAN, 2-Core Server](#5-gbps-lan-2-core-server).
-- **<u>No TLS.</u>** grpc_bench runs without it, and so does everything in this post. The question
-  here is <u>how much overhead each RPC library adds on the server side</u>, and encryption costs
-  the same per byte whichever library sends the bytes. [The Effect of TLS](#the-effect-of-tls)
-  shows how much it changes the numbers.
-- **The machines:** the server machine is described below the heading of each test section.
-- **The measure:** successful calls per second over a 15-second run after a warmup, with every
-  reply decoded, plus the server's CPU usage. 400% means all 4 CPUs are busy (200% on the 2-CPU LAN server).
+- **The setups:** in the [local setup](#local-tests-4-core-server), the server runs in a Docker
+  container limited to 4 CPUs, as in grpc_bench. In the [LAN setup](#5-gbps-lan-2-core-server), the
+  client is a separate PC and the server is limited to 2 CPUs: with more, the fastest libraries would
+  saturate the 5 Gbps link, and the test would measure the link instead of the library.
+
+**Just want the results?** Jump to [Combined Tables](#combined-tables).
 
 ## What Was Wrong with the Original Test
 
@@ -375,6 +367,49 @@ ActualLab.Rpc handles 2.7x more `SayHello` calls than the fastest gRPC server he
 grpc-dotnet. The gRPC servers' figures are single 15-second runs, and the `RpcBenchmark` figures are the best of six
 5-second tries, which favors the `RpcBenchmark` rows.
 
+## Conclusions
+
+### ActualLab.Rpc Is in a League of Its Own
+
+Even with the [disclaimer](#disclosure-and-fairness) in mind, the gap is hard to overstate.
+
+- **Calls:** it is 2.7x faster over the LAN than `rust_ntex`, the fastest gRPC server.
+- **Per core:** that's about 635K calls/s <u>per core, a number nearly every other server here can't
+  reach even with 4 cores</u>. And only `rust_ntex` and SignalR need "just" 3 cores to produce the
+  same number!
+- **Streams:** it processes <u>more than 10M one-byte items per second per core</u> (40.2M/s on
+  4 CPUs). It's almost the same over the LAN: 9.3M per core, on a slightly slower CPU.
+- **What's next:** it serializes with MessagePack here, and the upcoming MessagePack 4 is expected to
+  be about twice as fast as the current version, so I expect the gap to grow.
+- **And that's very good news for all other library authors:** if a library written almost
+  single-handedly beats every RPC stack in every language here by such a margin, all of them have huge
+  room to improve. And many of them eventually will.
+
+### On .NET, SignalR Is the Next Choice
+
+- Over the LAN it is slightly ahead of `rust_ntex` (416K vs 401K calls/s); locally it is 6% behind
+  (999K vs 1.06M).
+- It is 1.3-1.8x faster than grpc-dotnet.
+- On .NET 11 it needs one fix to get there, which `RpcBenchmark` applies; see
+  [The .NET 11 Pipe Scheduler Fix](#the-net-11-pipe-scheduler-fix).
+
+### Among gRPC Servers, `rust_ntex` Is the Clear Winner
+
+- Locally it is 1.6x faster than the next ones, Vert.x and grpc-dotnet, and it is the fastest gRPC
+  server over the LAN as well.
+- That's ntex, not Rust in general: tonic, the most popular Rust gRPC library, is slower than grpc-dotnet.
+- grpc-dotnet is 3rd of 26, but SignalR beats it on the same runtime and the same Kestrel. So I suspect
+  most of its overhead is in its own HTTP/2 and gRPC layers rather than in .NET, and that it could be a
+  lot faster.
+
+### Everything Else Is Far Behind
+
+- **Go:** the fastest Go server (Kitex, 374K) handles about half of what grpc-dotnet does and a third
+  of what `rust_ntex` does.
+- **C++:** the servers on gRPC's C core are surprisingly slow (227K).
+- **Swift, Node.js, Python:** 243K (only 16K with grpc-swift 2), 59K and 4K, i.e. 4-260x slower than
+  `rust_ntex`. If your server's RPC throughput matters, avoid them there.
+
 ## Important Remarks
 
 ### Disclosure and Fairness
@@ -425,6 +460,22 @@ nor time their calls to suit the server.
 The shaping is worth a lot. The same Rust client with one multi-threaded runtime instead of a
 runtime per CPU gives `rust_ntex` 667K instead of 900K, and grpc-dotnet gets 567K from
 `RpcBenchmark` against 670K from the Rust client with the optimal load.
+
+### The .NET 11 Pipe Scheduler Fix
+
+.NET 11 changed `PipeScheduler.ThreadPool` (System.IO.Pipelines) to queue its work items with
+`preferLocal: true`. Under load, a pipe reader such as SignalR's send loop now runs almost
+immediately and flushes tiny batches, so the number of socket sends per call grows several times,
+and <u>SignalR's call throughput drops several times with it</u>.
+
+`RpcBenchmark` works around this: at startup, both its server and its client processes replace the
+scheduler behind `PipeScheduler.ThreadPool` with one that queues to the global thread pool queue, as
+.NET 10 did. The fix is process-wide, so it applies to every .NET library in the test, not only to
+SignalR, and the `ActualLab_PipeSchedulerFix=0` environment variable turns it off. Without it,
+SignalR's numbers in this post would be much lower. The details are in
+[Benchmarks.md](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#net-11-pipe-scheduler-fix),
+and the code is
+[PipeSchedulerFix.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/ActualLab.Benchmarking/PipeSchedulerFix.cs).
 
 ### The Effect of TLS
 
