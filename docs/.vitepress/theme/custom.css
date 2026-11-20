@@ -171,11 +171,20 @@ details {
       outline: 2px solid var(--vp-c-text-1);
     }
 
+    /* The chevron is a mask filled with the text color: an SVG in `content: url(...)`
+       can't inherit currentColor, so it stayed black in dark mode. */
     &:after {
-      content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'/></svg>");
+      content: "";
       position: absolute;
       right: 0.5em;
-      transition: all 0.3s;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      margin-top: -8px;
+      background-color: var(--vp-c-text-1);
+      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'/></svg>") center / contain no-repeat;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'/></svg>") center / contain no-repeat;
+      transition: transform 0.3s;
     }
   }
 

@@ -510,6 +510,8 @@ the figures in this post are measured without it, for every library.
 Every server runs on the newest stable release of its runtime and gRPC library as of 2026-11-16,
 with the exceptions listed below the table.
 
+::: details Show library and runtime versions
+
 | Runtime | Server | Library |
 |---------|--------|---------|
 | .NET 11.0.0 | ActualLab.Rpc (RpcBenchmark) | ActualLab.Fusion 15.1.38 |
@@ -549,6 +551,8 @@ Pekko gRPC has no stable 2.x release; the JVM servers run on JDK 25, the current
 
 The `RpcBenchmark` libraries were the latest releases at the time. The load generators are `ghz` 0.114.0, the version grpc_bench
 uses, and the Rust client on tonic 0.14.9.
+
+:::
 
 ## P.S.
 
