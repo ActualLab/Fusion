@@ -342,7 +342,7 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 | Category | Tools |
 |----------|-------|
 | **AI CLIs** | Claude Code, OpenAI Codex, xAI Grok, Codename Goose, OpenCode |
-| **.NET** | .NET 11 SDK, .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
+| **.NET** | .NET 11 SDK, wasm-tools workload |
 | **Node.js** | Node.js 20, npm |
 | **Shell** | Zsh (default), Bash, PowerShell (`pwsh`) |
 | **Search** | ripgrep (`rg`), fd-find (`fdfind`), fzf |
