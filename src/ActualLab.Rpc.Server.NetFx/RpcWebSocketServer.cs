@@ -67,10 +67,20 @@ public class RpcWebSocketServer : RpcServiceBase
             return HttpStatusCode.Forbidden;
         }
 
-        // Validate serialization format before peer creation to avoid KeyNotFoundException
+        // Validate serialization format before peer creation to avoid KeyNotFoundException.
+        // The socket is accepted just to send close code 4001: the client treats it as final,
+        // while a plain HTTP error would make it reconnect forever.
         if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
             Log.LogWarning("'{PeerRef}': Rejected RPC connection: {Reason}", rpcRef, rejectionReason);
-            return HttpStatusCode.BadRequest;
+            var rejectAcceptOptions = Settings.ConfigureWebSocket.Invoke(this, context, rpcRef);
+            acceptToken(rejectAcceptOptions, wsEnv => {
+                var wsContext = (WebSocketContext)wsEnv["System.Net.WebSockets.WebSocketContext"];
+                return wsContext.WebSocket.CloseAsync(
+                    (WebSocketCloseStatus)RpcWebSocketCloseCode.UnsupportedFormat,
+                    $"Unsupported RPC serialization format: '{rpcRef.SerializationFormat}'",
+                    context.Request.CallCancelled);
+            });
+            return HttpStatusCode.SwitchingProtocols;
         }
 
         var peer = Hub.GetServerPeer(rpcRef);
