@@ -32,6 +32,9 @@ public static class EncoderExt
             bool completed;
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
+            if (source.Length == 0)
+                return;
+
             fixed (char* sourcePtr = &source.GetPinnableReference())
             fixed (byte* freeSpanPtr = &freeSpan.GetPinnableReference())
                 encoder.Convert(sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
@@ -54,6 +57,9 @@ public static class EncoderExt
             bool completed;
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
+            if (source.Length == 0)
+                return;
+
             fixed (char* sourcePtr = &source.GetPinnableReference())
             fixed (byte* freeSpanPtr = &freeSpan.GetPinnableReference())
                 encoder.Convert(sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
