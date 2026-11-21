@@ -11,6 +11,11 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- .NET 10+ has async LINQ built in (System.Linq.AsyncEnumerable); ActualLab.Core doesn't bring it anymore -->
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10')))">
+    <PackageReference Include="System.Linq.Async" />
+  </ItemGroup>
+
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
     <PackageReference Include="FlakyTest.XUnit" />
