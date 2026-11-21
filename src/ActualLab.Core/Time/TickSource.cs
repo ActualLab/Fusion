@@ -33,7 +33,17 @@ public sealed class TickSource(TimeSpan period)
             if (!whenNextTick.IsCompleted)
                 return whenNextTick;
 
+#if NETSTANDARD2_0
+            // .NET Framework runs every continuation of a completed task inline on the completing thread,
+            // so all waiters of a tick would resume one by one on the timer thread
+            whenNextTick = Task.Delay(Period).ContinueWith(
+                static _ => { },
+                CancellationToken.None,
+                TaskContinuationOptions.RunContinuationsAsynchronously,
+                TaskScheduler.Default);
+#else
             whenNextTick = Task.Delay(Period);
+#endif
             Volatile.Write(ref _whenNextTick, whenNextTick); // Published to the lock-free read above
             return whenNextTick;
         }
