@@ -8,11 +8,11 @@
 # (which live under docs/) rebuild the snippets stage.
 
 # 1) Refresh MarkdownSnippets in place (docs/**/*.md). Depends on docs/ only.
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS snippets
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS snippets
 WORKDIR /repo
 # global.json is deliberately NOT copied: mdsnippets only rewrites markdown, it
 # builds nothing, so pinning it to the repo's SDK version would break this stage
-# every time that pin moves ahead of the image (e.g. a .NET 11 preview).
+# every time that pin moves ahead of the image (e.g. a .NET 12 preview).
 COPY .config/ ./.config/
 COPY docs/ ./docs/
 # Pass the target dir explicitly so mdsnippets doesn't require a .git repo
