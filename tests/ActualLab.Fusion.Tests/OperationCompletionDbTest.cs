@@ -6,6 +6,8 @@ namespace ActualLab.Fusion.Tests;
 // up front, so it has to reach every host - which is only testable against a real operation log.
 public class OperationCompletionDbTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected virtual double DelayBeforeCommand => 0;
+
     [Fact]
     public async Task ICompletionRunsOnTheOriginAndOnTheOtherHost()
     {
@@ -15,6 +17,8 @@ public class OperationCompletionDbTest(ITestOutputHelper @out) : FusionTestBase(
         var origin = WebServices.GetRequiredService<CompletionEchoCatcher>();
         var other = Services.GetRequiredService<CompletionEchoCatcher>();
         var originHostId = WebServices.GetRequiredService<HostId>().Id;
+        if (DelayBeforeCommand > 0)
+            await Delay(DelayBeforeCommand);
 
         await WebServices.Commander().Call(new CompletionEcho_Set("ab", 1));
 
