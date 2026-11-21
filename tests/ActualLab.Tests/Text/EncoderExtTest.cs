@@ -1,4 +1,5 @@
 using System.Text;
+using Cysharp.Text;
 using ActualLab.IO.Internal;
 
 namespace ActualLab.Tests.Text;
@@ -31,6 +32,23 @@ public class EncoderExtTest(ITestOutputHelper @out) : TestBase(@out)
 
         encoder.Convert(ReadOnlySpan<char>.Empty, buffer, flush: true);
         buffer.WrittenSpan.ToArray().Should().Equal(0xEF, 0xBF, 0xBD); // U+FFFD
+    }
+
+    [Fact]
+    public void EmptyInputIntoFullBuilderTest()
+    {
+        var sb = ZString.CreateUtf8StringBuilder();
+        try {
+            sb.Advance(sb.GetSpan(0).Length);
+            sb.GetSpan(0).IsEmpty.Should().BeTrue();
+            var length = sb.Length;
+
+            EncodingExt.Utf8NoBom.GetEncoder().Convert(ReadOnlySpan<char>.Empty, ref sb);
+            sb.Length.Should().Be(length);
+        }
+        finally {
+            sb.Dispose();
+        }
     }
 
     [Fact]

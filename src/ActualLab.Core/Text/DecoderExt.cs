@@ -33,11 +33,14 @@ public static class DecoderExt
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
             // An empty span pins as a null pointer, which .NET Framework rejects,
-            // and returning early instead would skip the flush of the decoder's state
+            // and returning early instead would skip the flush of the decoder's state.
+            // The target span can be empty too: a full string builder returns one for a zero size hint.
             byte emptySource = default;
+            char emptyTarget = default;
             fixed (byte* sourcePtr = &source.GetPinnableReference())
             fixed (char* freeSpanPtr = &freeSpan.GetPinnableReference())
-                decoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
+                decoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length,
+                    freeSpanPtr is null ? &emptyTarget : freeSpanPtr, freeSpan.Length,
                     flush, out bytesUsed, out charsUsed, out completed);
 #else
             decoder.Convert(source, freeSpan, flush, out bytesUsed, out charsUsed, out completed);
@@ -58,11 +61,14 @@ public static class DecoderExt
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
             // An empty span pins as a null pointer, which .NET Framework rejects,
-            // and returning early instead would skip the flush of the decoder's state
+            // and returning early instead would skip the flush of the decoder's state.
+            // The target span can be empty too: a full string builder returns one for a zero size hint.
             byte emptySource = default;
+            char emptyTarget = default;
             fixed (byte* sourcePtr = &source.GetPinnableReference())
             fixed (char* freeSpanPtr = &freeSpan.GetPinnableReference())
-                decoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
+                decoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length,
+                    freeSpanPtr is null ? &emptyTarget : freeSpanPtr, freeSpan.Length,
                     flush, out bytesUsed, out charsUsed, out completed);
 #else
             decoder.Convert(source, freeSpan, flush, out bytesUsed, out charsUsed, out completed);
