@@ -75,7 +75,13 @@ public abstract class RpcStream : IRpcObject
     public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource, bool allowReconnect = true)
         => new(outgoingSource) { AllowReconnect = allowReconnect };
     public static RpcStream<T> New<T>(IEnumerable<T> outgoingSource, bool allowReconnect = true)
+#if NET10_0_OR_GREATER
         => new(outgoingSource.ToAsyncEnumerable()) { AllowReconnect = allowReconnect };
+#else
+        => new(ToAsyncEnumerable(outgoingSource ?? throw new ArgumentNullException(nameof(outgoingSource)))) {
+            AllowReconnect = allowReconnect,
+        };
+#endif
 
     public override string ToString()
         => $"{GetType().GetName()}({Id} @ {Peer?.Route}, {Kind})";
@@ -93,6 +99,23 @@ public abstract class RpcStream : IRpcObject
     protected internal abstract void OnBatch(long index, object? items);
     protected internal abstract void OnEnd(long index, Exception? error);
     protected abstract Task Reconnect(CancellationToken cancellationToken);
+
+#if !NET10_0_OR_GREATER
+    // Private methods
+
+#pragma warning disable CS1998
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
+        IEnumerable<T> source,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var item in source) {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return item;
+        }
+    }
+#pragma warning restore CS1998
+#endif
 }
 
 /// <summary>

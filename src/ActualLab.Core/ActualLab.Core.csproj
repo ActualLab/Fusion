@@ -21,9 +21,6 @@
     <PackageReference Include="ZString" />
   </ItemGroup>
 
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10')))">
-    <PackageReference Include="System.Linq.Async" />
-  </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="MemoryPack.Core" />
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />

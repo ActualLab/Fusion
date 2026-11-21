@@ -26,13 +26,22 @@ public abstract class DbShardWorkerBase<TDbContext>(
     {
         var changes = WorkerShards.Computed
             .Changes(cancellationToken)
-            .SkipSyncItems(cancellationToken)
-            .Select(c => c.Value.Remove(DbShard.Template));
-        return changes.RunItemTasks(
+            .SkipSyncItems(cancellationToken);
+        return ExcludeTemplateShard(changes, cancellationToken).RunItemTasks(
             OnRun,
             // (shards, _, _) => Log.LogWarning("New shards: {Shards}", shards.ToDelimitedString()),
             cancellationToken);
     }
 
     protected abstract Task OnRun(string shard, CancellationToken cancellationToken);
+
+    // Private methods
+
+    private static async IAsyncEnumerable<ImmutableHashSet<string>> ExcludeTemplateShard(
+        IAsyncEnumerable<Computed<ImmutableHashSet<string>>> changes,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await foreach (var computed in changes.WithCancellation(cancellationToken).ConfigureAwait(false))
+            yield return computed.Value.Remove(DbShard.Template);
+    }
 }

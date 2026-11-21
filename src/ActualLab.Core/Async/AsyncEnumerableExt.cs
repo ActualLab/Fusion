@@ -13,14 +13,16 @@ public static partial class AsyncEnumerableExt
         where T : class
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IAsyncEnumerable<T> SkipNullItems() => source.Where(x => x is not null)!;
+        public IAsyncEnumerable<T> SkipNullItems()
+            => SkipNullReferences(source ?? throw new ArgumentNullException(nameof(source)));
     }
 
     extension<T>(IAsyncEnumerable<T?> source)
         where T : struct
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IAsyncEnumerable<T> SkipNullItems() => source.Where(x => x is not null).Select(x => x!.Value);
+        public IAsyncEnumerable<T> SkipNullItems()
+            => SkipNullValues(source ?? throw new ArgumentNullException(nameof(source)));
     }
 
     extension<T>(IAsyncEnumerable<T> source)
@@ -127,5 +129,29 @@ public static partial class AsyncEnumerableExt
                     yield break;
             }
         }
+    }
+
+    // Private methods
+
+    private static async IAsyncEnumerable<T> SkipNullReferences<T>(
+        IAsyncEnumerable<T?> source,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        where T : class
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false))
+            if (item is not null)
+                yield return item;
+    }
+
+    private static async IAsyncEnumerable<T> SkipNullValues<T>(
+        IAsyncEnumerable<T?> source,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        where T : struct
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false))
+            if (item.HasValue)
+                yield return item.GetValueOrDefault();
     }
 }
