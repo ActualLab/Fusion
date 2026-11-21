@@ -6,7 +6,7 @@ import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
 import { RpcStream } from './rpc-stream.js';
 
-const { warnLog } = getLogs('RpcSharedStream');
+const { warnLog, errorLog } = getLogs('RpcSharedStream');
 
 /** Settle-only view of a promise: observes it without consuming its outcome. */
 function _ignore(): void { /* intentionally empty */ }
@@ -540,7 +540,16 @@ export class RpcStreamSender<T> implements IRpcObject {
                 while (this._nextIndex < maxIndex && bufferIndex < buffer.count) {
                     const item = buffer.get(bufferIndex++);
                     if (item.kind === 'value') {
-                        this.sendItem(item.value);
+                        try {
+                            this.sendItem(item.value);
+                        } catch (e) {
+                            // The consumer would ask for the unsent item again and again,
+                            // so the stream ends with the error instead (.NET: RpcSendHandlers.EndStream)
+                            const error = e instanceof Error ? e : new Error(String(e));
+                            errorLog?.log(`Failed to send an item of stream #${this.id.localId}:`, error);
+                            this.sendEnd(error);
+                            continue nextAck;
+                        }
                     } else {
                         // End (clean or error). Unlike a `return`, this keeps the
                         // pump serving acks so a reset ack replays the End from

@@ -123,6 +123,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
         failingStream: { args: [], returns: RpcType.stream },
         infiniteStream: { args: [], returns: RpcType.stream },
         emptyStream: { args: [], returns: RpcType.stream },
+        unserializableStream: { args: [], returns: RpcType.stream },
     });
 
     beforeEach(async () => {
@@ -225,6 +226,38 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
         }).rejects.toThrow('Server stream failure');
 
         expect(items).toEqual([1, 2]);
+    });
+
+    it('should fail the stream when an item cannot be serialized', async () => {
+        pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
+            unserializableStream: async function* () {
+                yield 1;
+                const circular: Record<string, unknown> = {};
+                circular['self'] = circular;
+                yield circular;
+                yield 3;
+            },
+        });
+
+        const client = pair.clientHub.addClient<{
+            unserializableStream(): Promise<AsyncIterable<unknown>>;
+                }>(pair.clientPeer, StreamServiceDef);
+
+        const stream = await client.unserializableStream();
+        const items: unknown[] = [];
+        const whenConsumed = (async () => {
+            for await (const item of stream)
+                items.push(item);
+        })();
+        // Without the fix the stream never ends: the item is never sent, and neither is $sys.End
+        const result = await Promise.race([
+            whenConsumed.then(() => 'completed', () => 'failed'),
+            delay(2000).then(() => 'timeout'),
+        ]);
+
+        expect(result).toBe('failed');
+        expect(items).toEqual([1]);
     });
 
     it('should support early break from client', async () => {
