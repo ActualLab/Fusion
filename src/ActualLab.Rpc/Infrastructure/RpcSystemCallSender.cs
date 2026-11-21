@@ -208,7 +208,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
-        call.SendNoWait(needsPolymorphism: true);
+        call.SendNoWait(needsPolymorphism: true, RpcSendHandlers.EndStream);
 #pragma warning restore MA0100
     }
 
@@ -223,7 +223,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             ? ArgumentList.New(index, (object)items)
             : ArgumentList.New(index, items);
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;
-        call.SendNoWait(needsPolymorphism: true);
+        call.SendNoWait(needsPolymorphism: true, RpcSendHandlers.EndStream);
 #pragma warning restore MA0100
     }
 

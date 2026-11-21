@@ -193,7 +193,13 @@ public abstract class RpcInboundCall : RpcCall
     protected Exception ProcessArgumentDeserializationError(Exception error)
     {
         error = Errors.CannotDeserializeInboundCallArguments(error);
-        if (!MethodDef.SystemMethodKind.IsCallResultMethod())
+        var systemMethodKind = MethodDef.SystemMethodKind;
+        if (systemMethodKind is RpcSystemMethodKind.Item or RpcSystemMethodKind.Batch) {
+            if (Context.RelatedObject is RpcStream stream) // IsValidCall sets it
+                stream.OnItemDeserializationError(error);
+            return error;
+        }
+        if (!systemMethodKind.IsCallResultMethod())
             return error;
 
         var oldMethodDef = MethodDef;

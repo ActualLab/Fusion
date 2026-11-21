@@ -98,6 +98,7 @@ public abstract class RpcStream : IRpcObject
     protected internal abstract void OnItem(long index, object? item);
     protected internal abstract void OnBatch(long index, object? items);
     protected internal abstract void OnEnd(long index, Exception? error);
+    protected internal abstract void OnItemDeserializationError(Exception error);
     protected abstract Task Reconnect(CancellationToken cancellationToken);
 
 #if !NET10_0_OR_GREATER
@@ -368,6 +369,15 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
             // Debug.WriteLine($"{Id}: +{index} (ended!)");
             CloseFromLock(error);
+        }
+    }
+
+    protected internal override void OnItemDeserializationError(Exception error)
+    {
+        // The item's index can't be read, and asking for a resend would only repeat the failure
+        lock (_lock) {
+            if (_remoteChannel is not null)
+                CloseFromLock(error);
         }
     }
 

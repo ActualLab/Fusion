@@ -48,6 +48,22 @@ public static class RpcSendHandlers
             peer.Log.LogError(error, "Failed to send Ok response for call #{CallId}", message.RelatedId);
         };
 
+    // For $sys.I and $sys.B: the receiver would ask for the unsent item again and again,
+    // so the stream ends with the error instead. A closed transport's items are resent on reconnect.
+    public static readonly RpcTransportSendHandler EndStream
+        = (transport, message, error) => {
+            if (error is null || IsAutoHandledError(error))
+                return;
+
+            var peer = transport.Peer;
+            peer.Log.LogError(error, "Failed to send an item of stream #{StreamId}", message.RelatedId);
+            if (transport.WhenCompleted.IsCompleted || !ReferenceEquals(peer.Transport, transport))
+                return;
+
+            var index = message.Arguments!.Get<long>(0);
+            peer.Hub.SystemCallSender.End(peer, message.RelatedId, index, error);
+        };
+
     public static readonly RpcTransportSendHandler CompleteInboundCall
         = (transport, message, error) => {
             CompleteInboundCallTrace(message, error);

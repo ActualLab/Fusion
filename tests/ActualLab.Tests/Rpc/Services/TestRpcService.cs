@@ -51,6 +51,24 @@ public partial class NonPolymorphicDerived2 : NonPolymorphicBase
     public double Score { get; set; }
 }
 
+/// <summary>
+/// A stream item System.Text.Json writes but can't read back.
+/// </summary>
+[JsonConverter(typeof(UnreadableItemConverter))]
+public sealed class UnreadableItem
+{
+    public int Value { get; init; }
+}
+
+public sealed class UnreadableItemConverter : JsonConverter<UnreadableItem>
+{
+    public override UnreadableItem Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+        => throw new System.Text.Json.JsonException($"{nameof(UnreadableItem)} can't be read.");
+
+    public override void Write(System.Text.Json.Utf8JsonWriter writer, UnreadableItem value, System.Text.Json.JsonSerializerOptions options)
+        => writer.WriteNumberValue(value.Value);
+}
+
 public interface ITestRpcService : ICommandService
 {
     public Task<int?> Div(int? a, int b);
@@ -72,6 +90,7 @@ public interface ITestRpcService : ICommandService
 
     public Task<NonPolymorphicBase> NonPolymorphRoundtrip(NonPolymorphicBase item, CancellationToken cancellationToken = default);
     public Task<RpcStream<NonPolymorphicBase>> StreamNonPolymorph(int count);
+    public Task<RpcStream<UnreadableItem>> StreamUnreadable(int count);
 
     public ValueTask<RpcNoWait> MaybeSet(string key, string? value);
     public ValueTask<string?> Get(string key);
@@ -164,6 +183,9 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
                 : new NonPolymorphicDerived2 { Value = i, Score = i * 0.5 });
         return Task.FromResult(RpcStream.New(seq));
     }
+
+    public virtual Task<RpcStream<UnreadableItem>> StreamUnreadable(int count)
+        => Task.FromResult(RpcStream.New(Enumerable.Range(0, count).Select(i => new UnreadableItem { Value = i })));
 
     public virtual Task<int> AddWithAttribute(int a, int b)
         => Task.FromResult(a + b);

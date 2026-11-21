@@ -566,6 +566,33 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             () => client.PolymorphResult(2));
     }
 
+    [Theory]
+    [InlineData("json5np")]
+    [InlineData("njson5np")]
+    public async Task StreamItemThatCantBeSerializedFailsTheStream(string serializationFormat)
+    {
+        SerializationFormat = serializationFormat;
+        await using var services = CreateServices();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        // Tuple<int> items of an RpcStream<ITuple> are polymorphic, which "np" formats can't write
+        var stream = await client.StreamTuples(10);
+        await AssertStreamFails(stream);
+    }
+
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("json5np")]
+    public async Task StreamItemThatCantBeDeserializedFailsTheStream(string serializationFormat)
+    {
+        SerializationFormat = serializationFormat;
+        await using var services = CreateServices();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        var stream = await client.StreamUnreadable(10);
+        await AssertStreamFails(stream);
+    }
+
     [Fact]
     public async Task CancellationTest()
     {
@@ -664,6 +691,15 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     // Private methods
+
+    private static async Task AssertStreamFails<T>(RpcStream<T> stream)
+    {
+        var readTask = stream.ToListAsync().AsTask();
+        await Task.WhenAny(readTask, Task.Delay(TimeSpan.FromSeconds(10)));
+
+        readTask.IsCompleted.Should().BeTrue("the stream must end rather than keep resending an item");
+        readTask.IsFaulted.Should().BeTrue();
+    }
 
     private static bool HasTag(
         IEnumerable<KeyValuePair<string, object?>> tags,
