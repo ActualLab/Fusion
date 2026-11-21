@@ -96,7 +96,6 @@ individual `PackageVersion` lines that reference it.
 
 Several pins carry a `<!-- ... -->` explaining *why* they're held back, e.g.:
 - `Xunit.DependencyInjection.Logging` held at 8.x because 9.0.0 removed `XunitTestOutputLoggerProvider`.
-- CommunityToolkit.HighPerformance was deliberately downgraded (see git history) for compatibility.
 
 If a package has such a comment, **do not override it** without confirming the reason no
 longer applies. When you skip a package for this reason, say so in your summary.

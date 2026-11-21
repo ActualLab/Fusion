@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Diagnostics.Contracts;
-using CommunityToolkit.HighPerformance;
-using CommunityToolkit.HighPerformance.Buffers;
+using ActualLab.Collections.Internal;
 
 namespace ActualLab.Collections;
 
@@ -10,7 +9,7 @@ namespace ActualLab.Collections;
 /// <see cref="IBufferWriter{T}"/> and provides list-like operations.
 /// </summary>
 public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, bool mustClear)
-    : IBuffer<T>, IMemoryOwner<T>
+    : IBufferWriter<T>, IMemoryOwner<T>
 {
     private const int DefaultInitialCapacity = 256;
 
@@ -33,31 +32,26 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         }
     }
 
-    /// <inheritdoc/>
     public int Capacity {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.Length;
     }
 
-    /// <inheritdoc/>
     public int FreeCapacity {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.Length - _position;
     }
 
-    /// <inheritdoc/>
     public int WrittenCount {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _position;
     }
 
-    /// <inheritdoc/>
     public ReadOnlyMemory<T> WrittenMemory {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.AsMemory(0, _position);
     }
 
-    /// <inheritdoc/>
     public ReadOnlySpan<T> WrittenSpan {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.AsSpan(0, _position);
@@ -204,7 +198,6 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         _position += count;
     }
 
-    /// <inheritdoc/>
     public void Clear()
         => _array.AsSpan(0, _position).Clear();
 

@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using ActualLab.Internal;
 using ActualLab.Text.Internal;
-using CommunityToolkit.HighPerformance;
 using MessagePack;
 
 namespace ActualLab.Text;
@@ -44,7 +43,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
         => EncodingExt.Utf8NoBom.GetBytes(source).AsByteString();
 
     public static ByteString FromStringAsUtf16(string source)
-        => source.AsSpan().Cast<char, byte>().ToArray().AsByteString();
+        => MemoryMarshal.AsBytes(source.AsSpan()).ToArray().AsByteString();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ByteString(byte[] bytes)
@@ -96,9 +95,9 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
         var span = Bytes.Span;
         return (span.Length & 1) == 0
 #if !NETSTANDARD2_0
-            ? new string(span.Cast<byte, char>())
+            ? new string(MemoryMarshal.Cast<byte, char>(span))
 #else
-            ? span.Cast<byte, char>().ToString()
+            ? MemoryMarshal.Cast<byte, char>(span).ToString()
 #endif
             : throw Errors.Format("Invalid sequence length.");
     }

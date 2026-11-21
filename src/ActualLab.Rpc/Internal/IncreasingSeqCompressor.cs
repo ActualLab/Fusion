@@ -1,5 +1,3 @@
-using CommunityToolkit.HighPerformance.Buffers;
-
 namespace ActualLab.Rpc.Internal;
 
 /// <summary>
@@ -10,7 +8,7 @@ public static class IncreasingSeqCompressor
     public static byte[] Serialize(IEnumerable<long> values)
     {
         var lastValue = 0L;
-        var writer = new ArrayPoolBufferWriter<byte>(ArrayPools.SharedBytePool);
+        using var writer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, mustClear: false);
         foreach (var value in values) {
             var delta = value - lastValue;
             lastValue = value;

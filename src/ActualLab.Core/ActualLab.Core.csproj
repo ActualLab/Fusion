@@ -13,7 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.HighPerformance" />
     <PackageReference Include="K4os.Compression.LZ4" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.Reactive" />
@@ -102,6 +101,7 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="IndexRange" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.Bcl.HashCode" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" />
   </ItemGroup>

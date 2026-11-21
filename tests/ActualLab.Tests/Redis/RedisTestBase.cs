@@ -3,7 +3,6 @@ using ActualLab.IO;
 using ActualLab.OS;
 using ActualLab.Redis;
 using ActualLab.Reflection;
-using CommunityToolkit.HighPerformance;
 using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Tests.Redis;

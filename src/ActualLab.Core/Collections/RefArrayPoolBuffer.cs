@@ -1,6 +1,6 @@
 using System.Buffers;
 using System.Diagnostics.Contracts;
-using CommunityToolkit.HighPerformance;
+using ActualLab.Collections.Internal;
 
 namespace ActualLab.Collections;
 

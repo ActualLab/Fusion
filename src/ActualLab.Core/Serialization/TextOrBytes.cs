@@ -1,4 +1,4 @@
-using CommunityToolkit.HighPerformance;
+using ActualLab.Collections.Internal;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -41,7 +41,7 @@ public readonly partial record struct TextOrBytes(
         : this(DataFormat.Bytes, bytes.AsMemory())
         => Bytes = bytes;
     public TextOrBytes(ReadOnlyMemory<char> text)
-        : this(DataFormat.Text, text.Cast<char, byte>()) { }
+        : this(DataFormat.Text, MemoryCast.Cast<char, byte>(text)) { }
     public TextOrBytes(ReadOnlyMemory<byte> bytes)
         : this(DataFormat.Bytes, bytes) { }
 
@@ -53,18 +53,23 @@ public readonly partial record struct TextOrBytes(
         => ToString(64);
     public string ToString(int maxLength)
     {
-        var isText = IsText(out var text);
-        var sData = isText
+        if (Format == DataFormat.Text) {
+            var text = MemoryMarshal.Cast<byte, char>(Data.Span);
+            var textLength = text.Length;
 #if NET5_0_OR_GREATER
-            ? new string(text.Span[..Math.Min(text.Length, maxLength)])
-            : Convert.ToHexString(Data.Span[..Math.Min(Data.Length, maxLength)]);
+            var sText = new string(text[..Math.Min(textLength, maxLength)]);
 #else
-            ? new string(text.Span[..Math.Min(text.Length, maxLength)].ToArray())
-            : BitConverter.ToString(Data.Span[..Math.Min(Data.Length, maxLength)].ToArray());
+            var sText = new string(text[..Math.Min(textLength, maxLength)].ToArray());
 #endif
-        return isText
-            ? $"[ {text.Length} char(s): `{sData}{(text.Length <= maxLength ? "`" : "`...")} ]"
-            : $"[ {Data.Length} byte(s): {sData}{(Data.Length <= maxLength ? "" : "...")} ]";
+            return $"[ {textLength} char(s): `{sText}{(textLength <= maxLength ? "`" : "`...")} ]";
+        }
+
+#if NET5_0_OR_GREATER
+        var sData = Convert.ToHexString(Data.Span[..Math.Min(Data.Length, maxLength)]);
+#else
+        var sData = BitConverter.ToString(Data.Span[..Math.Min(Data.Length, maxLength)].ToArray());
+#endif
+        return $"[ {Data.Length} byte(s): {sData}{(Data.Length <= maxLength ? "" : "...")} ]";
     }
 
     public static implicit operator TextOrBytes(ReadOnlyMemory<byte> bytes) => new(bytes);
@@ -75,7 +80,7 @@ public readonly partial record struct TextOrBytes(
     public bool IsText(out ReadOnlyMemory<char> text)
     {
         if (Format == DataFormat.Text) {
-            text = Data.Cast<byte, char>();
+            text = MemoryCast.Cast<byte, char>(Data);
             return true;
         }
 
