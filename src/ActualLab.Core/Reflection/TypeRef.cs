@@ -228,7 +228,11 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
             return cachedType;
 
         // Failures are never cached: an assembly loaded later must still be resolvable
+#if NETSTANDARD2_0
+        var type = Type.GetType(assemblyQualifiedName, ResolveAssembly, null, false, false);
+#else
         var type = Type.GetType(assemblyQualifiedName, false, false);
+#endif
         if (type is null)
             return null;
 
@@ -246,6 +250,24 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
         // Deliberately not routed through WithoutAssemblyVersions(): its cache is unbounded,
         // and a peer streaming distinct generic instantiations would grow it without limit
         => RemoveAssemblyVersionsRe.Replace(type.AssemblyQualifiedName ?? "", "");
+
+#if NETSTANDARD2_0
+    // .NET Framework can't load a GAC assembly by its simple name (e.g. "System.Core"),
+    // which is how the unversioned type names this library emits refer to it
+    private static Assembly? ResolveAssembly(AssemblyName assemblyName)
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            if (AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()))
+                return assembly;
+
+        try {
+            return Assembly.Load(assemblyName);
+        }
+        catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException) {
+            return null;
+        }
+    }
+#endif
 
     private static PruningCache<string, TypeRef> NewUnversionedNameCache(int capacity)
         => new(capacity, StringComparer.Ordinal);

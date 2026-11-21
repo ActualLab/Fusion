@@ -97,7 +97,11 @@ public class TypeRefTest(ITestOutputHelper @out) : TestBase(@out)
     [InlineData("ActualLab.Tests.Reflection.TypeRefTest,  ActualLab.Tests", typeof(TypeRefTest))]
     [InlineData("ActualLab.Tests.Reflection.TypeRefTest, ActualLab.Tests, Culture=neutral", typeof(TypeRefTest))]
     [InlineData("System.Int32", typeof(int))]
+#if NETFRAMEWORK
+    [InlineData("System.Int32, mscorlib, Culture=neutral", typeof(int))]
+#else
     [InlineData("System.Int32, System.Private.CoreLib, Culture=neutral", typeof(int))]
+#endif
     public void NonCanonicalNameIsNotCachedTest(string name, Type expectedType)
     {
         ResetResolveCache();
