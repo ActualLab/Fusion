@@ -189,6 +189,8 @@ following agents in a chosen environment:
 - **xAI Grok** — `grok`
 - **Codename Goose** — `goose` (block/goose)
 - **OpenCode** — `opencode` (sst/opencode)
+- **Pi** — `pi` (pi.dev)
+- **Codex Desktop app** — `codex-app` (macOS host OS mode only)
 
 …in any of the following environments:
 
@@ -203,37 +205,43 @@ running and how to access projects.
 ## Agent Selector
 
 The agent is the optional first positional arg (or the `--agent:<name>`
-option); if omitted, `claude` is used. `--agent:` accepts the full agent names
-only (`claude`, `codex`, `grok`, `goose`, `opencode`). Entry points:
+option); if omitted, `AC_DEFAULT_AGENT` is used when set, otherwise `claude`.
+`--agent:` accepts the full agent names only (`claude`, `codex`, `grok`,
+`goose`, `opencode`, `pi`, `codex-app`). `codex-app` is macOS host OS mode
+only; it opens the selected workspace in the Codex Desktop app. Entry points:
 
 - `ai` — the launcher itself; Claude by default, or pick the agent explicitly.
-- `ai-codex` / `ai-grok` / `ai-goose` / `ai-opencode` — one-agent shortcuts (`= ai --agent:<name>`).
+- `ai-codex` / `ai-codex-app` / `ai-grok` / `ai-goose` / `ai-opencode` / `ai-pi` — one-agent shortcuts (`= ai --agent:<name>`).
 
 ```
 ai                 → claude,   Docker (default)
 ai codex           → codex,    Docker (positional form)
 ai-codex           → codex,    Docker (= ai --agent:codex)
+ai-codex-app os    → Codex Desktop, macOS host OS (= ai --agent:codex-app os)
 ai-grok os         → grok,     host OS
 ai-goose           → goose,    Docker (= ai --agent:goose)
 ai --agent:goose   → goose,    Docker (explicit)
 ai-opencode        → opencode, Docker (= ai --agent:opencode)
+ai-pi              → pi,       Docker (= ai --agent:pi)
 ai opencode wsl    → opencode, WSL
 ai wsl             → claude,   WSL
 ai os              → claude,   host OS  (default agent)
+ai codex-app os fwt feature1
+                   → create/configure the feature worktree, then open it in Codex Desktop (macOS)
 ai codex --dry-run → codex,    Docker (dry run)
 ```
 
 Inside the sandboxed Docker container, each agent is invoked in its
 "skip-approvals" mode (`claude --dangerously-skip-permissions`, `codex
 --full-auto`, `grok` as-is, `goose session` with `GOOSE_MODE=auto`,
-`opencode --auto`). On the host OS no such flag/mode is added — the agent runs
+`opencode --auto`; Pi requires no auto-approval flag). On the host OS no such flag/mode is added — the agent runs
 in its normal interactive/approval mode.
 
 ## Installation
 
-Run once after cloning AgentCli to make the `ai` / `ai-codex` / `ai-grok` /
-`ai-goose` / `ai-opencode` commands available everywhere and build the Docker
-image (which contains all five CLIs pre-installed):
+Run once after cloning AgentCli to make the `ai` / `ai-codex` / `ai-codex-app` /
+`ai-grok` / `ai-goose` / `ai-opencode` / `ai-pi` commands available everywhere and build
+the Docker image (which contains all six CLIs pre-installed):
 
 ```
 ./ai.ps1 install
@@ -242,8 +250,8 @@ image (which contains all five CLIs pre-installed):
 What `install` does, by host OS:
 - **Windows** — adds the AgentCli folder to the *user* `Path` environment
   variable so the entry-point `.cmd` files resolve in any new shell.
-- **macOS** — adds `alias ai=…`, `alias ai-codex=…`, `alias ai-grok=…`,
-  `alias ai-goose=…`, `alias ai-opencode=…` (pointing at the polyglot `.cmd`
+- **macOS** — adds `alias ai=…`, `alias ai-codex=…`, `alias ai-codex-app=…`,
+  `alias ai-grok=…`, `alias ai-goose=…`, `alias ai-opencode=…`, `alias ai-pi=…` (pointing at the polyglot `.cmd`
   files) to `~/.zshrc` and `chmod +x`'s them.
 - **Linux / WSL** — same as macOS, but the aliases go into `~/.bashrc`.
 
@@ -334,7 +342,7 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 | Category | Tools |
 |----------|-------|
 | **AI CLIs** | Claude Code, OpenAI Codex, xAI Grok, Codename Goose, OpenCode |
-| **.NET** | .NET 11 SDK (preview), .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
+| **.NET** | .NET 11 SDK, .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
 | **Node.js** | Node.js 20, npm |
 | **Shell** | Zsh (default), Bash, PowerShell (`pwsh`) |
 | **Search** | ripgrep (`rg`), fd-find (`fdfind`), fzf |
