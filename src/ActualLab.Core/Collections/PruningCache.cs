@@ -40,7 +40,7 @@ public sealed class PruningCache<TKey, TValue>
         _storage = new ConcurrentDictionary<TKey, TValue>(
             concurrencyLevel > 0 ? concurrencyLevel : HardwareInfo.ProcessorCountPo2,
             Math.Min(capacity, 131),
-            keyComparer);
+            keyComparer ?? EqualityComparer<TKey>.Default); // .NET Framework throws on a null comparer
     }
 
     public bool TryGet(TKey key, [MaybeNullWhen(false)] out TValue value)
