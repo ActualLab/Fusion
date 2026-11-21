@@ -44,6 +44,7 @@ public abstract record DbLogReaderOptions
 /// </summary>
 public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
 {
+    // How long before the reader's first look at a shard an entry may be logged and still be read
     public TimeSpan StartOffset { get; init; } = TimeSpan.FromSeconds(3);
     // Pending-gap set settings (see DbOperationLogReader)
     public RandomTimeSpan GapCheckPeriod { get; init; } = TimeSpan.FromSeconds(1).ToRandom(0.1);

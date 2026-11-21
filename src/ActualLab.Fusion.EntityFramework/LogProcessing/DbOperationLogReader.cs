@@ -16,6 +16,12 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     where TOptions : DbOperationLogReaderOptions
 {
     protected ConcurrentDictionary<string, long> NextIndexes { get; } = new(StringComparer.Ordinal);
+    // Per-shard lower bound of LoggedAt for the start entry lookup. It's fixed on the first lookup
+    // rather than computed from "now" on every one: a sliding bound drops an entry whose change
+    // notification was missed, once it ages past StartOffset before the next CheckPeriod-driven poll.
+    // GetStartEntry still takes the sliding bound if it's lower, so a clock moved back can't leave
+    // this one in the future.
+    protected ConcurrentDictionary<string, DateTime> StartEntryMinLoggedAts { get; } = new(StringComparer.Ordinal);
     // Per-shard set of unresolved indexes: gaps (missing entries) and present-but-failing entries.
     // Re-checked in batches on an adaptive cadence - see ProcessGaps.
     protected ConcurrentDictionary<string, ShardGapSet> Gaps { get; } = new(StringComparer.Ordinal);
@@ -170,7 +176,9 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
-        var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.StartOffset;
+        var slidingMinLoggedAt = SystemClock.Now.ToDateTime() - Settings.StartOffset;
+        var fixedMinLoggedAt = StartEntryMinLoggedAts.GetOrAdd(shard, slidingMinLoggedAt);
+        var minLoggedAt = fixedMinLoggedAt < slidingMinLoggedAt ? fixedMinLoggedAt : slidingMinLoggedAt;
         return await dbContext.Set<TDbEntry>().AsQueryable()
             .Where(e => e.LoggedAt >= minLoggedAt)
             .OrderBy(e => e.LoggedAt).ThenBy(e => e.Index)
