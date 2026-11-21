@@ -63,6 +63,12 @@
     <PackageReference Include="System.Drawing.Common" VersionOverride="$(MicrosoftExtensionsVersion5)" />
     <PackageReference Include="Microsoft.CSharp" />
   </ItemGroup>
+  <!-- These run the source generator in-process and compile its output against TRUSTED_PLATFORM_ASSEMBLIES,
+       which .NET Framework doesn't have; the generator runs in the compiler, so the test runtime doesn't matter -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <Compile Remove="Generators\ProxyGeneratorTest.cs" />
+    <Compile Remove="Generators\ProxyGeneratorAuditRegressionTest.cs" />
+  </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="IndexRange" />
     <PackageReference Include="System.Memory" />

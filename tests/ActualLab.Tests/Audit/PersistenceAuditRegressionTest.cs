@@ -13,6 +13,8 @@ public class PersistenceAuditRegressionTest : CommandRTestBase
     public PersistenceAuditRegressionTest(ITestOutputHelper @out) : base(@out)
         => UseDbContext = true;
 
+#if !NETFRAMEWORK
+    // EnableSaveChanges is a no-op on .NET Framework: EF Core 3.1 has no DbContext.SavingChanges event
     [Fact]
     public void SaveChangesGuardShouldBeIdempotent()
     {
@@ -54,6 +56,7 @@ public class PersistenceAuditRegressionTest : CommandRTestBase
         secondDbContext.EnableSaveChanges(true);
         save.Should().NotThrow();
     }
+#endif
 
     [Fact]
     public void OperationsShouldRegisterTheEventResolverWithItsStringKey()

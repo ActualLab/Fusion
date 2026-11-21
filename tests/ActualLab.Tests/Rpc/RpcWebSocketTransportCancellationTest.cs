@@ -32,8 +32,14 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
 
         (await moveNextTask.WaitAsync(TimeSpan.FromSeconds(1))).Should().BeFalse();
         webSocket.AbortCount.Should().BeGreaterThan(0);
+#if NETFRAMEWORK
+        // .NET Framework's WebSocket has no Memory<byte> overload of ReceiveAsync
+        webSocket.ArraySegmentReceiveCount.Should().Be(1);
+        webSocket.MemoryReceiveCount.Should().Be(0);
+#else
         webSocket.ArraySegmentReceiveCount.Should().Be(0);
         webSocket.MemoryReceiveCount.Should().Be(1);
+#endif
     }
 
     private sealed class AbortableReceiveWebSocket : WebSocket
