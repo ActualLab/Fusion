@@ -15,6 +15,7 @@ export interface ITypeScriptTestComputeService {
     GetCounterNonCompute(key: string): Promise<number>;
     StreamInt32(count: number): Promise<RpcStream<number>>;
     StreamInt32NoReconnect(count: number): Promise<RpcStream<number>>;
+    StreamUnwritable(count: number): Promise<RpcStream<UnwritableItem>>;
 }
 
 export const TypeScriptTestComputeServiceDef = defineRpcService('ITypeScriptTestComputeService', {
@@ -26,6 +27,7 @@ export const TypeScriptTestComputeServiceDef = defineRpcService('ITypeScriptTest
     GetCounterNonCompute: { args: [''] },
     StreamInt32: { args: [0], returns: RpcType.stream, wireArgCount: 1 },
     StreamInt32NoReconnect: { args: [0], returns: RpcType.stream, wireArgCount: 1 },
+    StreamUnwritable: { args: [0], returns: RpcType.stream, wireArgCount: 1 },
 });
 
 export interface ITypeScriptTestService {
@@ -53,3 +55,7 @@ export const TypeScriptTestServiceDef = defineRpcService('ITypeScriptTestService
     GetSlowEchoInvocationCount: { args: [], wireArgCount: 0 },
     ResetSlowEchoCounter: { args: [], wireArgCount: 0 },
 });
+
+export interface UnwritableItem {
+    value: number;
+}

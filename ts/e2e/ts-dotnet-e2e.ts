@@ -146,6 +146,8 @@ async function run(): Promise<void> {
             await testReconnectNoDuplicate(hub, peer);
         if (scenario === 'stream-no-reconnect' || scenario === 'all')
             await testStreamNoReconnect(hub, peer);
+        if (scenario === 'stream-unwritable-item' || scenario === 'all')
+            await testStreamUnwritableItem(hub, peer);
         if (scenario === 'reconnection-torture')
             await testReconnectionTorture(hub, peer);
         if (scenario === 'server-restart')
@@ -336,6 +338,33 @@ async function testStreamNoReconnect(hub: FusionHub, peer: RpcClientPeer): Promi
     await delay(200);
 
     console.log(`  stream-no-reconnect: PASSED (received ${items.length} items before disconnect)`);
+}
+
+// ---------------------------------------------------------------------------
+// Test: stream-unwritable-item — a stream item the server can't serialize fails the stream
+// ---------------------------------------------------------------------------
+
+async function testStreamUnwritableItem(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+    const svc = hub.addClient<ITypeScriptTestComputeService>(peer, TestComputeServiceDef);
+
+    // Items 0 and 1 serialize fine, item 2 throws while being serialized.
+    // The server may batch them, so items 0 and 1 may fail along with it.
+    const stream = await svc.StreamUnwritable(5);
+    const items: unknown[] = [];
+    const whenConsumed = (async () => {
+        for await (const item of stream)
+            items.push(item);
+    })();
+    // Without the server-side fix the client asks for item 2 again and again, so the stream never ends
+    const result = await Promise.race([
+        whenConsumed.then(() => 'completed', () => 'failed'),
+        delay(10_000).then(() => 'timeout'),
+    ]);
+
+    assert(result === 'failed', `StreamUnwritable(5) expected to fail, got: ${result}`);
+    assert(items.length <= 2, `StreamUnwritable(5) expected at most 2 items before the failure, got ${items.length}`);
+
+    console.log('  stream-unwritable-item: PASSED');
 }
 
 // ---------------------------------------------------------------------------

@@ -86,6 +86,17 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("json5")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+    public async Task StreamUnwritableItem(string format)
+    {
+        SerializationFormat = format;
+        await using var _ = await WebHost.Serve();
+        await RunScenario("stream-unwritable-item", format);
+    }
+
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
     public async Task AutoReconnection(string format)
     {
         SerializationFormat = format;

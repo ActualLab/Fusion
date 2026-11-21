@@ -1,4 +1,5 @@
 using ActualLab.Rpc;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.TypeScriptRpc;
 
@@ -14,4 +15,15 @@ public interface ITypeScriptTestComputeService : IComputeService
     Task<int> GetCounterNonCompute(string key, CancellationToken cancellationToken = default);
     Task<RpcStream<int>> StreamInt32(int count);
     Task<RpcStream<int>> StreamInt32NoReconnect(int count);
+    Task<RpcStream<UnwritableItem>> StreamUnwritable(int count);
+}
+
+/// <summary>
+/// A stream item that can't be serialized once its value reaches 2.
+/// </summary>
+[MessagePackObject]
+public sealed class UnwritableItem(int value)
+{
+    [Key(0)]
+    public int Value => value < 2 ? value : throw new InvalidOperationException($"{nameof(UnwritableItem)} can't be written.");
 }

@@ -50,6 +50,19 @@ public class TypeScriptTestComputeService : ITypeScriptTestComputeService
         return Task.FromResult(RpcStream.New(seq, allowReconnect: false));
     }
 
+    public Task<RpcStream<UnwritableItem>> StreamUnwritable(int count)
+        => Task.FromResult(RpcStream.New(EnumerateUnwritable(count)));
+
+    private static async IAsyncEnumerable<UnwritableItem> EnumerateUnwritable(
+        int count, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        for (var i = 0; i < count; i++)
+            yield return new UnwritableItem(i);
+
+        // No normal End, so the only End the client gets is the one carrying the serialization error
+        await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
+    }
+
     private static async IAsyncEnumerable<int> EnumerateInt32(int count)
     {
         for (var i = 0; i < count; i++)
