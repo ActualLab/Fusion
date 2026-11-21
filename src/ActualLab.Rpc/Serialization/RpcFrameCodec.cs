@@ -199,8 +199,11 @@ public sealed class RpcFrameCodec
             return _readFunc(messageData, out _);
         }
         catch (Exception e) {
-            var remainingMemory = array.AsMemory(offset, totalLength - offset);
-            _errorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Text, remainingMemory));
+            if (_errorLog is { } errorLog) {
+                // The frame holds UTF-8, while TextOrBytes' Text format holds UTF-16 chars
+                var text = EncodingExt.Utf8NoBom.GetString(array, offset, messageLength);
+                errorLog.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(text));
+            }
             return null;
         }
         finally {

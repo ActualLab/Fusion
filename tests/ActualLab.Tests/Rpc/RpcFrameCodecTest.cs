@@ -4,6 +4,7 @@ using ActualLab.IO.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
+using ActualLab.Testing.Logging;
 
 namespace ActualLab.Tests.Rpc;
 
@@ -53,6 +54,25 @@ public class RpcFrameCodecTest(ITestOutputHelper @out) : TestBase(@out)
         messages[0].ArgumentData.ToArray().Should().Equal(expectedArgs[0]);
     }
 
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("json5np")]
+    public void TextFrameThatCantBeDeserializedIsLoggedAsText(string formatKey)
+    {
+        const string text = "{ not json: \"текст\" }";
+        var payload = Encoding.UTF8.GetBytes(text);
+        var logs = new CapturingLoggerProvider();
+        var (peer, services) = NewPeer(formatKey);
+        using var _ = services;
+        var codec = NewCodec(peer, logs.CreateLogger("codec"));
+
+        var offset = 0;
+        codec.TryDeserialize(payload, ref offset, payload.Length).Should().BeNull();
+
+        offset.Should().Be(payload.Length);
+        logs.Content.Should().Contain(text);
+    }
+
     // Private methods
 
     private static (byte[] Payload, List<byte[]> ExpectedArgs) WriteFrame(string formatKey, int messageCount)
@@ -96,14 +116,14 @@ public class RpcFrameCodecTest(ITestOutputHelper @out) : TestBase(@out)
         return (messages, skipped);
     }
 
-    private static RpcFrameCodec NewCodec(RpcPeer peer)
+    private static RpcFrameCodec NewCodec(RpcPeer peer, ILogger? errorLog = null)
     {
         var meter = new Meter($"frame-codec-test-{Guid.NewGuid():N}");
         return new RpcFrameCodec(
             peer.MessageSerializer,
             meter.CreateCounter<long>("in"),
             meter.CreateCounter<long>("out"),
-            null,
+            errorLog,
             FrameHeaderSize);
     }
 
