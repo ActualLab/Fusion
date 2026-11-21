@@ -256,9 +256,11 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     // which is how the unversioned type names this library emits refer to it
     private static Assembly? ResolveAssembly(AssemblyName assemblyName)
     {
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            if (AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()))
-                return assembly;
+        // ReferenceMatchesDefinition compares simple names only, so a versioned name is left to the binder
+        if (assemblyName.Version is null && assemblyName.GetPublicKeyToken() is not { Length: > 0 })
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                if (AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()))
+                    return assembly;
 
         try {
             return Assembly.Load(assemblyName);
