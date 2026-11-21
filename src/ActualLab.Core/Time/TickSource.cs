@@ -34,8 +34,8 @@ public sealed class TickSource(TimeSpan period)
                 return whenNextTick;
 
 #if NETSTANDARD2_0
-            // .NET Framework runs every continuation of a completed task inline on the completing thread,
-            // so all waiters of a tick would resume one by one on the timer thread
+            // .NET Framework resumes the awaiters of a completed Task.Delay inline on the timer thread,
+            // so all waiters of a tick would resume one by one there
             whenNextTick = Task.Delay(Period).ContinueWith(
                 static _ => { },
                 CancellationToken.None,
