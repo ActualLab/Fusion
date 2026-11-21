@@ -32,12 +32,12 @@ public static class DecoderExt
             bool completed;
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
-            if (source.Length == 0)
-                return;
-
+            // An empty span pins as a null pointer, which .NET Framework rejects,
+            // and returning early instead would skip the flush of the decoder's state
+            byte emptySource = default;
             fixed (byte* sourcePtr = &source.GetPinnableReference())
             fixed (char* freeSpanPtr = &freeSpan.GetPinnableReference())
-                decoder.Convert(sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
+                decoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
                     flush, out bytesUsed, out charsUsed, out completed);
 #else
             decoder.Convert(source, freeSpan, flush, out bytesUsed, out charsUsed, out completed);
@@ -57,12 +57,12 @@ public static class DecoderExt
             bool completed;
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
-            if (source.Length == 0)
-                return;
-
+            // An empty span pins as a null pointer, which .NET Framework rejects,
+            // and returning early instead would skip the flush of the decoder's state
+            byte emptySource = default;
             fixed (byte* sourcePtr = &source.GetPinnableReference())
             fixed (char* freeSpanPtr = &freeSpan.GetPinnableReference())
-                decoder.Convert(sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
+                decoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
                     flush, out bytesUsed, out charsUsed, out completed);
 #else
             decoder.Convert(source, freeSpan, flush, out bytesUsed, out charsUsed, out completed);

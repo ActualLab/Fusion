@@ -20,4 +20,28 @@ public class EncoderExtTest(ITestOutputHelper @out) : TestBase(@out)
 
         EncodingExt.Utf8NoBom.GetDecoder().Convert(bytes).Should().Be(text);
     }
+
+    [Fact]
+    public void EmptyInputFlushesEncoderTest()
+    {
+        var encoder = EncodingExt.Utf8NoBom.GetEncoder();
+        using var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, 16, mustClear: false);
+        encoder.Convert("\ud800".AsSpan(), buffer, flush: false); // A dangling high surrogate
+        buffer.WrittenCount.Should().Be(0);
+
+        encoder.Convert(ReadOnlySpan<char>.Empty, buffer, flush: true);
+        buffer.WrittenSpan.ToArray().Should().Equal(0xEF, 0xBF, 0xBD); // U+FFFD
+    }
+
+    [Fact]
+    public void EmptyInputFlushesDecoderTest()
+    {
+        var decoder = EncodingExt.Utf8NoBom.GetDecoder();
+        using var buffer = new ArrayPoolBuffer<char>(ArrayPools.SharedCharPool, 16, mustClear: false);
+        decoder.Convert(new byte[] { 0xD0 }, buffer, flush: false); // The first byte of a 2-byte sequence
+        buffer.WrittenCount.Should().Be(0);
+
+        decoder.Convert(ReadOnlySpan<byte>.Empty, buffer, flush: true);
+        buffer.WrittenSpan.ToString().Should().Be("�");
+    }
 }

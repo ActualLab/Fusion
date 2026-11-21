@@ -32,12 +32,12 @@ public static class EncoderExt
             bool completed;
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
-            if (source.Length == 0)
-                return;
-
+            // An empty span pins as a null pointer, which .NET Framework rejects,
+            // and returning early instead would skip the flush of the encoder's state
+            char emptySource = default;
             fixed (char* sourcePtr = &source.GetPinnableReference())
             fixed (byte* freeSpanPtr = &freeSpan.GetPinnableReference())
-                encoder.Convert(sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
+                encoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
                     flush, out charsUsed, out bytesUsed, out completed);
 #else
             encoder.Convert(source, freeSpan, flush, out charsUsed, out bytesUsed, out completed);
@@ -57,12 +57,12 @@ public static class EncoderExt
             bool completed;
             var freeSpan = target.GetSpan(source.Length);
 #if NETSTANDARD2_0
-            if (source.Length == 0)
-                return;
-
+            // An empty span pins as a null pointer, which .NET Framework rejects,
+            // and returning early instead would skip the flush of the encoder's state
+            char emptySource = default;
             fixed (char* sourcePtr = &source.GetPinnableReference())
             fixed (byte* freeSpanPtr = &freeSpan.GetPinnableReference())
-                encoder.Convert(sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
+                encoder.Convert(sourcePtr is null ? &emptySource : sourcePtr, source.Length, freeSpanPtr, freeSpan.Length,
                     flush, out charsUsed, out bytesUsed, out completed);
 #else
             encoder.Convert(source, freeSpan, flush, out charsUsed, out bytesUsed, out completed);
