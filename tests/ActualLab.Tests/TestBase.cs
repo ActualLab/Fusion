@@ -1,13 +1,12 @@
 using ActualLab.IO;
 using ActualLab.OS;
-using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.Tests;
 
 public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
 {
     protected static readonly string DotNetVersion = RuntimeInfo.DotNet.VersionString ?? "";
-    protected static readonly string DotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(DotNetVersion.GetDjb2HashCode()))[..4];
+    protected static readonly string DotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(DotNetVersion.AsSpan().GetDjb2HashCode()))[..4];
     protected static readonly FilePath TempDir = TestRunnerInfo.IsGitHubAction()
         ? (FilePath)Environment.GetEnvironmentVariable("RUNNER_TEMP")
         : FilePath.GetApplicationTempDirectory();

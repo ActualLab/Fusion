@@ -2,7 +2,6 @@ using Cysharp.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using ActualLab.Serialization.Internal;
-using CommunityToolkit.HighPerformance;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Serialization;

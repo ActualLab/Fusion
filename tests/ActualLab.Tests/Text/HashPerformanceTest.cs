@@ -1,5 +1,3 @@
-using CommunityToolkit.HighPerformance;
-
 namespace ActualLab.Tests.Text;
 
 public sealed class HashPerformanceTest(ITestOutputHelper @out) : BenchmarkTestBase(@out)
@@ -14,8 +12,8 @@ public sealed class HashPerformanceTest(ITestOutputHelper @out) : BenchmarkTestB
         var source = new byte[16384];
         new Random().NextBytes(source);
 
-        await Benchmark("new byte(length).AsSpan().GetDjb2HashCode()", byteCount, (length, n) => {
-            var s = source.AsSpan(0, length);
+        await Benchmark("new char(length / 2).AsSpan().GetDjb2HashCode()", byteCount, (length, n) => {
+            ReadOnlySpan<char> s = MemoryMarshal.Cast<byte, char>(source.AsSpan(0, length));
             n /= Math.Max(1, length);
             for (var i = 0; i < n; i++)
                 _ = s.GetDjb2HashCode();
