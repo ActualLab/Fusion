@@ -36,7 +36,7 @@
         var cancellationToken = _stopTokenSource.Token;
         var changes = await TodoApi.ObserveItem(cancellationToken); // We should call ObserveItem this before GetItem
         _ = ObserveChanges(changes, cancellationToken); // And _reliably_ cancel + dispose
-        _item ??= await TodoApi.GetItem(Ulid.Parse(Id), cancellationToken); // Note "??="
+        _item ??= await TodoApi.GetItem(Id, cancellationToken); // Note "??="
 
         // And even this code is far from being perfect:
         // - ObserveItem must be written really carefully: the sequence it produces can't miss a change
@@ -54,7 +54,7 @@
     // Since this is just an example, the API is declared right here:
     public interface ITypicalTodoApi
     {
-        public Task<TodoItem?> GetItem(Ulid id, CancellationToken cancellationToken = default);
+        public Task<TodoItem?> GetItem(string id, CancellationToken cancellationToken = default);
         public Task<IAsyncEnumerable<TodoItem>> ObserveItem(CancellationToken cancellationToken = default);
     }
 }

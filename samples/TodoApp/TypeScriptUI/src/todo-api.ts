@@ -3,5 +3,5 @@
 // Session.Default.Id = "~"
 export const DEFAULT_SESSION = "~";
 
-// Ulid.Empty as string (26 zeros)
-export const ULID_EMPTY = "00000000000000000000000000";
+// An empty TodoItem.Id makes the server generate a new one
+export const EMPTY_ID = "";

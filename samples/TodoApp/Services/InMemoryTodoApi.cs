@@ -1,4 +1,5 @@
 ﻿using Samples.TodoApp.Abstractions;
+using ActualLab.Generators;
 
 namespace Samples.TodoApp.Services;
 
@@ -13,8 +14,8 @@ public class InMemoryTodoApi : ITodoApi
     public virtual async Task<TodoItem> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)
     {
         var (session, todo) = command;
-        if (todo.Id == Ulid.Empty)
-            todo = todo with { Id = Ulid.NewUlid() };
+        if (todo.Id.IsNullOrEmpty())
+            todo = todo with { Id = UlidUuidGenerator.Instance.Next() };
         var oldItems = _items;
         var oldItem = oldItems.FirstOrDefault(i => i.Id == todo.Id);
         var items = _items = oldItems.RemoveAll(i => i.Id == todo.Id).Add(todo);
@@ -52,13 +53,13 @@ public class InMemoryTodoApi : ITodoApi
 
     // Queries
 
-    public virtual Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default)
+    public virtual Task<TodoItem?> Get(Session session, string id, CancellationToken cancellationToken = default)
         => Task.FromResult(_items.SingleOrDefault(i => i.Id == id));
 
-    public virtual async Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default)
+    public virtual async Task<string[]> ListIds(Session session, int count, CancellationToken cancellationToken = default)
     {
         await PseudoListIds(session).ConfigureAwait(false);
-        return _items.Select(x => x.Id).Order().Take(count).ToArray();
+        return _items.Select(x => x.Id).Order(StringComparer.Ordinal).Take(count).ToArray();
     }
 
     public virtual async Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default)

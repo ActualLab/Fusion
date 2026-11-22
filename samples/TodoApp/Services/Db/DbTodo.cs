@@ -28,17 +28,17 @@ public class DbTodo
     public TodoItem ToModel()
         => new(SplitKey(Key).Id, Title, IsDone);
 
-    public static string ComposeKey(string folder, Ulid id)
-        => $"{folder}/{id.ToString()}";
+    public static string ComposeKey(string folder, string id)
+        => $"{folder}/{id}";
 
-    public static (string Folder, Ulid Id) SplitKey(string key)
+    public static (string Folder, string Id) SplitKey(string key)
     {
         var lastSlashIndex = key.LastIndexOf('/');
         if (lastSlashIndex < 0)
             throw new ArgumentOutOfRangeException(nameof(key));
 
         var folder = key[..lastSlashIndex];
-        var id = Ulid.Parse(key[(lastSlashIndex + 1)..], CultureInfo.InvariantCulture);
+        var id = key[(lastSlashIndex + 1)..];
         return (folder, id);
     }
 }

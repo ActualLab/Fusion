@@ -1,6 +1,5 @@
 using ActualLab.Api.Internal;
 using ActualLab.Collections.Internal;
-using Cysharp.Serialization.MessagePack;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
@@ -20,7 +19,6 @@ public class DefaultMessagePackResolver : IFormatterResolver
 
     public static readonly Dictionary<Type, Type> Formatters = new() {
         { typeof(Unit), typeof(UnitMessagePackFormatter) },
-        { typeof(Ulid), typeof(UlidMessagePackFormatter) },
         { typeof(Option<>), typeof(OptionMessagePackFormatter<>) },
         { typeof(ApiOption<>), typeof(ApiOptionMessagePackFormatter<>) },
         { typeof(ApiNullable<>), typeof(ApiNullableMessagePackFormatter<>) },

@@ -16,14 +16,14 @@ public class Todos(Session session, ITodoApi todoApi) : IComputeService, IDispos
         => Interlocked.Exchange(ref _isDisposed, 1);
 
     [ComputeMethod]
-    public virtual async Task<TodoItem?> Get(Ulid id, CancellationToken cancellationToken = default)
+    public virtual async Task<TodoItem?> Get(string id, CancellationToken cancellationToken = default)
     {
         using var _ = ActivitySource.StartActivity(typeof(Todos));
         return await todoApi.Get(Session, id, cancellationToken).ConfigureAwait(false);
     }
 
     [ComputeMethod]
-    public virtual async Task<Ulid[]> ListIds(int count, CancellationToken cancellationToken = default)
+    public virtual async Task<string[]> ListIds(int count, CancellationToken cancellationToken = default)
     {
         using var _ = ActivitySource.StartActivity(typeof(Todos));
         return await todoApi.ListIds(Session, count, cancellationToken).ConfigureAwait(false);

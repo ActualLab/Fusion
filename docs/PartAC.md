@@ -47,13 +47,13 @@ This means you should design APIs around **individual cacheable units**:
 ```cs
 // Fusion: fetch IDs, then individual items
 [ComputeMethod]
-Task<Ulid[]> ListMessageIds(Ulid roomId, int limit, CancellationToken ct);
+Task<string[]> ListMessageIds(string roomId, int limit, CancellationToken ct);
 
 [ComputeMethod]
-Task<Message?> GetMessage(Ulid messageId, CancellationToken ct);
+Task<Message?> GetMessage(string messageId, CancellationToken ct);
 
 [ComputeMethod]
-Task<User?> GetUser(Ulid userId, CancellationToken ct);
+Task<User?> GetUser(string userId, CancellationToken ct);
 ```
 <!-- endSnippet -->
 
@@ -122,10 +122,10 @@ Instead of returning full objects in lists, return IDs and let components fetch 
 ```cs
 // Prefer this:
 [ComputeMethod]
-Task<Ulid[]> ListTodoIds(Session session, int limit, CancellationToken ct);
+Task<string[]> ListTodoIds(Session session, int limit, CancellationToken ct);
 
 [ComputeMethod]
-Task<TodoItem?> GetTodo(Ulid id, CancellationToken ct);
+Task<TodoItem?> GetTodo(string id, CancellationToken ct);
 ```
 <!-- endSnippet -->
 
@@ -149,7 +149,7 @@ cache hits:
 ```cs
 // Good: stable cache keys
 [ComputeMethod]
-Task<User?> GetUser(Ulid userId, CancellationToken ct);
+Task<User?> GetUser(string userId, CancellationToken ct);
 ```
 <!-- endSnippet -->
 
@@ -157,7 +157,7 @@ Task<User?> GetUser(Ulid userId, CancellationToken ct);
 ```cs
 // Problematic: timestamp in arguments means no cache hits
 [ComputeMethod]
-Task<User?> GetUser(Ulid userId, DateTime asOf, CancellationToken ct);
+Task<User?> GetUser(string userId, DateTime asOf, CancellationToken ct);
 ```
 <!-- endSnippet -->
 
@@ -174,10 +174,10 @@ consider splitting it:
 <!-- snippet: PartAC_SeparateData -->
 ```cs
 [ComputeMethod]
-Task<UserProfile> GetUserProfile(Ulid userId, CancellationToken ct);
+Task<UserProfile> GetUserProfile(string userId, CancellationToken ct);
 
 [ComputeMethod]
-Task<UserPresence> GetUserPresence(Ulid userId, CancellationToken ct);
+Task<UserPresence> GetUserPresence(string userId, CancellationToken ct);
 ```
 <!-- endSnippet -->
 
@@ -191,11 +191,11 @@ a compute method for the list query:
 <!-- snippet: PartAC_NotObservable -->
 ```cs
 // Regular method - not cached, not observable
-Task<Ulid[]> SearchProducts(string query, int skip, int take, CancellationToken ct);
+Task<string[]> SearchProducts(string query, int skip, int take, CancellationToken ct);
 
 // Compute method - each item is cached and observable
 [ComputeMethod]
-Task<Product?> GetProduct(Ulid id, CancellationToken ct);
+Task<Product?> GetProduct(string id, CancellationToken ct);
 ```
 <!-- endSnippet -->
 

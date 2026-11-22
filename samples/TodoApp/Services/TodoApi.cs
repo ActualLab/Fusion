@@ -22,7 +22,7 @@ public class TodoApi(IAuth auth, ITodoBackend backend, ICommander commander) : I
 
     // Queries
 
-    public virtual async Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default)
+    public virtual async Task<TodoItem?> Get(Session session, string id, CancellationToken cancellationToken = default)
     {
         var folder = await GetFolder(session, cancellationToken).ConfigureAwait(false);
         var item = await backend.Get(folder, id, cancellationToken).ConfigureAwait(false);
@@ -33,7 +33,7 @@ public class TodoApi(IAuth auth, ITodoBackend backend, ICommander commander) : I
         return item;
     }
 
-    public virtual async Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default)
+    public virtual async Task<string[]> ListIds(Session session, int count, CancellationToken cancellationToken = default)
     {
         var folder = await GetFolder(session, cancellationToken).ConfigureAwait(false);
         return await backend.ListIds(folder, count, cancellationToken).ConfigureAwait(false);

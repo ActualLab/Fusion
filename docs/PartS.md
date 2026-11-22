@@ -544,3 +544,20 @@ subclass of it) &ndash; with the stock `DefaultContractResolver`, types like `Sy
 Persisted data written by Fusion (the EF operation log, the key-value store and auth data of
 `ActualLab.Fusion.Ext.Services`) still uses Newtonsoft.Json, in the same format as before; these
 packages reference `ActualLab.Serialization.NewtonsoftJson` themselves.
+
+### 6. `Ulid` needs its own MessagePack resolver
+
+`ActualLab.Core` no longer references the `Ulid` and `Ulid.MessagePack` packages, and its MessagePack
+resolver no longer knows `Ulid`. `UlidUuidGenerator` still produces ULID strings without them.
+
+- Code that used `Ulid` through Core's reference must now reference the `Ulid` package itself.
+- To send `Ulid` with MessagePack (the default RPC format is `msgpack6`), reference `Ulid.MessagePack`
+  and prepend its resolver at startup, before the first `Ulid` is serialized &ndash;
+  `DefaultMessagePackResolver` caches the formatter of each type on first use:
+
+```cs
+// using ActualLab.Serialization.Internal; using Cysharp.Serialization.MessagePack;
+DefaultMessagePackResolver.Resolvers = [UlidMessagePackResolver.Instance, .. DefaultMessagePackResolver.Resolvers];
+```
+
+  Without it, the first call that carries a `Ulid` fails with a MessagePack serialization error.

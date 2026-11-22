@@ -5,7 +5,7 @@ import { AsyncContext } from "@actuallab/core";
 import type { RpcPeerStateMonitor } from "@actuallab/rpc";
 import type { Todos } from "./todos.js";
 import type { ITodoApi } from "./contracts.generated.js";
-import { DEFAULT_SESSION, ULID_EMPTY } from "./todo-api.js";
+import { DEFAULT_SESSION, EMPTY_ID } from "./todo-api.js";
 import { TodoItemView } from "./TodoItemView.js";
 import { TodoSummaryBadge } from "./TodoSummaryBadge.js";
 import { ConnectionStatusBanner } from "./ConnectionStatusBanner.js";
@@ -45,7 +45,7 @@ export function TodoApp({ todos, api, monitor }: Props) {
     uiActions.run(async () => {
       await api.AddOrUpdate({
         session: DEFAULT_SESSION,
-        item: { id: ULID_EMPTY, title: title, isDone: false },
+        item: { id: EMPTY_ID, title: title, isDone: false },
       });
     });
   };

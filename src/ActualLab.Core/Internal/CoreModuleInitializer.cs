@@ -2,7 +2,6 @@ using ActualLab.Collections.Internal;
 using ActualLab.Compliance.Internal;
 using ActualLab.Serialization.Internal;
 using ActualLab.Trimming;
-using Cysharp.Serialization.MessagePack;
 
 namespace ActualLab.Internal;
 
@@ -21,7 +20,6 @@ internal static class CoreModuleInitializer
 
         // DefaultMessagePackResolver instantiates these reflectively, so nothing roots their constructors
         CodeKeeper.Keep<UnitMessagePackFormatter>();
-        CodeKeeper.Keep<UlidMessagePackFormatter>();
         CodeKeeper.Keep<TypeDecoratingUniSerializedMessagePackFormatter<TypeSchema.Any, object>>();
         CodeKeeper.Keep<PropertyBagMessagePackFormatter<TypeSchema.Any>>();
         CodeKeeper.Keep<PropertyBagItemMessagePackFormatter<TypeSchema.Any>>();

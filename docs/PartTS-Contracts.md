@@ -33,7 +33,7 @@ Type mapping highlights:
 
 | .NET | TypeScript |
 |------|------------|
-| `string`, `Guid`, `DateTime`, `TimeSpan`, `Session`, `Ulid`, `Moment`, `Symbol` | `string` |
+| `string`, `Guid`, `DateTime`, `TimeSpan`, `Session`, `Moment`, `Symbol` | `string` |
 | numeric types, including `long` and `decimal` | `number` |
 | `T[]`, `List<T>`, `ImmutableArray<T>`, `ApiArray<T>` | `T[]` |
 | `Dictionary<K, V>` | `Record<string, V>` |
@@ -43,7 +43,7 @@ Type mapping highlights:
 | `RpcStream<T>` nested into a DTO | `unknown`: convert it with `toRpcStream<T>(value, peer)` |
 | `CancellationToken` | omitted; compute methods get a trailing `ctx?: AsyncContext` instead |
 
-Value types serialized by custom converters (`Ulid`, `Moment`, ...) are mapped by serializing their default
+Value types serialized by custom converters (`Moment`, `Symbol`, ...) are mapped by serializing their default
 value. Reference types the generator can't map become `unknown` with a warning:
 add them to `RpcTypeScriptGeneratorOptions.KnownTypes` if you use the API directly.
 
@@ -116,10 +116,10 @@ public interface ITodoApi : IComputeService
     [CommandHandler]
     Task<TodoItem> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
+    Task<TodoItem?> Get(Session session, string id, CancellationToken cancellationToken = default);
 }
 
-public sealed partial record TodoItem(Ulid Id, string Title, bool IsDone = false);
+public sealed partial record TodoItem(string Id, string Title, bool IsDone = false);
 public sealed partial record Todos_AddOrUpdate(Session Session, TodoItem Item) : ISessionCommand<TodoItem>;
 ```
 

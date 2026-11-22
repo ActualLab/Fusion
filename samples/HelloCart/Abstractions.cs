@@ -4,6 +4,7 @@ using System.Transactions;
 using ActualLab.CommandR.Operations;
 using MessagePack;
 using Pastel;
+using ActualLab.Generators;
 
 namespace Samples.HelloCart;
 
@@ -53,7 +54,7 @@ public partial record LogMessageCommand(
         var message = delay > TimeSpan.FromMilliseconds(1)
             ? $"Message #{index}, triggered with {delay.ToShortString()} delay"
             : $"Message #{index}";
-        return new(Ulid.NewUlid().ToString(), message, now + delay);
+        return new(UlidUuidGenerator.Instance.Next(), message, now + delay);
     }
 
     // This is ILocalCommand, so Run is its own handler
