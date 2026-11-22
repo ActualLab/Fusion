@@ -25,6 +25,11 @@ async Task ObserveTodos()
         return items;
     }).Update();
     await foreach (var (items, error) in computed.Changes()) {
+        if (error is not null) {
+            WriteLine($"Error: {error.Message}");
+            continue;
+        }
+
         WriteLine($"Todos ({items.Length}):");
         foreach (var item in items)
             WriteLine($"- {item}");
@@ -34,8 +39,8 @@ async Task ObserveTodos()
 async Task ObserveSummary()
 {
     var computed = await Computed.Capture(() => todoApi.GetSummary(session));
-    await foreach (var c in computed.Changes())
-        WriteLine($"- {c.Value}");
+    await foreach (var (summary, error) in computed.Changes())
+        WriteLine(error is null ? $"- {summary}" : $"Error: {error.Message}");
 }
 
 IServiceProvider CreateServiceProvider()
