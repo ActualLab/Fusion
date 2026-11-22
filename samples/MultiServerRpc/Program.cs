@@ -57,15 +57,13 @@ async Task RunClient()
         .AddSingleton(_ => RpcOutboundCallOptions.Default with {
             RouterFactory = method => args => {
                 if (method.Service.Type == typeof(IChat)) {
-                    var arg0Type = args.GetType(0);
-                    int hash;
-                    if (arg0Type == typeof(string))
-                        // Contrary to string.GetHashCode, GetXxHash3 doesn't change run to run
-                        hash = args.Get<string>(0).GetXxHash3();
-                    else if (arg0Type == typeof(Chat_Post))
-                        hash = args.Get<Chat_Post>(0).ChatId.GetXxHash3();
-                    else
-                        throw new NotSupportedException("Can't route this call.");
+                    // Command calls declare their first argument as ICommand, so match the value, not GetType(0).
+                    // Contrary to string.GetHashCode, GetXxHash3 doesn't change run to run.
+                    var hash = args.Get0Untyped() switch {
+                        string chatId => chatId.GetXxHash3(),
+                        Chat_Post command => command.ChatId.GetXxHash3(),
+                        _ => throw new NotSupportedException("Can't route this call."),
+                    };
                     return clientPeerRefs[hash.PositiveModulo(serverCount)];
                 }
                 return RpcRef.Default;
