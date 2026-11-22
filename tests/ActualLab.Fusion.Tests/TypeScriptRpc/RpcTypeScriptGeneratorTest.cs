@@ -185,7 +185,7 @@ public class RpcTypeScriptGeneratorTest
 public interface ITsGenTestService : IComputeService
 {
     [ComputeMethod]
-    Task<TsGenItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
+    Task<TsGenItem?> Get(Session session, string id, CancellationToken cancellationToken = default);
     [ComputeMethod]
     Task<TsGenPage<TsGenItem>> List(TsGenFilter? filter, CancellationToken cancellationToken = default);
 
@@ -210,7 +210,7 @@ public enum TsGenStatus { Draft, Published = 5 }
 public enum TsGenColor { Red, DarkBlue }
 
 public sealed record TsGenItem(
-    Ulid Id,
+    string Id,
     string Title,
     string? Note,
     TsGenStatus Status,

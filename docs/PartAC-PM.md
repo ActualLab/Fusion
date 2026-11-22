@@ -22,10 +22,10 @@ Consider a `ListIds` method with a `limit` parameter:
 <!-- snippet: PartFPatterns_Problem -->
 ```cs
 [ComputeMethod]
-public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken ct = default)
+public virtual async Task<string[]> ListIds(string folder, int limit, CancellationToken ct = default)
 {
     // Returns up to `limit` IDs from the folder
-    return Array.Empty<Ulid>();
+    return Array.Empty<string>();
 }
 ```
 <!-- endSnippet -->
@@ -45,7 +45,7 @@ protected virtual Task<Unit> PseudoListIds(string folder)
     => TaskExt.UnitTask;
 
 [ComputeMethod]
-public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken ct = default)
+public virtual async Task<string[]> ListIds(string folder, int limit, CancellationToken ct = default)
 {
     // Create dependency on the pseudo-method
     await PseudoListIds(folder);
@@ -126,7 +126,7 @@ public class TodoService : IComputeService
         => TaskExt.UnitTask;
 
     [ComputeMethod]
-    public virtual async Task<Ulid[]> ListIds(Session session, int count, CancellationToken ct = default)
+    public virtual async Task<string[]> ListIds(Session session, int count, CancellationToken ct = default)
     {
         // Establish dependency on pseudo-method
         await PseudoListIds(session);
@@ -153,15 +153,15 @@ public class TodoService : IComputeService
     }
 
     [ComputeMethod]
-    public virtual Task<TodoItem?> Get(Session session, Ulid id, CancellationToken ct)
+    public virtual Task<TodoItem?> Get(Session session, string id, CancellationToken ct)
         => Task.FromResult<TodoItem?>(null);
 
     [ComputeMethod]
     public virtual Task<string> GetSummary(Session session, CancellationToken ct)
         => Task.FromResult("");
 
-    private Task<Ulid[]> QueryIds(Session session, int count, CancellationToken ct)
-        => Task.FromResult(Array.Empty<Ulid>());
+    private Task<string[]> QueryIds(Session session, int count, CancellationToken ct)
+        => Task.FromResult(Array.Empty<string>());
 
     private Task<TodoItem> SaveTodo(AddTodoCommand command, CancellationToken ct)
         => Task.FromResult(command.Todo);

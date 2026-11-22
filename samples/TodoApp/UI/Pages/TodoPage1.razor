@@ -100,7 +100,7 @@
 
     private void Create()
     {
-        var item = new TodoItem(default, NewItemTitle);
+        var item = new TodoItem("", NewItemTitle);
         NewItemTitle = "";
         _ = UICommander.Run(new Todos_AddOrUpdate(Todos.Session, item));
     }

@@ -11,7 +11,7 @@ namespace Docs.PartAC;
 // Fake types for snippet compilation
 public record AddItemCommand(string Folder);
 public record AddTodoCommand(Session Session, TodoItem Todo);
-public record TodoItem(Ulid Id, string Text);
+public record TodoItem(string Id, string Text);
 public record Resource(string Key, string Value);
 public record PeerState(bool IsConnected);
 public record StockPrice(string Symbol, decimal Price);
@@ -31,10 +31,10 @@ public class ListIdsServiceProblem : IComputeService
 {
     #region PartFPatterns_Problem
     [ComputeMethod]
-    public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken ct = default)
+    public virtual async Task<string[]> ListIds(string folder, int limit, CancellationToken ct = default)
     {
         // Returns up to `limit` IDs from the folder
-        return Array.Empty<Ulid>();
+        return Array.Empty<string>();
     }
     #endregion
 }
@@ -53,7 +53,7 @@ public class ListIdsServiceSolution : IComputeService
         => TaskExt.UnitTask;
 
     [ComputeMethod]
-    public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken ct = default)
+    public virtual async Task<string[]> ListIds(string folder, int limit, CancellationToken ct = default)
     {
         // Create dependency on the pseudo-method
         await PseudoListIds(folder);
@@ -63,8 +63,8 @@ public class ListIdsServiceSolution : IComputeService
     }
     #endregion
 
-    private Task<Ulid[]> FetchIds(string folder, int limit, CancellationToken ct)
-        => Task.FromResult(Array.Empty<Ulid>());
+    private Task<string[]> FetchIds(string folder, int limit, CancellationToken ct)
+        => Task.FromResult(Array.Empty<string>());
 
     #region PartFPatterns_InvalidatePseudo
     [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
@@ -134,7 +134,7 @@ public class TodoService : IComputeService
         => TaskExt.UnitTask;
 
     [ComputeMethod]
-    public virtual async Task<Ulid[]> ListIds(Session session, int count, CancellationToken ct = default)
+    public virtual async Task<string[]> ListIds(Session session, int count, CancellationToken ct = default)
     {
         // Establish dependency on pseudo-method
         await PseudoListIds(session);
@@ -161,15 +161,15 @@ public class TodoService : IComputeService
     }
 
     [ComputeMethod]
-    public virtual Task<TodoItem?> Get(Session session, Ulid id, CancellationToken ct)
+    public virtual Task<TodoItem?> Get(Session session, string id, CancellationToken ct)
         => Task.FromResult<TodoItem?>(null);
 
     [ComputeMethod]
     public virtual Task<string> GetSummary(Session session, CancellationToken ct)
         => Task.FromResult("");
 
-    private Task<Ulid[]> QueryIds(Session session, int count, CancellationToken ct)
-        => Task.FromResult(Array.Empty<Ulid>());
+    private Task<string[]> QueryIds(Session session, int count, CancellationToken ct)
+        => Task.FromResult(Array.Empty<string>());
 
     private Task<TodoItem> SaveTodo(AddTodoCommand command, CancellationToken ct)
         => Task.FromResult(command.Todo);
@@ -383,24 +383,24 @@ public static class ChangesErrorHandling
 // ============================================================================
 
 // Fake types for API design examples
-public record Message(Ulid Id, string Text, Ulid AuthorId);
-public record User(Ulid Id, string Name);
-public record UserProfile(Ulid Id, string Name, string Bio);
-public record UserPresence(Ulid Id, bool IsOnline, DateTime LastSeen);
-public record Product(Ulid Id, string Name, decimal Price);
+public record Message(string Id, string Text, string AuthorId);
+public record User(string Id, string Name);
+public record UserProfile(string Id, string Name, string Bio);
+public record UserPresence(string Id, bool IsOnline, DateTime LastSeen);
+public record Product(string Id, string Name, decimal Price);
 
 public interface IChatService : IComputeService
 {
     #region PartAC_FusionApiDesign
     // Fusion: fetch IDs, then individual items
     [ComputeMethod]
-    Task<Ulid[]> ListMessageIds(Ulid roomId, int limit, CancellationToken ct);
+    Task<string[]> ListMessageIds(string roomId, int limit, CancellationToken ct);
 
     [ComputeMethod]
-    Task<Message?> GetMessage(Ulid messageId, CancellationToken ct);
+    Task<Message?> GetMessage(string messageId, CancellationToken ct);
 
     [ComputeMethod]
-    Task<User?> GetUser(Ulid userId, CancellationToken ct);
+    Task<User?> GetUser(string userId, CancellationToken ct);
     #endregion
 }
 
@@ -409,10 +409,10 @@ public interface ITodoServicePattern : IComputeService
     #region PartAC_FetchIdsPattern
     // Prefer this:
     [ComputeMethod]
-    Task<Ulid[]> ListTodoIds(Session session, int limit, CancellationToken ct);
+    Task<string[]> ListTodoIds(Session session, int limit, CancellationToken ct);
 
     [ComputeMethod]
-    Task<TodoItem?> GetTodo(Ulid id, CancellationToken ct);
+    Task<TodoItem?> GetTodo(string id, CancellationToken ct);
     #endregion
 }
 
@@ -430,7 +430,7 @@ public interface IUserServiceStable : IComputeService
     #region PartAC_StableArguments
     // Good: stable cache keys
     [ComputeMethod]
-    Task<User?> GetUser(Ulid userId, CancellationToken ct);
+    Task<User?> GetUser(string userId, CancellationToken ct);
     #endregion
 }
 
@@ -439,7 +439,7 @@ public interface IUserServiceUnstable : IComputeService
     #region PartAC_UnstableArguments
     // Problematic: timestamp in arguments means no cache hits
     [ComputeMethod]
-    Task<User?> GetUser(Ulid userId, DateTime asOf, CancellationToken ct);
+    Task<User?> GetUser(string userId, DateTime asOf, CancellationToken ct);
     #endregion
 }
 
@@ -447,10 +447,10 @@ public interface IUserServiceSplit : IComputeService
 {
     #region PartAC_SeparateData
     [ComputeMethod]
-    Task<UserProfile> GetUserProfile(Ulid userId, CancellationToken ct);
+    Task<UserProfile> GetUserProfile(string userId, CancellationToken ct);
 
     [ComputeMethod]
-    Task<UserPresence> GetUserPresence(Ulid userId, CancellationToken ct);
+    Task<UserPresence> GetUserPresence(string userId, CancellationToken ct);
     #endregion
 }
 
@@ -458,11 +458,11 @@ public interface IProductService : IComputeService
 {
     #region PartAC_NotObservable
     // Regular method - not cached, not observable
-    Task<Ulid[]> SearchProducts(string query, int skip, int take, CancellationToken ct);
+    Task<string[]> SearchProducts(string query, int skip, int take, CancellationToken ct);
 
     // Compute method - each item is cached and observable
     [ComputeMethod]
-    Task<Product?> GetProduct(Ulid id, CancellationToken ct);
+    Task<Product?> GetProduct(string id, CancellationToken ct);
     #endregion
 }
 

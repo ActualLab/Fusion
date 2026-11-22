@@ -14,9 +14,9 @@ public interface ITodoApi : IComputeService
 
     // Queries
     [ComputeMethod]
-    public Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
+    public Task<TodoItem?> Get(Session session, string id, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    public Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default);
+    public Task<string[]> ListIds(Session session, int count, CancellationToken cancellationToken = default);
     [ComputeMethod(ConsolidationDelay = 0.5)]
     public Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default);
 }
@@ -26,7 +26,7 @@ public interface ITodoApi : IComputeService
 [DataContract, MessagePackObject(true)]
 [ParameterComparer(typeof(ByValueParameterComparer))]
 public sealed partial record TodoItem(
-    [property: DataMember] Ulid Id,
+    [property: DataMember] string Id,
     [property: DataMember] string Title,
     [property: DataMember] bool IsDone = false
 );
@@ -52,5 +52,5 @@ public sealed partial record Todos_AddOrUpdate(
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_Remove(
     [property: DataMember] Session Session,
-    [property: DataMember] Ulid Id
+    [property: DataMember] string Id
 ) : ISessionCommand<Unit>, IDelegatingCommand;

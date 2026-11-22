@@ -248,7 +248,7 @@ public sealed class TypeScriptTypeMapper
 
     private string Probe(Type type)
     {
-        // Types with custom converters (Ulid, Moment, Symbol, ...) are usually structs, so their default value
+        // Types with custom converters (Moment, Symbol, ...) are usually structs, so their default value
         // reveals the JSON shape they're written as
         if (type.IsValueType) {
             string? json = null;

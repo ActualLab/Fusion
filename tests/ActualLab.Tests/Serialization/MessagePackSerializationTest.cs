@@ -12,9 +12,6 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
     {
         Test(default(Unit), "null");
 
-        // Ulid
-        Test(default(Ulid), "\"AAAAAAAAAAAAAAAAAAAAAA==\"");
-
         // Moment
         Test(default(Moment), "0");
         Test(new Moment(1), "1");

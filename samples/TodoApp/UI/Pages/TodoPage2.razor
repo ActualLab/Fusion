@@ -99,7 +99,7 @@
 
     private void Create()
     {
-        var item = new TodoItem(default, NewItemTitle);
+        var item = new TodoItem("", NewItemTitle);
         NewItemTitle = "";
         _ = UICommander.Run(new Todos_AddOrUpdate(Session, item));
     }
@@ -107,7 +107,7 @@
     // Nested types
 
     public sealed record Model(
-        Ulid[] ItemIds,
+        string[] ItemIds,
         bool HasMore,
         DateTime ComputedAt)
     {

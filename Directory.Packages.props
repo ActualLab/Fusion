@@ -158,8 +158,6 @@
     <PackageVersion Include="System.Net.WebSockets.Client" Version="4.3.2" />
     <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
-    <PackageVersion Include="Ulid" Version="1.4.1" />
-    <PackageVersion Include="Ulid.MessagePack" Version="1.4.1" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <!-- Microsoft.Extensions.* -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="$(MicrosoftExtensionsVersion)" />

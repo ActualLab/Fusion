@@ -2,6 +2,7 @@ using ActualLab.Fusion.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Samples.TodoApp.Abstractions;
 using Samples.TodoApp.Services.Db;
+using ActualLab.Generators;
 
 namespace Samples.TodoApp.Services;
 
@@ -30,8 +31,8 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
                 "Simulated concurrency conflict. " +
                 "Check the log to see if OperationReprocessor retried the command 3 times.");
 
-        if (item.Id == Ulid.Empty) {
-            item = item with { Id = Ulid.NewUlid() };
+        if (item.Id.IsNullOrEmpty()) {
+            item = item with { Id = UlidUuidGenerator.Instance.Next() };
             dbContext.Add(new DbTodo(folder, item));
             isNew = true;
         }
@@ -82,7 +83,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
 
     // Queries
 
-    public virtual async Task<TodoItem?> Get(string folder, Ulid id, CancellationToken cancellationToken = default)
+    public virtual async Task<TodoItem?> Get(string folder, string id, CancellationToken cancellationToken = default)
     {
         var tenant = folder.GetTenant();
         var dbTodo = await DbTodoResolver
@@ -91,7 +92,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         return dbTodo?.ToModel();
     }
 
-    public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken cancellationToken = default)
+    public virtual async Task<string[]> ListIds(string folder, int limit, CancellationToken cancellationToken = default)
     {
         await PseudoListIds(folder).ConfigureAwait(false);
 

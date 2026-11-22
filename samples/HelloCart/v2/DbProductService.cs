@@ -1,4 +1,5 @@
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Generators;
 
 namespace Samples.HelloCart.V2;
 
@@ -31,7 +32,7 @@ public class DbProductService(IServiceProvider services)
         var message = product is null
             ? $"Product removed: {productId}"
             : $"Product updated: {productId} with Price = {product.Price}";
-        var logEvent = new LogMessageCommand(Ulid.NewUlid().ToString(), message);
+        var logEvent = new LogMessageCommand(UlidUuidGenerator.Instance.Next(), message);
         context.Operation.AddEvent(logEvent);
         var randomEvent = LogMessageCommand.New();
         context.Operation.AddEvent(randomEvent).SetDelayUntil(randomEvent.DelayUntil);
