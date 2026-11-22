@@ -154,7 +154,7 @@
     <Using Include="ActualLab.CommandR" />
     <Using Include="ActualLab.CommandR.Configuration" />
     <Using Include="ActualLab.CommandR.Commands" />
-    <Using Include="MemoryPack" />
+    <Using Include="MemoryPack" Condition="'$(MSBuildProjectName)' == 'ActualLab.Tests' or '$(MSBuildProjectName)' == 'ActualLab.Fusion.Tests'" />
     <Using Include="Microsoft.Extensions.DependencyInjection" />
     <Using Include="Microsoft.Extensions.Logging" />
     <Using Include="Microsoft.Extensions.Logging.Abstractions" />

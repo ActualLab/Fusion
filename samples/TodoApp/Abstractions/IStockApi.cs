@@ -1,5 +1,4 @@
 using System.Runtime.Serialization;
-using MemoryPack;
 using MessagePack;
 
 namespace Samples.TodoApp.Abstractions;
@@ -12,7 +11,7 @@ public interface IStockApi : IComputeService
     public Task<StockPrice?> Get(string symbol, CancellationToken cancellationToken = default);
 }
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public sealed partial record StockPrice(
     [property: DataMember] string Symbol,
     [property: DataMember] string Name,

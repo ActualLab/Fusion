@@ -24,7 +24,7 @@ public sealed class TestClock : MomentClock, IDisposable
     public override Moment Now
         => ToLocalTime(SystemClock.Instance.Now);
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor]
+    [JsonConstructor]
     public TestClock(TestClockSettings settings)
         => _settings = settings;
     public TestClock(TimeSpan localOffset = default, TimeSpan realOffset = default, double multiplier = 1)

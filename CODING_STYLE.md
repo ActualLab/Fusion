@@ -562,26 +562,26 @@ public interface IMediaBackend : IComputeService, IBackendService
     Task OnCopyChat(MediaBackend_CopyChat command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record MediaBackend_Change(
-    [property: DataMember, MemoryPackOrder(0)] MediaId Id,
-    [property: DataMember, MemoryPackOrder(1)] Change<Media> Change
+    [property: DataMember(Order = 0), Key(0)] MediaId Id,
+    [property: DataMember(Order = 1), Key(1)] Change<Media> Change
 ) : ICommand<Media?>, IBackendCommand, IHasShardKey<MediaId>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public MediaId ShardKey => Id;
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record MediaBackend_CopyChat(
-    [property: DataMember, MemoryPackOrder(0)] ChatId ChatId,
-    [property: DataMember, MemoryPackOrder(1)] string CorrelationId,
-    [property: DataMember, MemoryPackOrder(2)] MediaId[] MediaIds
+    [property: DataMember(Order = 0), Key(0)] ChatId ChatId,
+    [property: DataMember(Order = 1), Key(1)] string CorrelationId,
+    [property: DataMember(Order = 2), Key(2)] MediaId[] MediaIds
 ) : ICommand<Unit>, IBackendCommand, IHasShardKey<ChatId>
 {
-    [IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public ChatId ShardKey => ChatId;
 }
 ```
@@ -626,11 +626,11 @@ public class Chats(IServiceProvider services) : IChats
 2. **API records** should be fully serializable,
    which typically implies the presence of the following attributes:
 ```csharp
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[method: MemoryPackConstructor, SerializationConstructor, JsonConstructor]
+[DataContract, MessagePackObject]
+[method: JsonConstructor, SerializationConstructor]
 public sealed partial record TextEntry(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] long LocalId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] string Content)
+    [property: DataMember(Order = 0), Key(0)] long LocalId,
+    [property: DataMember(Order = 1), Key(1)] string Content)
 { }
 ```
 

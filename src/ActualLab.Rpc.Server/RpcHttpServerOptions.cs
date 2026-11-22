@@ -13,7 +13,7 @@ public record RpcHttpServerOptions
     public bool ExposeBackend { get; init; } = false;
     public string RequestPath { get; init; } = RpcHttpClientOptions.Default.RequestPath;
     public string BackendRequestPath { get; init; } = RpcHttpClientOptions.Default.BackendRequestPath;
-    public string SerializationFormatParameterName { get; init; } = RpcHttpClientOptions.Default.SerializationFormatParameterName;
+    public string WireFormatParameterName { get; init; } = RpcHttpClientOptions.Default.WireFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcHttpClientOptions.Default.ClientIdParameterName;
     public string ReconnectProofCounterParameterName { get; init; }
         = RpcHttpClientOptions.Default.ReconnectProofCounterParameterName;

@@ -18,8 +18,7 @@ public static class TypeDecoratingNerdbankMessagePackSerialized
 /// A <see cref="ByteSerialized{T}"/> variant that uses type-decorating Nerdbank.MessagePack serialization.
 /// </summary>
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract]
 public partial class TypeDecoratingNerdbankMessagePackSerialized<T> : ByteSerialized<T>
 {
     private static IByteSerializer<T>? _serializer;

@@ -1,14 +1,13 @@
-using MemoryPack;
 using MessagePack;
 
 namespace Samples.MeshRpc.Services;
 
-[MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
-[method: MemoryPackConstructor, SerializationConstructor]
+[MessagePackObject(true)]
+[method: SerializationConstructor]
 public sealed partial record Counter(
-    [property: MemoryPackOrder(0)] int Key,
-    [property: MemoryPackOrder(1)] int Value,
-    [property: MemoryPackOrder(2)] CpuTimestamp UpdatedAt)
+    int Key,
+    int Value,
+    CpuTimestamp UpdatedAt)
 {
     public Counter(int key, int value)
         : this(key, value, CpuTimestamp.Now)

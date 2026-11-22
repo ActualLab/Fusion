@@ -19,7 +19,7 @@ public class RpcWebSocketServerNetFxAuditTest
         var rpcRefFactoryCallCount = 0;
         services.AddSingleton<RpcWebSocketServerRefFactory>((_, _, _) => {
             rpcRefFactoryCallCount++;
-            return RpcRef.NewServer("audit", RpcSerializationFormat.SystemJsonV5.Key);
+            return RpcRef.NewServer("audit", RpcDefaultWireFormats.SystemJsonV5.Key);
         });
         services.AddSingleton(new RpcPeerOptions {
             ServerConnectionFactory = (_, _, _, _) =>

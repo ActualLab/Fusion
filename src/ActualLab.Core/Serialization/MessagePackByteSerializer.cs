@@ -2,7 +2,6 @@ using System.Buffers;
 using MessagePack;
 using ActualLab.OS;
 using ActualLab.Serialization.Internal;
-using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
@@ -10,7 +9,7 @@ namespace ActualLab.Serialization;
 /// An <see cref="IByteSerializer"/> implementation backed by MessagePack.
 /// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
-public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
+public class MessagePackByteSerializer : IByteSerializer
 {
 #if NET9_0_OR_GREATER
     private static readonly Lock StaticLock = new();
@@ -85,32 +84,29 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
 
     // Instance members
 
-    public MessagePackSerializerOptions Options { get; } = options;
+    public MessagePackSerializerOptions Options { get; }
+    // The serializer typed serializers expose as ByteSerializer.Current:
+    // their untyped (root) serializer, since only it can (de)serialize any type
+    public IByteSerializer Root { get; protected set; }
 
     public MessagePackByteSerializer() : this(DefaultOptions) { }
+
+    public MessagePackByteSerializer(MessagePackSerializerOptions options)
+    {
+        Options = options;
+        Root = this;
+    }
 
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null)
         => (IByteSerializer<T>)GetTypedSerializer(serializedType ?? typeof(T));
 
-    public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
-    {
-        var serializer = _typedSerializerCache.GetOrAdd(type,
-            static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
-                .MakeGenericType(type1)
-                .CreateInstance(self.Options, type1),
-            this);
-        return serializer.Read(data, type, out readLength);
-    }
+    // Unscoped API
 
-    public virtual void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
-    {
-        var serializer = _typedSerializerCache.GetOrAdd(type,
-            static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
-                .MakeGenericType(type1)
-                .CreateInstance(self.Options, type1),
-            this);
-        serializer.Write(bufferWriter, value, type);
-    }
+    public virtual object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
+        => GetTypedSerializer(type).ReadUnscoped(data, type, out readLength);
+
+    public virtual void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
+        => GetTypedSerializer(type).WriteUnscoped(bufferWriter, value, type);
 
     // Private methods
 
@@ -118,7 +114,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
         => _typedSerializerCache.GetOrAdd(serializedType,
             static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
                 .MakeGenericType(type1)
-                .CreateInstance(self.Options, type1),
+                .CreateInstance(self.Options, type1, self.Root),
             this);
 }
 
@@ -126,31 +122,40 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
 /// A typed <see cref="MessagePackByteSerializer"/> that serializes values of type <typeparamref name="T"/>.
 /// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
-public class MessagePackByteSerializer<T>(MessagePackSerializerOptions options, Type serializedType)
-    : MessagePackByteSerializer(options), IByteSerializer<T>
+public class MessagePackByteSerializer<T> : MessagePackByteSerializer, IByteSerializer<T>
 {
-    public Type SerializedType { get; } = serializedType;
+    public Type SerializedType { get; }
 
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public MessagePackByteSerializer(
+        MessagePackSerializerOptions options,
+        Type serializedType,
+        IByteSerializer? root = null)
+        : base(options)
     {
-        if (type != SerializedType)
-            throw Errors.SerializedTypeMismatch(SerializedType, type);
+        SerializedType = serializedType;
+        if (root is not null)
+            Root = root;
+    }
 
+    // Unscoped API
+
+    public override object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
-        return Read(data, out readLength);
-    }
+        => type == SerializedType
+            ? ReadUnscoped(data, out readLength)
+            : base.ReadUnscoped(data, type, out readLength);
 
-    public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
+    public override void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
-        if (type != SerializedType)
-            throw Errors.SerializedTypeMismatch(SerializedType, type);
-
-        Write(bufferWriter, (T)value!);
+        if (type == SerializedType)
+            WriteUnscoped(bufferWriter, (T)value!);
+        else
+            base.WriteUnscoped(bufferWriter, value, type);
     }
 
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength)
         => MessagePackSerializer.Deserialize<T>(data, Options, out readLength);
 
-    public void Write(IBufferWriter<byte> bufferWriter, T value)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value)
         => MessagePackSerializer.Serialize(bufferWriter, value, Options);
 }

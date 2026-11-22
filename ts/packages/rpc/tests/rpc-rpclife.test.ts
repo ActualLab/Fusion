@@ -16,7 +16,7 @@ import {
     RpcStreamSender,
     RpcLimits,
     RpcCallTimeouts,
-    RpcSerializationFormat,
+    RpcWireFormat,
     createMessageChannelPair,
     defineRpcService,
     type RpcServerPeer,
@@ -42,7 +42,7 @@ function connectedPair(limits?: RpcLimits): Pair {
         serverHub.limits = limits;
         clientHub.limits = limits;
     }
-    RpcSerializationFormat.get('json5np');
+    RpcWireFormat.get('json5np');
     const [a, b] = createMessageChannelPair();
     const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
     clientPeer.connectWith(a);
@@ -80,9 +80,9 @@ describe('R10 — unknown shared object → $sys.Disconnect', () => {
         let disconnectCount = 0;
         const s = pair.serverHub.systemCallSender;
         const orig = s.disconnect.bind(s);
-        s.disconnect = ((conn, format, ids) => {
+        s.disconnect = ((conn, wireFormat, ids) => {
             disconnectCount++;
-            orig(conn, format, ids);
+            orig(conn, wireFormat, ids);
         }) as typeof s.disconnect;
 
         // A remote stream whose server-side sender does not exist. Enumerating
@@ -106,9 +106,9 @@ describe('R11 — RpcStreamSender.onAck guards', () => {
         let n = 0;
         const s = pair.serverHub.systemCallSender;
         const orig = s.disconnect.bind(s);
-        s.disconnect = ((conn, format, ids) => {
+        s.disconnect = ((conn, wireFormat, ids) => {
             n++;
-            orig(conn, format, ids);
+            orig(conn, wireFormat, ids);
         }) as typeof s.disconnect;
         return { count: () => n };
     }

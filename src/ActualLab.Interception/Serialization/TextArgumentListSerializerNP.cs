@@ -15,8 +15,13 @@ public sealed class TextArgumentListSerializerNP(ITextSerializer baseSerializer)
     [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
     public static int Utf8BufferReplaceCapacity { get; set; } = 65536 * 2;
 
+    private ITextSerializer BaseSerializer { get; } = baseSerializer;
+    private ITextSerializer BaseSerializerRoot { get; } = baseSerializer.Root;
+
     public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
     {
+        // Items are serialized with Read/WriteUnscoped in a single scope per argument list
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         var writer = _utf8Buffer ??= new Utf8TextWriter();
         try {
             var itemTypes = arguments.Type.ItemTypes;
@@ -31,7 +36,7 @@ public sealed class TextArgumentListSerializerNP(ITextSerializer baseSerializer)
                     if (itemType != type)
                         throw Errors.PolymorphicObjectButNonPolymorphicSerializer(type, itemType);
                 }
-                baseSerializer.Write(writer, item, type);
+                BaseSerializer.WriteUnscoped(writer, item, type);
                 writer.WriteLiteral(Delimiter);
             }
 
@@ -50,6 +55,7 @@ public sealed class TextArgumentListSerializerNP(ITextSerializer baseSerializer)
 
     public override void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data)
     {
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         // Deserialization never encounters polymorphic data because Serialize already rejects it.
         // We just deserialize as the declared type.
         var itemTypes = arguments.Type.ItemTypes;
@@ -60,7 +66,7 @@ public sealed class TextArgumentListSerializerNP(ITextSerializer baseSerializer)
                 continue;
             }
 
-            arguments.SetUntyped(i, baseSerializer.ReadDelimited(ref data, type, Delimiter));
+            arguments.SetUntyped(i, BaseSerializer.ReadDelimitedUnscoped(ref data, type, Delimiter));
         }
     }
 }

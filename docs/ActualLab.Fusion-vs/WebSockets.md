@@ -68,7 +68,7 @@ await foreach (var c in computed.Changes(ct))
 |---------|----------------|--------|
 | Connection management | Manual | Automatic |
 | Reconnection | Manual | Automatic with state recovery |
-| Message serialization | Manual | Built-in (MemoryPack, MessagePack) |
+| Message serialization | Manual | Built-in (MessagePack, System.Text.Json; MemoryPack and others via packages) |
 | Request batching | Manual | Automatic |
 | Caching | None | Intelligent cache with invalidation |
 | Type safety | None | Full compile-time checking |
@@ -106,7 +106,7 @@ Fusion solves all of these. You focus on your business logic.
 Fusion's WebSocket layer (ActualLab.Rpc) is highly optimized:
 
 - **Batching**: Multiple calls in the same frame are batched automatically
-- **Binary serialization**: MemoryPack for minimal overhead
+- **Binary serialization**: MessagePack (default) or MemoryPack for minimal overhead
 - **Connection pooling**: Efficient resource usage
 - **Compression**: Optional message compression
 

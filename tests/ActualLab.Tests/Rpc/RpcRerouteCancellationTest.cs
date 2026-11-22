@@ -7,7 +7,7 @@ namespace ActualLab.Tests.Rpc;
 public class RpcRerouteCancellationTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 {
     private readonly TestReroutableRef _clientRef = new();
-    private readonly RpcRef _serverRef = RpcRef.NewServer("test-reroutable", RpcTestBase.DefaultSerializationFormat);
+    private readonly RpcRef _serverRef = RpcRef.NewServer("test-reroutable", RpcTestBase.DefaultWireFormat);
     private RpcRef? _rerouteTarget;
 
     protected override void ConfigureServices(ServiceCollection services)

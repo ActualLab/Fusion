@@ -19,7 +19,7 @@ while preserving their exact types.
 
 **Key features:**
 - **Type preservation**: Values retain their type through serialization/deserialization
-- **Multi-format support**: Works with JSON, MemoryPack, and MessagePack
+- **Multi-format support**: Works with JSON and MessagePack, plus MemoryPack via `ActualLab.Serialization.MemoryPack`
 - **Immutable by default**: `PropertyBag` is a readonly struct
 - **String or Type keys**: Index by string name or by Type
 
@@ -150,20 +150,21 @@ Parallel.For(0, 100, i => {
 
 ## Type-Decorated Serialization
 
-PropertyBag uses `TypeDecoratingUniSerialized<object>` internally, which preserves type information:
+PropertyBag uses `TypeDecoratingUniSerialized<TSchema, object>` internally, which preserves type information:
 
 ```cs
 // Internal structure
-[DataContract, MemoryPackable, MessagePackObject]
-public partial record struct PropertyBagItem(
-    [property: DataMember] string Key,
-    [property: DataMember] TypeDecoratingUniSerialized<object> Serialized);
+[DataContract]
+public partial record struct PropertyBagItem<TSchema>(
+    [property: DataMember(Order = 0), Key(0)] string Key,
+    [property: DataMember(Order = 1), Key(1)] TypeDecoratingUniSerialized<TSchema, object> Serialized)
+    where TSchema : TypeSchema, new();
 ```
 
 This means:
 - Store an `int`, get back an `int` (not `long` or `object`)
 - Store a custom class, get back that exact type
-- Works across JSON, MemoryPack, and MessagePack boundaries
+- Works across JSON, MessagePack and MemoryPack boundaries
 
 
 ## Usage Examples

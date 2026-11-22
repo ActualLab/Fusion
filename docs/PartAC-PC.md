@@ -57,14 +57,14 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
             return default;
 
         var bytes = Convert.FromBase64String(sValue);
-        var value = MemoryPackSerializer.Deserialize<RpcCacheValue>(bytes);
+        var value = (RpcCacheValue?)ByteSerializer.Default.Read(bytes, typeof(RpcCacheValue), out _);
         return new ValueTask<RpcCacheValue?>(value);
     }
 
     public override void Set(RpcCacheKey key, RpcCacheValue value)
     {
-        var bytes = MemoryPackSerializer.Serialize(value);
-        var sValue = Convert.ToBase64String(bytes);
+        using var buffer = ByteSerializer.Default.Write(value, typeof(RpcCacheValue));
+        var sValue = Convert.ToBase64String(buffer.WrittenSpan);
         _storage.SetItemAsString(GetStringKey(key), sValue);
     }
 

@@ -14,13 +14,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+    <ProjectReference Include="..\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

@@ -14,9 +14,8 @@ namespace ActualLab.Collections;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(PropertyBagMessagePackFormatter<>))]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct PropertyBag<TSchema> : IEquatable<PropertyBag<TSchema>>
     where TSchema : TypeSchema, new()
 {
@@ -26,7 +25,7 @@ public readonly partial struct PropertyBag<TSchema> : IEquatable<PropertyBag<TSc
 
     // MessagePack requires this member to be public
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0), MemoryPackInclude, JsonInclude, Newtonsoft.Json.JsonProperty]
+    [DataMember(Order = 0), Key(0), JsonInclude]
     public PropertyBagItem<TSchema>[]? RawItems {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items;
@@ -35,13 +34,13 @@ public readonly partial struct PropertyBag<TSchema> : IEquatable<PropertyBag<TSc
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items?.Length ?? 0;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public IReadOnlyList<PropertyBagItem<TSchema>> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items ?? [];
@@ -65,7 +64,7 @@ public readonly partial struct PropertyBag<TSchema> : IEquatable<PropertyBag<TSc
     public PropertyBag()
     { }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public PropertyBag(PropertyBagItem<TSchema>[]? rawItems)
     {
         if (rawItems is not null && rawItems.Length != 0)

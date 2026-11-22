@@ -7,16 +7,15 @@ namespace ActualLab.Collections;
 /// An immutable bidirectional map (bimap) that maintains both forward and backward
 /// lookup dictionaries between two key types.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(ImmutableBimapMessagePackFormatter<,>))]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record ImmutableBimap<TFrom, TTo>
     where TFrom : notnull
     where TTo : notnull
 {
     private readonly IReadOnlyDictionary<TFrom, TTo> _forward = ImmutableDictionary<TFrom, TTo>.Empty;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0)]
     public IReadOnlyDictionary<TFrom, TTo> Forward {
         get => _forward;
         init {
@@ -27,13 +26,13 @@ public partial record ImmutableBimap<TFrom, TTo>
         }
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public IReadOnlyDictionary<TTo, TFrom> Backward { get; private set; } = ImmutableDictionary<TTo, TFrom>.Empty;
 
     public ImmutableBimap()
     { }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public ImmutableBimap(IReadOnlyDictionary<TFrom, TTo> forward)
         => Forward = forward;
 

@@ -15,7 +15,7 @@ public record RpcWebSocketClientOptions
 
     public string RequestPath { get; init; } = "/rpc/ws";
     public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
-    public string SerializationFormatParameterName { get; init; } = "f";
+    public string WireFormatParameterName { get; init; } = "f";
     public string ClientIdParameterName { get; init; } = "clientId";
     public string ReconnectProofCounterParameterName { get; init; } = "c";
     public string ReconnectProofParameterName { get; init; } = "p";
@@ -69,7 +69,7 @@ public record RpcWebSocketClientOptions
         var queryStart = url.IndexOf('?') < 0 ? '?' : '&';
 #pragma warning restore CA1307
         url = $"{url}{queryStart}{options.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
-            + $"&{options.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
+            + $"&{options.WireFormatParameterName}={peer.WireFormat.Key}";
         if (peer.ReconnectSecret is { } secret) {
             // Neither value needs percent-encoding: the counter is decimal digits, the proof is base64url.
             var counterText = peer.NextReconnectCounter().ToString(CultureInfo.InvariantCulture);

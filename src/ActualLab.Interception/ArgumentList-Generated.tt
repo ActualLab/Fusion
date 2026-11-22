@@ -133,7 +133,7 @@ public abstract partial record ArgumentList
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList<#=itemCount#> : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => <#=itemCount#>;
 
     protected static Type?[] CreateNonDefaultItemTypes()

@@ -138,7 +138,7 @@ export class RpcSystemCallHandler {
 
                 if (unknownIds.length > 0)
                     peer.hub.systemCallSender.disconnect(
-                        peer.wireConnection, peer.serializationFormat, unknownIds);
+                        peer.wireConnection, peer.wireFormat, unknownIds);
             }
             break;
         }
@@ -206,7 +206,7 @@ export class RpcSystemCallHandler {
                 sender.onAck(args[0] as number, args[1] as string);
             else if (peer.wireConnection !== undefined)
                 peer.hub.systemCallSender.disconnect(
-                    peer.wireConnection, peer.serializationFormat, [relatedId]);
+                    peer.wireConnection, peer.wireFormat, [relatedId]);
             break;
         }
         case RpcSystemCalls.ackEnd: {
@@ -217,7 +217,7 @@ export class RpcSystemCallHandler {
                 sender.onAckEnd(args[0] as string);
             else if (peer.wireConnection !== undefined)
                 peer.hub.systemCallSender.disconnect(
-                    peer.wireConnection, peer.serializationFormat, [relatedId]);
+                    peer.wireConnection, peer.wireFormat, [relatedId]);
             break;
         }
         case RpcSystemCalls.disconnect: {
@@ -275,7 +275,7 @@ export class RpcSystemCallHandler {
         if (typeof handshakeIndex !== 'number' || handshakeIndex !== peer.ownHandshakeIndex) {
             const got = typeof handshakeIndex === 'number' ? handshakeIndex : `<${typeof handshakeIndex}>`;
             peer.hub.systemCallSender.error(
-                conn, peer.serializationFormat, relatedId,
+                conn, peer.wireFormat, relatedId,
                 new Error(
                     `TooLateToReconnect: own handshake index ${peer.ownHandshakeIndex} != ${got}`));
             return;
@@ -286,7 +286,7 @@ export class RpcSystemCallHandler {
         // RpcSystemCalls.Reconnect's TryClaimReconnect gate.
         if (!peer.tryClaimReconnect()) {
             peer.hub.systemCallSender.error(
-                conn, peer.serializationFormat, relatedId,
+                conn, peer.wireFormat, relatedId,
                 new Error('TooLateToReconnect: this connection was already reconnected'));
             return;
         }
@@ -326,8 +326,8 @@ export class RpcSystemCallHandler {
         }
 
         const responseBytes = IncreasingSeqCompressor.serialize(unknownIds);
-        const responseValue = peer.serializationFormat.isBinary ? responseBytes : base64Encode(responseBytes);
-        peer.hub.systemCallSender.ok(conn, peer.serializationFormat, relatedId, responseValue);
+        const responseValue = peer.wireFormat.isBinary ? responseBytes : base64Encode(responseBytes);
+        peer.hub.systemCallSender.ok(conn, peer.wireFormat, relatedId, responseValue);
     }
 }
 

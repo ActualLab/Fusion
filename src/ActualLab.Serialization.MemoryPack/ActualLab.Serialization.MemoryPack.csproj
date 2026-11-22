@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">$(LatestTargetFrameworks)net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion memorypack</PackageTags>
+    <Description>ActualLab.Serialization.MemoryPack - MemoryPack support for ActualLab.Fusion: <!--
+    -->an IByteSerializer, formatters for ActualLab types, and MemoryPack-based RPC serialization formats.</Description>
+    <RootNamespace>ActualLab.Serialization</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MemoryPack.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Fusion.Ext.Backend.Contracts\ActualLab.Fusion.Ext.Backend.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="MemoryPack" />
+  </ItemGroup>
+</Project>

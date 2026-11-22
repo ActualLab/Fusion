@@ -114,7 +114,7 @@ describe('parseStreamRef', () => {
     });
 });
 
-describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
+describe.each(FORMATS)('RpcStream end-to-end [%s]', (wireFormatKey) => {
     let pair: TestHubPair;
 
     const StreamServiceDef = defineRpcService('StreamService', {
@@ -127,7 +127,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
     });
 
     beforeEach(async () => {
-        pair = createTestHubPair(formatKey);
+        pair = createTestHubPair(wireFormatKey);
         await delay(10);
     });
 
@@ -513,9 +513,9 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
         let ackEndCount = 0;
         const sender = pair.clientHub.systemCallSender;
         const origAckEnd = sender.ackEnd.bind(sender);
-        sender.ackEnd = ((conn, format, localId, hostId) => {
+        sender.ackEnd = ((conn, wireFormat, localId, hostId) => {
             ackEndCount++;
-            origAckEnd(conn, format, localId, hostId);
+            origAckEnd(conn, wireFormat, localId, hostId);
         }) as typeof sender.ackEnd;
 
         const stream = await client.getNumbers(3);
@@ -746,9 +746,9 @@ describe('RpcStream $sys.End index gate (R3/R4)', () => {
         let ackEndCount = 0;
         const sender = pair.clientHub.systemCallSender;
         const origAckEnd = sender.ackEnd.bind(sender);
-        sender.ackEnd = ((conn, format, localId, hostId) => {
+        sender.ackEnd = ((conn, wireFormat, localId, hostId) => {
             ackEndCount++;
-            origAckEnd(conn, format, localId, hostId);
+            origAckEnd(conn, wireFormat, localId, hostId);
         }) as typeof sender.ackEnd;
 
         const stream = makeRemoteStream(93);
@@ -767,10 +767,10 @@ describe('RpcStream $sys.End index gate (R3/R4)', () => {
         const resetAcks: number[] = [];
         const sender = pair.clientHub.systemCallSender;
         const origAck = sender.ack.bind(sender);
-        sender.ack = ((conn, format, localId, nextIndex, hostId) => {
+        sender.ack = ((conn, wireFormat, localId, nextIndex, hostId) => {
             if (hostId && hostId !== '00000000-0000-0000-0000-000000000000')
                 resetAcks.push(nextIndex);
-            origAck(conn, format, localId, nextIndex, hostId);
+            origAck(conn, wireFormat, localId, nextIndex, hostId);
         }) as typeof sender.ack;
 
         const stream = makeRemoteStream(91);

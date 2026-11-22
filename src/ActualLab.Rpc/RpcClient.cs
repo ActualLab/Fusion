@@ -38,7 +38,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
     {
         var serverPeerRef = RpcRef.NewServer(
             clientPeer.ClientId,
-            clientPeer.SerializationFormat.Key,
+            clientPeer.WireFormat.Key,
             clientPeer.Ref.IsBackend,
             RpcPeerConnectionKind.Loopback);
         var serverPeer = Hub.GetServerPeer(serverPeerRef);

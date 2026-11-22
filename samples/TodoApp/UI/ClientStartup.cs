@@ -38,9 +38,6 @@ public static class ClientStartup
             LogCacheEntryUpdateSettings = (LogLevel.Warning, int.MaxValue),
         };
 #endif
-        // Default RPC client serialization format
-        RpcSerializationFormatResolver.Default = new("msgpack6c-lz4"); // mempack6c, mempack6, json5, etc.
-
         // The block of code below is totally optional.
         // It makes Fusion to delay initial compute method RCP calls if they're resolved as "hit" into the local cache.
         // I.e., we can postpone a majority (or all) of RPC calls on startup to let the app start a bit faster.
@@ -58,6 +55,11 @@ public static class ClientStartup
 
         // Fusion services
         var fusion = services.AddFusion();
+        // RPC client wire format: compact MessagePack w/ LZ4-compressed server-to-client frames
+        fusion.Rpc.ConfigureWireFormats(f => {
+            f.AddLZ4Variants();
+            f.DefaultFormat = f["msgpack6c-lz4"];
+        });
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 

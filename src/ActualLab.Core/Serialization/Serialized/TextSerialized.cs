@@ -22,8 +22,7 @@ public static class TextSerialized
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public partial class TextSerialized<T>
 {
 #if NET9_0_OR_GREATER
@@ -34,10 +33,10 @@ public partial class TextSerialized<T>
     protected static readonly object StaticLock = new();
 #endif
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public T Value { get; init; } = default!;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public string Data {
         get => Serialize();
         init => Value = Deserialize(value);

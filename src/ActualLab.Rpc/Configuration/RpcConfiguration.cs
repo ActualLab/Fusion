@@ -4,7 +4,7 @@ using ActualLab.Internal;
 namespace ActualLab.Rpc;
 
 /// <summary>
-/// Holds the set of registered RPC service builders and default service mode.
+/// Holds the set of registered RPC service builders, the default service mode and the wire formats.
 /// Frozen after <see cref="RpcHub"/> construction to prevent further modification.
 /// </summary>
 public class RpcConfiguration
@@ -39,6 +39,8 @@ public class RpcConfiguration
         }
     }
 
+    public RpcWireFormatConfiguration WireFormats { get; } = new();
+
     public void Freeze()
     {
         if (IsFrozen)
@@ -52,6 +54,7 @@ public class RpcConfiguration
             // while Services still returns the mutable dictionary
             Volatile.Write(ref _services, new ReadOnlyDictionary<Type, RpcServiceBuilder>(
                 new Dictionary<Type, RpcServiceBuilder>(Services)));
+            WireFormats.Freeze();
             IsFrozen = true;
         }
     }

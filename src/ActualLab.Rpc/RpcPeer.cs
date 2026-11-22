@@ -69,7 +69,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcPeerConnectionKind ConnectionKind { get; }
     public VersionSet Versions { get; init; }
 
-    public RpcSerializationFormat SerializationFormat { get; init; }
+    public RpcWireFormat WireFormat { get; init; }
     public RpcCompressionFormat? OutboundCompression { get; }
     public RpcCompressionFormat? InboundCompression { get; }
     public ArgumentListSerializer ArgumentListSerializer { get; init; }
@@ -119,16 +119,16 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         _serverMethodResolver = GetServerMethodResolver(handshake: null);
 #pragma warning restore CA2214
 
-        SerializationFormat = Hub.SerializationFormats.Get(route.Ref.SerializationFormat);
-        var compressionMode = SerializationFormat.CompressionMode;
+        WireFormat = Hub.WireFormats.Get(route.Ref.WireFormat);
+        var compressionMode = WireFormat.CompressionMode;
         OutboundCompression = compressionMode.MustCompress(route.Ref.IsServer)
-            ? SerializationFormat.CompressionFormat
+            ? WireFormat.CompressionFormat
             : null;
         InboundCompression = compressionMode.MustCompress(!route.Ref.IsServer)
-            ? SerializationFormat.CompressionFormat
+            ? WireFormat.CompressionFormat
             : null;
-        ArgumentListSerializer = SerializationFormat.ArgumentListSerializer;
-        MessageSerializer = SerializationFormat.MessageSerializerFactory.Invoke(this);
+        ArgumentListSerializer = WireFormat.ArgumentListSerializer;
+        MessageSerializer = WireFormat.MessageSerializerFactory.Invoke(this);
         Hasher = OutboundCallOptions.Hasher;
 
         var services = hub.Services;

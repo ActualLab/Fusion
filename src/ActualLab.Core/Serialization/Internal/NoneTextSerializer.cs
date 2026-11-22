@@ -9,20 +9,23 @@ public sealed class NoneTextSerializer : ITextSerializer
 {
     public static readonly NoneTextSerializer Instance = new();
 
+    public ITextSerializer Root => this;
+    IByteSerializer IByteSerializer.Root => this;
+
     public bool PreferStringApi => false;
 
-    public object? Read(string data, Type type)
+    public object? ReadUnscoped(string data, Type type)
         => throw Errors.NoSerializer();
-    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
         => throw Errors.NoSerializer();
-    public object? Read(ReadOnlyMemory<char> data, Type type)
+    public object? ReadUnscoped(ReadOnlyMemory<char> data, Type type)
         => throw Errors.NoSerializer();
 
-    public string Write(object? value, Type type)
+    public string WriteUnscoped(object? value, Type type)
         => throw Errors.NoSerializer();
-    public void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
         => throw Errors.NoSerializer();
-    public void Write(TextWriter textWriter, object? value, Type type)
+    public void WriteUnscoped(TextWriter textWriter, object? value, Type type)
         => throw Errors.NoSerializer();
 
     IByteSerializer<T> IByteSerializer.ToTyped<T>(Type? serializedType)
@@ -38,19 +41,22 @@ public sealed class NoneTextSerializer<T> : ITextSerializer<T>
 {
     public static readonly NoneTextSerializer<T> Instance = new();
 
+    public ITextSerializer Root => NoneTextSerializer.Instance;
+    IByteSerializer IByteSerializer<T>.Root => Root;
+
     public bool PreferStringApi => false;
 
-    public T Read(string data)
+    public T ReadUnscoped(string data)
         => throw Errors.NoSerializer();
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength)
         => throw Errors.NoSerializer();
-    public T Read(ReadOnlyMemory<char> data)
+    public T ReadUnscoped(ReadOnlyMemory<char> data)
         => throw Errors.NoSerializer();
 
-    public string Write(T value)
+    public string WriteUnscoped(T value)
         => throw Errors.NoSerializer();
-    public void Write(IBufferWriter<byte> bufferWriter, T value)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value)
         => throw Errors.NoSerializer();
-    public void Write(TextWriter textWriter, T value)
+    public void WriteUnscoped(TextWriter textWriter, T value)
         => throw Errors.NoSerializer();
 }

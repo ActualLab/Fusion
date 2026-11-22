@@ -155,7 +155,7 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             Guid.NewGuid(), new VersionSet(apiVersions), Guid.NewGuid(),
             RpcHandshake.CurrentProtocolVersion, 1);
         var maxSize = 0;
-        foreach (var format in RpcSerializationFormat.All) {
+        foreach (var format in RpcTestFormats.Catalog) {
             var (transport, webSocket, services) = NewTransport(
                 RpcWebSocketTransport.Options.Default, [], format: format);
             await using var _1 = services;
@@ -192,7 +192,7 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
         var options = RpcWebSocketTransport.Options.Default with {
             MaxPreHandshakeMessageSize = maxFrameSize,
         };
-        foreach (var format in RpcSerializationFormat.All) {
+        foreach (var format in RpcTestFormats.Catalog) {
             var (transport, webSocket, services) = NewTransport(options, [], format: format);
             await using (services)
             await using (transport)
@@ -251,20 +251,24 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             RpcWebSocketTransport.Options options,
             IReadOnlyList<Fragment> fragments,
             int? maxArgumentDataSize = null,
-            RpcSerializationFormat? format = null,
+            RpcWireFormat? format = null,
             bool isServer = false)
     {
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
-        services.AddRpc();
-        var actualFormat = format ?? RpcSerializationFormat.SystemJsonV5;
+        services.AddRpc().AddTestFormats();
+        var actualFormat = format ?? RpcDefaultWireFormats.SystemJsonV5;
         if (maxArgumentDataSize is { } maxSize) {
-            actualFormat = new RpcSerializationFormat(
+            actualFormat = new RpcWireFormat(
                 "json-size-test",
-                () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
-                peer => new RpcTextMessageSerializerV3(peer) { MaxArgumentDataSize = maxSize });
-            services.AddSingleton(
-                _ => new RpcSerializationFormatResolver(actualFormat.Key, new[] { actualFormat }));
+                () => RpcDefaultWireFormats.SystemJsonV5.ArgumentListSerializer,
+                peer => new RpcTextMessageSerializerV3(peer) { MaxArgumentDataSize = maxSize },
+                DataFormat.Text);
+            services.AddRpc().ConfigureWireFormats(f => {
+                f.Clear();
+                f.Add(actualFormat);
+                f.DefaultFormat = actualFormat;
+            });
         }
         var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();

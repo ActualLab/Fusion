@@ -9,7 +9,7 @@ namespace ActualLab.Serialization;
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 [UnconditionalSuppressMessage("Trimming", "IL2116", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
-    : TextSerializerBase
+    : TextSerializerBase(serializer.Root)
 {
 #if NET9_0_OR_GREATER
     private static readonly Lock StaticLock = new();
@@ -64,7 +64,7 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
     public ITextSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (static _ => true);
 
-    public override object? Read(string data, Type type)
+    public override object? ReadUnscoped(string data, Type type)
     {
         if (data.IsNullOrEmpty())
             return null;
@@ -78,7 +78,7 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         var aqn = data.Substring(TypeDecoratorPrefix.Length, typeSuffixIndex - TypeDecoratorPrefix.Length);
         var tail = data[(typeSuffixIndex + TypeDecoratorSuffix.Length)..];
         if (aqn is [ExactTypeDecorator])
-            return Serializer.Read(tail, type);
+            return Serializer.ReadUnscoped(tail, type);
 
         var actualType = new TypeRef(aqn).Resolve();
         if (!type.IsAssignableFrom(actualType))
@@ -86,10 +86,10 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         if (!TypeFilter.Invoke(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
 
-        return Serializer.Read(tail, actualType);
+        return Serializer.ReadUnscoped(tail, actualType);
     }
 
-    public override string Write(object? value, Type type)
+    public override string WriteUnscoped(object? value, Type type)
     {
         if (value is null)
             return "";
@@ -103,7 +103,7 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
             else
                 sb.Append(new TypeRef(actualType).WithoutAssemblyVersions());
             sb.Append(TypeDecoratorSuffix);
-            sb.Append(Serializer.Write(value, actualType));
+            sb.Append(Serializer.WriteUnscoped(value, actualType));
             return sb.ToString();
         }
         finally {
@@ -120,15 +120,14 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
             // Special case: null deserialization
             return null;
 
-        TypeNameHelpers.SplitAssemblyQualifiedName(p.Item, out var assemblyName, out var typeName);
-        var actualType = NewtonsoftJsonSerializationBinder.Default.BindToType(assemblyName, typeName);
+        var actualType = new TypeRef(p.Item).Resolve();
         if (!type.IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
         if (!TypeFilter.Invoke(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
 
         p.ParseNext();
-        return Serializer.Read(p.Item, actualType);
+        return Serializer.ReadUnscoped(p.Item, actualType);
     }
 
     protected string WriteLegacy(object? value, Type type)
@@ -138,8 +137,8 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
 
         using var f = ListFormat.Default.CreateFormatter();
         var actualType = value.GetType();
-        var aqn = actualType.GetAssemblyQualifiedName(false, NewtonsoftJsonSerializationBinder.Default);
-        var data = Serializer.Write(value, actualType);
+        var aqn = actualType.GetAssemblyQualifiedName(false);
+        var data = Serializer.WriteUnscoped(value, actualType);
         f.Append(aqn);
         f.Append(data);
         f.AppendEnd();
@@ -153,9 +152,9 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
 public class LegacyTypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
     : TypeDecoratingTextSerializer(serializer, typeFilter)
 {
-    public override object? Read(string data, Type type)
+    public override object? ReadUnscoped(string data, Type type)
         => ReadLegacy(data, type);
 
-    public override string Write(object? value, Type type)
+    public override string WriteUnscoped(object? value, Type type)
         => WriteLegacy(value, type);
 }

@@ -72,9 +72,11 @@ public static class CodeKeeper
 ```
 <!-- endSnippet -->
 
-`KeepSerializable<T>()` preserves the serialization code for `T` in both MemoryPack and MessagePack
-serializers. Each serializer's keep-code is gated by a feature switch (see
-[Feature Switches](#feature-switches)), so an app that uses only one of them can trim the other away.
+`KeepSerializable<T>()` preserves the MessagePack serialization code for `T`, gated by a feature
+switch (see [Feature Switches](#feature-switches)). Serializer packages add their own keep-code
+through a `CodeKeeper.IExtension`: `ActualLab.Serialization.MemoryPack` installs
+`MemoryPackCodeKeeperExtension`, so MemoryPack code is preserved only in apps that reference that
+package.
 
 ### Extension Architecture
 
@@ -306,13 +308,13 @@ app never uses to reduce the published binary size.
 | Switch | Default | Effect when disabled |
 |--------|---------|----------------------|
 | `ArgumentList.AllowGenerics` | `true` | `ArgumentList` stops using generic `ArgumentListG*<...>` implementations, so they can be trimmed away |
-| `MemoryPackByteSerializer.IsEnabled` | `true` | `CodeKeeper.KeepSerializable<T>()` stops preserving MemoryPack serialization code |
 | `MessagePackByteSerializer.IsEnabled` | `true` | `CodeKeeper.KeepSerializable<T>()` stops preserving MessagePack serialization code |
 
-The serializer switches matter for RPC: `KeepSerializable<T>()` preserves both MemoryPack and
-MessagePack serialization code for every registered type, since either can be picked via
-`RpcSerializationFormat`. If your app uses only one of them (e.g. only `mempack*` formats),
-disable the other to drop its keep-code.
+The serializer switch matters for RPC: `KeepSerializable<T>()` preserves MessagePack serialization
+code for every registered type, since the default RPC formats (`msgpack*`) use it. If your app uses
+only other formats (e.g. only `mempack*` from `ActualLab.Serialization.MemoryPack`), disable it to
+drop that keep-code. The `MemoryPackByteSerializer.IsEnabled` switch was removed in v16: MemoryPack
+keep-code now exists only if you reference `ActualLab.Serialization.MemoryPack`.
 
 To disable a switch, add a trimmed `RuntimeHostConfigurationOption` to your `.csproj`:
 
@@ -364,7 +366,7 @@ public void KeepArgumentListArgument<T>()
    Test your application in AOT mode during development.
 
 3. **Serialization**: All serialized types must be annotated with appropriate attributes
-   (`[DynamicallyAccessedMembers]`, `[MemoryPackable]`, etc.)
+   (`[DynamicallyAccessedMembers]`, `[MessagePackObject]`, `[MemoryPackable]` if you use MemoryPack, etc.)
 
 4. **Namespace requirement**: Service types and their implementations must be declared inside
    a namespace for the proxy source generator to produce output.

@@ -9,7 +9,7 @@ namespace ActualLab.Time;
 /// suitable for measuring elapsed time with minimal overhead.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable, MessagePackFormatter(typeof(CpuTimestampMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(CpuTimestampMessagePackFormatter))]
 public readonly partial record struct CpuTimestamp(
     [property: DataMember(Order = 0), Key(0)] long Value
     ) : IComparable<CpuTimestamp>

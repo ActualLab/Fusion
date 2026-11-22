@@ -40,12 +40,12 @@ const EchoServiceDef = defineRpcService('EchoService', {
     getStream: { args: [], returns: RpcType.stream },
 });
 
-describe.each(FORMATS)('RPC result stream-ref resolution [%s] (I9)', (formatKey) => {
+describe.each(FORMATS)('RPC result stream-ref resolution [%s] (I9)', (wireFormatKey) => {
     let pair: TestHubPair;
     let echo: IEchoService;
 
     beforeEach(async () => {
-        pair = createTestHubPair(formatKey);
+        pair = createTestHubPair(wireFormatKey);
         pair.serverHub.addService(EchoServiceDef, {
             echo: (value: unknown) => value,
             // eslint-disable-next-line @typescript-eslint/require-await

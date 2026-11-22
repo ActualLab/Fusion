@@ -9,7 +9,7 @@ namespace ActualLab.Serialization;
 /// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type, bool>? typeFilter = null)
-    : ByteSerializerBase
+    : ByteSerializerBase(serializer.Root)
 {
 #if NET9_0_OR_GREATER
     private static readonly Lock StaticLock = new();
@@ -41,9 +41,9 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
     public IByteSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (_ => true);
 
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public override object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
-        var actualTypeRef = (TypeRef)Serializer.Read(data, typeof(TypeRef), out var typeRefLength)!;
+        var actualTypeRef = (TypeRef)Serializer.ReadUnscoped(data, typeof(TypeRef), out var typeRefLength)!;
         if (actualTypeRef == default) {
             readLength = typeRefLength;
             return null;
@@ -56,21 +56,21 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
             throw Errors.UnsupportedSerializedType(actualType);
 
         var unreadData = data[typeRefLength..];
-        var result = Serializer.Read(unreadData, actualType, out readLength);
+        var result = Serializer.ReadUnscoped(unreadData, actualType, out readLength);
         readLength += typeRefLength;
         return result;
     }
 
-    public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
+    public override void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         if (ReferenceEquals(value, null)) {
-            Serializer.Write(bufferWriter, DefaultTypeRefAsObject, typeof(TypeRef));
+            Serializer.WriteUnscoped(bufferWriter, DefaultTypeRefAsObject, typeof(TypeRef));
             return;
         }
 
         var actualType = value.GetType();
         var actualTypeRef = new TypeRef(actualType).WithoutAssemblyVersions();
-        Serializer.Write(bufferWriter, actualTypeRef, typeof(TypeRef));
-        Serializer.Write(bufferWriter, value, actualType);
+        Serializer.WriteUnscoped(bufferWriter, actualTypeRef, typeof(TypeRef));
+        Serializer.WriteUnscoped(bufferWriter, value, actualType);
     }
 }

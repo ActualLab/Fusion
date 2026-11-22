@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">$(LatestTargetFrameworks)net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion newtonsoft json</PackageTags>
+    <Description>ActualLab.Serialization.NewtonsoftJson - Newtonsoft.Json support for ActualLab.Fusion: <!--
+    -->an ITextSerializer, converters for ActualLab types, and Newtonsoft.Json-based RPC serialization formats.</Description>
+    <RootNamespace>ActualLab.Serialization</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+  </ItemGroup>
+</Project>

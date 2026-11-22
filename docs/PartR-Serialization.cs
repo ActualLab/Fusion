@@ -3,10 +3,12 @@ using System.Text.Json.Serialization;
 using ActualLab.Interception;
 using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
+using ActualLab.Compression;
+using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
-using MemoryPack;
 using MessagePack;
+using Microsoft.Extensions.DependencyInjection;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
@@ -38,7 +40,7 @@ public class MyMessageSerializer(RpcPeer peer) : RpcMessageSerializer(peer)
 // ============================================================================
 
 #region PartRSerialization_FormatStructure
-public sealed class RpcSerializationFormatExample(
+public sealed class RpcWireFormatExample(
     string key,
     Func<ArgumentListSerializer> argumentSerializerFactory,
     Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory)
@@ -50,19 +52,54 @@ public sealed class RpcSerializationFormatExample(
 #endregion
 
 // ============================================================================
+// Default Format
+// ============================================================================
+
+public static class DefaultFormat
+{
+    public static void UseDefault(IServiceCollection services)
+    {
+        #region PartRSerialization_UseDefault
+        // Compact MessagePack with LZ4-compressed server-to-client frames
+        services.AddRpc().ConfigureWireFormats(f => {
+            f.AddLZ4Variants();
+            f.DefaultFormat = f["msgpack6c-lz4"];
+        });
+        #endregion
+    }
+}
+
+// ============================================================================
 // Accessing Formats
 // ============================================================================
 
 public static class AccessingFormats
 {
-    public static void Example()
+    public static void Example(IServiceProvider services)
     {
         #region PartRSerialization_AccessingFormats
-        // All registered formats
-        ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
+        // The formats this container serves
+        var resolver = services.GetRequiredService<RpcWireFormatResolver>();
+        RpcWireFormat defaultFormat = resolver.DefaultFormat;
+        var format = resolver.Get("msgpack6c");
 
-        // Find by key
-        var format = RpcSerializationFormat.All.First(f => f.Key == "mempack6c");
+        // The formats every container starts with (ActualLab.Rpc formats only)
+        ImmutableList<RpcWireFormat> builtIn = RpcDefaultWireFormats.All;
+        #endregion
+    }
+}
+
+// ============================================================================
+// Client-Selectable Formats
+// ============================================================================
+
+public static class ClientSelection
+{
+    public static void Example(IServiceCollection services)
+    {
+        #region PartRSerialization_ClientSelection
+        services.AddRpc().ConfigureWireFormats(f
+            => f.BackendOnlyFormatKeys = f.BackendOnlyFormatKeys.Union(["msgpack5", "msgpack5c"]));
         #endregion
     }
 }
@@ -73,23 +110,51 @@ public static class AccessingFormats
 
 public static class ConfiguringFormats
 {
-    public static void RegisterAdditionalFormat()
+    public static void CustomLz4Format(IServiceCollection services)
     {
-        #region PartRSerialization_RegisterFormat
-        RpcSerializationFormat.All = RpcSerializationFormat.All.Add(
-            new RpcSerializationFormat(
-                "custom",
-                () => new MyArgumentListSerializer(),
-                peer => new MyMessageSerializer(peer)));
+        #region PartRSerialization_CustomLz4Format
+        var lz4 = new RpcCompressionFormat("lz4",
+            static () => new LZ4ByteCompressor(),
+            static () => new LZ4ByteDecompressor(),
+            new RpcCompressionOptions { MinCompressedFrameSize = 1024 });
+        var format = new RpcWireFormat("msgpack6c-lz4-1k",
+            () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
+            peer => new RpcByteMessageSerializerV5Compact(peer),
+            DataFormat.Bytes,
+            lz4, RpcCompressionMode.ServerToClient);
+        services.AddRpc().ConfigureWireFormats(f => f.Add(format));
         #endregion
     }
 
-    public static void RemoveOldFormats()
+    public static void AddFormats(IServiceCollection services)
+    {
+        #region PartRSerialization_AddFormats
+        services.AddRpc().ConfigureWireFormats(f => {
+            f.AddMemoryPack();          // mempack5, mempack5c, mempack6, mempack6c
+            f.AddNewtonsoftJson();      // njson5, njson5np
+            f.AddNerdbankMessagePack(); // nmsgpack6, nmsgpack6c
+            f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full); // "-lz4" and "-lz4f"
+            f.DefaultFormat = f["mempack6c-lz4"];
+        });
+        #endregion
+    }
+
+    public static void RegisterAdditionalFormat(IServiceCollection services)
+    {
+        #region PartRSerialization_RegisterFormat
+        services.AddRpc().ConfigureWireFormats(f => f.Add(
+            new RpcWireFormat(
+                "custom",
+                () => new MyArgumentListSerializer(),
+                peer => new MyMessageSerializer(peer),
+                DataFormat.Bytes)));
+        #endregion
+    }
+
+    public static void RemoveOldFormats(IServiceCollection services)
     {
         #region PartRSerialization_RemoveFormats
-        // To disable older formats for security:
-        RpcSerializationFormat.All = RpcSerializationFormat.All
-            .RemoveAll(f => f.Key.StartsWith("mempack5") || f.Key.StartsWith("msgpack5"));
+        services.AddRpc().ConfigureWireFormats(f => f.Remove("msgpack5", "msgpack5c"));
         #endregion
     }
 }
@@ -102,9 +167,6 @@ public static class ConfiguringFormats
 // The underlying serializers handle polymorphism via union attributes,
 // so we mark this type as RPC-serializable to opt out of TypeRef wrapping.
 [RpcSerializable]
-[MemoryPackable]
-[MemoryPackUnion(0, typeof(ShapeCircle))]
-[MemoryPackUnion(1, typeof(ShapeRect))]
 [MessagePackObject]
 [Union(0, typeof(ShapeCircle))]
 [Union(1, typeof(ShapeRect))]
@@ -112,24 +174,24 @@ public static class ConfiguringFormats
 [JsonDerivedType(typeof(ShapeRect), "rect")]
 public abstract partial class Shape
 {
-    [DataMember, MemoryPackOrder(0), Key(0)]
+    [DataMember, Key(0)]
     public string? Name { get; set; }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MessagePackObject]
 public partial class ShapeCircle : Shape
 {
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember, Key(1)]
     public double Radius { get; set; }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MessagePackObject]
 public partial class ShapeRect : Shape
 {
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember, Key(1)]
     public double Width { get; set; }
 
-    [DataMember, MemoryPackOrder(2), Key(2)]
+    [DataMember, Key(2)]
     public double Height { get; set; }
 }
 #endregion
@@ -145,38 +207,36 @@ public class PartRSerialization : DocPart
         StartSnippetOutput("Reference verification");
 
         // Core types
-        _ = typeof(RpcSerializationFormat);
+        _ = typeof(RpcWireFormat);
         _ = typeof(ArgumentListSerializer);
         _ = typeof(RpcMessageSerializer);
         _ = typeof(RpcPeer);
 
-        // Available formats
-        _ = RpcSerializationFormat.All;
-
-        // Specific formats (verify they exist)
-        var formats = RpcSerializationFormat.All;
+        // Built-in formats
+        var formats = RpcDefaultWireFormats.All;
 
         // Text formats (JSON)
-        var json5 = formats.FirstOrDefault(f => f.Key == "json5");
-        var njson5 = formats.FirstOrDefault(f => f.Key == "njson5");
-
-        // Binary formats (MemoryPack)
-        var mempack6c = formats.FirstOrDefault(f => f.Key == "mempack6c");
-        var mempack6 = formats.FirstOrDefault(f => f.Key == "mempack6");
-        var mempack5c = formats.FirstOrDefault(f => f.Key == "mempack5c");
-        var mempack5 = formats.FirstOrDefault(f => f.Key == "mempack5");
+        var json5 = formats.First(f => f.Key == "json5");
+        var json5np = formats.First(f => f.Key == "json5np");
 
         // Binary formats (MessagePack)
-        var msgpack6c = formats.FirstOrDefault(f => f.Key == "msgpack6c");
-        var msgpack6 = formats.FirstOrDefault(f => f.Key == "msgpack6");
-        var msgpack5c = formats.FirstOrDefault(f => f.Key == "msgpack5c");
-        var msgpack5 = formats.FirstOrDefault(f => f.Key == "msgpack5");
+        var msgpack6c = formats.First(f => f.Key == "msgpack6c");
+        var msgpack6 = formats.First(f => f.Key == "msgpack6");
+        var msgpack5c = formats.First(f => f.Key == "msgpack5c");
+        var msgpack5 = formats.First(f => f.Key == "msgpack5");
+        var msgpack6cLz4 = msgpack6c.WithLZ4(); // LZ4 variants come from f.AddLZ4Variants()
 
-        WriteLine($"Total registered formats: {formats.Count}");
+        // Package-provided formats
+        _ = RpcMemoryPackWireFormats.MemoryPackV6C;
+        _ = RpcNewtonsoftJsonWireFormats.NewtonsoftJsonV5;
+        if (RpcDefaultWireFormats.DefaultFormat.Key != "msgpack6")
+            throw new InvalidOperationException("Unexpected default format.");
+
+        WriteLine($"Built-in formats: {formats.Count}");
         WriteLine("Format keys: " + string.Join(", ", formats.Select(f => f.Key)));
         WriteLine();
 
-        WriteLine("All RPC Serialization Formats references verified successfully!");
+        WriteLine("All RPC Wire Formats references verified successfully!");
         WriteLine();
 
         await Task.CompletedTask;

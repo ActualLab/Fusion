@@ -114,7 +114,7 @@ can't silently break the client's wire method names.
 | **Service interface** | C# interface + proxy generation | `defineComputeService()` or `@rpcService` / `@rpcMethod` decorators |
 | **Cancellation** | `CancellationToken` | `AbortSignal` (via `AsyncContext`) |
 | **Async context** | `ExecutionContext` / `AsyncLocal<T>` | `AsyncContext` &mdash; backed by `AsyncLocalStorage` on Node ≥ 20.16 (flows across `await`), explicit threading in browsers |
-| **Serialization** | MemoryPack / MessagePack / System.Text.Json | JSON (`json5np`) or MessagePack (`msgpack6`/`msgpack6c`); no MemoryPack, no polymorphism |
+| **Serialization** | MessagePack (default), System.Text.Json; MemoryPack, Newtonsoft.Json via packages | JSON (`json5np`) or MessagePack (`msgpack6`/`msgpack6c`); no MemoryPack, no polymorphism |
 | **UI integration** | `ComputedStateComponent<T>` (Blazor) | `useComputedState` hook (React) |
 | **State factory** | `IServiceProvider.StateFactory()` | `new ComputedState(computer, options)` / `new MutableState(initial)` |
 | **Streaming** | `RpcStream<T>` + `IAsyncEnumerable<T>` | `RpcStream<T>` + `AsyncIterable<T>` (`for await...of`) |

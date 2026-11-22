@@ -76,7 +76,7 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
                 return;
             }
 
-            if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
+            if (Hub.WireFormats.GetClientRejectionReason(rpcRef.WireFormat) is { } rejectionReason) {
                 Log.LogWarning("'{PeerRef}': Rejected {Request}: {Reason}",
                     rpcRef, requestDescription, rejectionReason);
                 context.Response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;

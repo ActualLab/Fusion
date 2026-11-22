@@ -12,9 +12,8 @@ namespace ActualLab.Text;
 #pragma warning disable MA0001, MA0021, CA1307, CA1721
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(SymbolMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(SymbolMessagePackFormatter))]
 [JsonConverter(typeof(SymbolJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(SymbolNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SymbolTypeConverter))]
 public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>, IConvertibleTo<string>, ISerializable
 {
@@ -23,25 +22,25 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     private readonly string? _value;
     private readonly int _hashCode;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public string Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _value ?? "";
     }
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public int HashCode {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _hashCode;
     }
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Value.Length == 0;
     }
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     public Symbol(string? value)
     {
         if (ReferenceEquals(value, null) || value.Length == 0)

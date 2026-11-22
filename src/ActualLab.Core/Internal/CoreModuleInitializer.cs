@@ -16,13 +16,6 @@ internal static class CoreModuleInitializer
 {
     static CoreModuleInitializer()
     {
-        // Not a trimming concern, and must run unconditionally: MemoryPack resolves a formatter
-        // by type without touching the type, so SanitizedString<>'s own static constructor can
-        // be too late. Registering the open generic here covers every instantiation.
-#if !NETSTANDARD2_0
-        SanitizedStringMemoryPackFormatter.RegisterGenericType();
-#endif
-
         if (CodeKeeper.AlwaysTrue)
             return;
 
@@ -32,6 +25,32 @@ internal static class CoreModuleInitializer
         CodeKeeper.Keep<TypeDecoratingUniSerializedMessagePackFormatter<TypeSchema.Any, object>>();
         CodeKeeper.Keep<PropertyBagMessagePackFormatter<TypeSchema.Any>>();
         CodeKeeper.Keep<PropertyBagItemMessagePackFormatter<TypeSchema.Any>>();
+        // [MessagePackFormatter(typeof(...))] formatters: MessagePack creates them reflectively, and the attribute
+        // doesn't root their constructors, so NativeAOT trims them (msgpack6 is the default RPC format)
+        CodeKeeper.Keep<ActualLab.Reflection.Internal.TypeRefMessagePackFormatter>();
+        CodeKeeper.Keep<ActualLab.Text.Internal.SymbolMessagePackFormatter>();
+        CodeKeeper.Keep<ActualLab.Text.Internal.ByteStringMessagePackFormatter>();
+        CodeKeeper.Keep<ActualLab.Time.Internal.MomentMessagePackFormatter>();
+        CodeKeeper.Keep<ActualLab.Time.Internal.CpuTimestampMessagePackFormatter>();
+        CodeKeeper.Keep<ActualLab.IO.Internal.FilePathMessagePackFormatter>();
+        CodeKeeper.Keep<HostIdMessagePackFormatter>();
+        CodeKeeper.Keep<JsonStringMessagePackFormatter>();
+        CodeKeeper.Keep<MessagePackDataMessagePackFormatter>();
+        CodeKeeper.Keep(typeof(OptionMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(ResultMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(BoxMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(MutableBoxMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(PropertyBagMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(PropertyBagItemMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(TypeDecoratingUniSerializedMessagePackFormatter<,>));
+        CodeKeeper.Keep(typeof(ImmutableBimapMessagePackFormatter<,>));
+        CodeKeeper.Keep(typeof(SanitizedStringMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiOptionMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiNullableMessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiNullable8MessagePackFormatter<>));
+        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiArrayMessagePackFormatter<>));
+        // Every RPC handshake carries it, and reflection-based System.Text.Json (json5) needs its [JsonConstructor]
+        CodeKeeper.Keep<VersionSet>();
 
         CodeKeeper.KeepSerializable<Unit>();
         CodeKeeper.KeepSerializable<PropertyBag>();

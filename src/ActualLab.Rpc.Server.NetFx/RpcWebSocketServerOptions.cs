@@ -13,7 +13,7 @@ public record RpcWebSocketServerOptions
     public bool ExposeBackend { get; init; } = false;
     public string RequestPath { get; init; } = RpcWebSocketClientOptions.Default.RequestPath;
     public string BackendRequestPath { get; init; } = RpcWebSocketClientOptions.Default.BackendRequestPath;
-    public string SerializationFormatParameterName { get; init; } = RpcWebSocketClientOptions.Default.SerializationFormatParameterName;
+    public string WireFormatParameterName { get; init; } = RpcWebSocketClientOptions.Default.WireFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcWebSocketClientOptions.Default.ClientIdParameterName;
     public string ReconnectProofCounterParameterName { get; init; }
         = RpcWebSocketClientOptions.Default.ReconnectProofCounterParameterName;

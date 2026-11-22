@@ -59,7 +59,7 @@ public class RpcErrorResponseTest(ITestOutputHelper @out) : RpcLocalTestBase(@ou
     [InlineData(typeof(RpcReconnectFailedException))]
     [InlineData(typeof(RpcStreamNotFoundException))]
     [InlineData(typeof(RpcResourceLimitExceededException))]
-    [InlineData(typeof(RpcSerializationFormatException))]
+    [InlineData(typeof(RpcWireFormatException))]
     [InlineData(typeof(InternalError))]
     [InlineData(typeof(TransientException))]
     [InlineData(typeof(TerminalException))]

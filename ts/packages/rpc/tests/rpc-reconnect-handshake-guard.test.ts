@@ -5,7 +5,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
     RpcHub,
     RpcWebSocketConnection,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcSystemCalls,
     type RpcServerPeer,
 } from '../src/index.js';
@@ -20,17 +20,17 @@ interface Harness {
 
 async function createHarness(ownHandshakeIndex: number): Promise<Harness> {
     const hub = new RpcHub('server-hub');
-    const format = RpcSerializationFormat.get('json5np');
+    const wireFormat = RpcWireFormat.get('json5np');
     const [clientWs, serverWs] = createMockWsPair();
-    const conn = new RpcWebSocketConnection(serverWs, format.isBinary, format, hub.registry);
-    const clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, hub.registry);
+    const conn = new RpcWebSocketConnection(serverWs, wireFormat.isBinary, wireFormat, hub.registry);
+    const clientConn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, hub.registry);
     const peer: RpcServerPeer = hub.getServerPeer('server://test');
-    peer.serializationFormat = format;
+    peer.wireFormat = wireFormat;
     peer.accept(conn);
     // The peer's $sys.Reconnect replies are gated on reaching `Connected`, so the
     // handshake has to actually happen. It bumps `_ownHandshakeIndex`, hence the
     // override below it rather than above.
-    hub.systemCallSender.handshake(clientConn, format, 'client-peer', hub.hubId, 1);
+    hub.systemCallSender.handshake(clientConn, wireFormat, 'client-peer', hub.hubId, 1);
     await delay(5);
     (peer as unknown as { _ownHandshakeIndex: number })._ownHandshakeIndex = ownHandshakeIndex;
 

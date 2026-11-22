@@ -14,15 +14,15 @@ namespace ActualLab.CommandR.Operations;
 /// <c>DbLogEntrySerializer.Format</c> selects - a binary one decorates only the root type, so a
 /// nested <see cref="ICommand"/> has to carry its own.
 /// </remarks>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[DataContract, MessagePackObject]
+[method: JsonConstructor, SerializationConstructor]
 public sealed partial record OperationCompletion(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [property: DataMember(Order = 0), Key(0)]
     TypeDecoratingUniSerialized<TypeSchema.Any, ICommand?> SerializedCommand,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] ServiceCall[] InvalidationCalls
+    [property: DataMember(Order = 1), Key(1)] ServiceCall[] InvalidationCalls
 ) : ICommand<Unit>, IBackendCommand
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public ICommand? Command => SerializedCommand.Value;
 
     // Factories rather than constructors: ICommand? converts implicitly to

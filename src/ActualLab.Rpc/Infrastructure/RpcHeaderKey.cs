@@ -12,19 +12,19 @@ namespace ActualLab.Rpc.Infrastructure;
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNone<RpcHeaderKey>
 {
     public static RpcHeaderKey None => default;
     private readonly string _name;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public string Name => _name ?? "";
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public readonly ReadOnlyMemory<byte> Utf8Name;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public bool IsNone {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _name.IsNullOrEmpty();
@@ -47,7 +47,7 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
         _name = utf8Name.ToStringAsUtf8();
     }
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     public RpcHeaderKey(ReadOnlyMemory<byte> utf8Name)
     {
         if (WellKnownRpcHeaders.ByUtf8Name.TryGetValue(utf8Name.AsByteString(), out var key)) {

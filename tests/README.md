@@ -30,10 +30,10 @@ Orthogonal to groups:
 
 | Variable | Effect |
 |---|---|
-| `ActualLab_FullTestRun=1` | Runs `FullRunOnly*` tests (benchmarks, perf) and expands the RPC serialization format matrix to all formats |
+| `ActualLab_FullTestRun=1` | Runs `FullRunOnly*` tests (benchmarks, perf) and expands the RPC wire format matrix to all formats |
 | `ActualLab_Tests_DbTypes=Sqlite,PostgreSql,...` | Explicit list of enabled `FusionTestDbType` values; disables port probing |
 
-### RPC serialization format matrix
+### RPC wire format matrix
 
 Format-matrix theories (see `RpcTestFormats`) run a reduced core set by default:
 `json5`, `njson5`, `json5np`, `mempack6c`, `msgpack6c`, `nmsgpack6c` — one per serializer family.

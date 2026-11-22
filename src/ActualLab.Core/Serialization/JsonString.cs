@@ -8,11 +8,10 @@ namespace ActualLab.Serialization;
 /// <summary>
 /// A string wrapper representing a raw JSON value with proper serialization support.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(JsonStringMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(JsonStringMessagePackFormatter))]
 [JsonConverter(typeof(JsonStringJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(JsonStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(JsonStringTypeConverter))]
-[method: MemoryPackConstructor, SerializationConstructor] // Has JsonConverters
+[method: SerializationConstructor] // Has JsonConverters
 public partial class JsonString(string value) :
     IEquatable<JsonString>,
     IComparable<JsonString>,
@@ -21,7 +20,7 @@ public partial class JsonString(string value) :
     public static readonly JsonString? Null = null;
     public static readonly JsonString Empty= new("");
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public string Value {
         get => field ?? string.Empty;
     } = value;

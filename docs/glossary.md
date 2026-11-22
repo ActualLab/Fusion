@@ -466,5 +466,6 @@ Fusion uses that classification to choose error invalidation delays, reconnectio
 
 ###### Unified serialization
 
-ActualLab's common text and byte serializer abstractions and wrappers over System.Text.Json,
-Newtonsoft.Json, MemoryPack, and MessagePack. See [Unified Serialization](PartS.md).
+ActualLab's common text and byte serializer abstractions and wrappers over System.Text.Json and
+MessagePack, plus Newtonsoft.Json and MemoryPack via the `ActualLab.Serialization.NewtonsoftJson` and
+`ActualLab.Serialization.MemoryPack` packages. See [Unified Serialization](PartS.md).

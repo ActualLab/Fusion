@@ -1,3 +1,8 @@
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#else
+using System.Collections.ObjectModel;
+#endif
 using System.ComponentModel;
 using System.Text.RegularExpressions;
 using ActualLab.Internal;
@@ -11,9 +16,8 @@ namespace ActualLab.Reflection;
 /// A serializable reference to a <see cref="Type"/> by its assembly-qualified name.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(TypeRefMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(TypeRefMessagePackFormatter))]
 [JsonConverter(typeof(TypeRefJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(TypeRefNewtonsoftJsonConverter))]
 [TypeConverter(typeof(TypeRefTypeConverter))]
 public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRef>, ISerializable
 {
@@ -60,10 +64,37 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     }
     public static int ResolveCacheSize => _resolveCache.Count;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter, Key(0)]
+#if NET8_0_OR_GREATER
+    private static FrozenDictionary<string, string> _movedTypes
+#else
+    private static ReadOnlyDictionary<string, string> _movedTypes
+#endif
+        = ToMovedTypes(new Dictionary<string, string>(StringComparer.Ordinal) {
+            ["ActualLab.Serialization.NewtonsoftJsonSerialized`1"] = "ActualLab.Serialization.NewtonsoftJson",
+            ["ActualLab.Serialization.TypeDecoratingNewtonsoftJsonSerialized`2"] = "ActualLab.Serialization.NewtonsoftJson",
+            ["ActualLab.Serialization.MemoryPackSerialized`1"] = "ActualLab.Serialization.MemoryPack",
+            ["ActualLab.Serialization.TypeDecoratingMemoryPackSerialized`2"] = "ActualLab.Serialization.MemoryPack",
+            ["ActualLab.Collections.OptionSet"] = "ActualLab.Core.Legacy",
+            ["ActualLab.Collections.ImmutableOptionSet"] = "ActualLab.Core.Legacy",
+        });
+
+    // Top-level type full name (with the generic arity suffix, e.g. "Ns.Foo`1") -> the assembly it moved to;
+    // nested types follow their declaring type's entry. Resolves type names written before the move:
+    // a type forwarder can't point to a dependent assembly.
+    public static IReadOnlyDictionary<string, string> MovedTypes {
+        get => _movedTypes;
+        set {
+            var movedTypes = ToMovedTypes(value);
+            lock (StaticLock)
+                // Release, so the new dictionary is fully constructed before the reference is visible
+                Volatile.Write(ref _movedTypes, movedTypes);
+        }
+    }
+
+    [DataMember(Order = 0), Key(0)]
     public string AssemblyQualifiedName => field ?? "";
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public string TypeName {
         get {
             var name = AssemblyQualifiedName;
@@ -74,7 +105,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     public TypeRef(Type type)
         : this(type.AssemblyQualifiedName!) { }
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public TypeRef(string assemblyQualifiedName)
         => AssemblyQualifiedName = assemblyQualifiedName;
 
@@ -220,6 +251,24 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     // Private methods
 
+    // An atomic read-modify-write of MovedTypes, so concurrent registrations don't lose each other
+    public static void AddMovedType(string typeName, string assemblyName)
+    {
+        lock (StaticLock) {
+            var movedTypes = _movedTypes.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+            movedTypes[typeName] = assemblyName;
+            Volatile.Write(ref _movedTypes, ToMovedTypes(movedTypes));
+        }
+    }
+
+#if NET8_0_OR_GREATER
+    private static FrozenDictionary<string, string> ToMovedTypes(IReadOnlyDictionary<string, string> movedTypes)
+        => movedTypes.ToFrozenDictionary(StringComparer.Ordinal);
+#else
+    private static ReadOnlyDictionary<string, string> ToMovedTypes(IReadOnlyDictionary<string, string> movedTypes)
+        => new(movedTypes.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal));
+#endif
+
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Type? Resolve(string assemblyQualifiedName)
     {
@@ -229,9 +278,9 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
         // Failures are never cached: an assembly loaded later must still be resolvable
 #if NETSTANDARD2_0
-        var type = Type.GetType(assemblyQualifiedName, ResolveAssembly, null, false, false);
+        var type = Type.GetType(assemblyQualifiedName, ResolveAssembly, ResolveType, false, false);
 #else
-        var type = Type.GetType(assemblyQualifiedName, false, false);
+        var type = Type.GetType(assemblyQualifiedName, null, ResolveType, false, false);
 #endif
         if (type is null)
             return null;
@@ -244,6 +293,24 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
         resolveCache.TryAdd(assemblyQualifiedName, type);
         return type;
+    }
+
+    // Payloads written before v16 name these types with their old assembly (ActualLab.Core), and a type
+    // forwarder can't point from ActualLab.Core to the packages depending on it
+    private static Type? ResolveType(Assembly? assembly, string typeName, bool ignoreCase)
+    {
+        var type = assembly is null
+            ? Type.GetType(typeName, false, ignoreCase)
+            : assembly.GetType(typeName, false, ignoreCase);
+        if (type is not null || !_movedTypes.TryGetValue(typeName, out var newAssemblyName))
+            return type;
+
+        try {
+            return Assembly.Load(new AssemblyName(newAssemblyName)).GetType(typeName, false, ignoreCase);
+        }
+        catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException) {
+            return null;
+        }
     }
 
     private static string GetCanonicalName(Type type)

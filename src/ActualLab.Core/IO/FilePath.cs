@@ -10,9 +10,8 @@ namespace ActualLab.IO;
 /// with operators for joining and combining paths.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(FilePathMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(FilePathMessagePackFormatter))]
 [JsonConverter(typeof(FilePathJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(FilePathNewtonsoftJsonConverter))]
 [TypeConverter(typeof(FilePathTypeConverter))]
 public readonly partial struct FilePath : IEquatable<FilePath>, IComparable<FilePath>
 {
@@ -20,37 +19,37 @@ public readonly partial struct FilePath : IEquatable<FilePath>, IComparable<File
 
     private readonly string? _value;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public string Value => _value ?? "";
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public int Length => Value.Length;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public bool IsEmpty => _value.IsNullOrEmpty();
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
 #if !NETSTANDARD2_0
     public bool IsFullyQualified => Path.IsPathFullyQualified(Value);
 #else
     public bool IsFullyQualified => PathCompatExt.IsPathFullyQualified(Value);
 #endif
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public bool IsRooted => Path.IsPathRooted(Value);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public bool HasExtension => Path.HasExtension(Value);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public string Extension => Path.GetExtension(Value);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public FilePath DirectoryPath => Path.GetDirectoryName(Value);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public FilePath FileName => Path.GetFileName(Value);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public FilePath FileNameWithoutExtension => Path.GetFileNameWithoutExtension(Value);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember]
     public FilePath FullPath => Path.GetFullPath(Value);
 
     public static FilePath New(string? value) => new(value ?? "");
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
     public FilePath(string? value)
         => _value = value;

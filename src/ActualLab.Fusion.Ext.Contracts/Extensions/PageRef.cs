@@ -24,10 +24,10 @@ public abstract record PageRef : IHasToStringProducingJson
 /// <summary>
 /// A typed cursor-based pagination reference with a count and an optional "after" key.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public partial record PageRef<TKey>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Count,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] Option<TKey> After = default
+    [property: DataMember(Order = 0)] int Count,
+    [property: DataMember(Order = 1)] Option<TKey> After = default
     ) : PageRef
 {
     public override string ToString()

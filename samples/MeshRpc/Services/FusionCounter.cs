@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.Serialization;
 using ActualLab.Fusion.Operations.Internal;
-using MemoryPack;
 using MessagePack;
 using static Samples.MeshRpc.HostFactorySettings;
 
@@ -15,13 +14,13 @@ public interface IFusionCounter : IComputeService
     public Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record FusionCounter_Increment(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key
+    [property: DataMember(Order = 0)] int Key
 ) : ICommand<CounterWithOrigin>, IHasShardRef
 {
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember]
     public ShardRef ShardRef => ShardRef.New(Key);
 }
 

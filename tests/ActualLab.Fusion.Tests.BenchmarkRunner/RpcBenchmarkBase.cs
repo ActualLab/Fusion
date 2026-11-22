@@ -29,7 +29,7 @@ public abstract class RpcBenchmarkBase
         var hub = _services.RpcHub();
         var rpcRef = RpcRef.NewServer(
             "benchmark-peer",
-            BenchmarkSettings.RpcSerializationFormat,
+            BenchmarkSettings.RpcWireFormat,
             isBackend: false);
         Peer = new BenchmarkRpcPeer(hub, rpcRef.Route);
         GetMethodDef = hub.ServiceRegistry[typeof(IRpcBenchmarkService)].Methods

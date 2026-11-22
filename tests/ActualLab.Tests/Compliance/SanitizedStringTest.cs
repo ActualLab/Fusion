@@ -125,7 +125,11 @@ public class SanitizedStringTest
     // Private methods
 
     private static IByteSerializer[] ByteSerializers()
+#if NETFRAMEWORK
+        => [MessagePackByteSerializer.Default];
+#else
         => [MemoryPackByteSerializer.Default, MessagePackByteSerializer.Default];
+#endif
 
     private static ITextSerializer[] TextSerializers()
         => [SystemJsonSerializer.Default, NewtonsoftJsonSerializer.Default];

@@ -13,7 +13,7 @@ namespace ActualLab.Tests.Serialization;
 /// Each test pair drives the bytes directly: <c>MessagePack-CSharp bytes → Nerdbank read</c>
 /// and <c>Nerdbank bytes → MessagePack-CSharp read</c>. Value-equality is asserted on both
 /// sides. Byte-equality is asserted where both serializers happen to produce the same
-/// canonical wire (ApiMap empty, ImmutableOptionSet empty); otherwise only the semantic
+/// canonical wire (ApiMap empty); otherwise only the semantic
 /// round-trip is checked.
 /// </para>
 /// <para>
@@ -55,30 +55,6 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         };
         AssertBytesCrossDecode(map, (a, b) => a.Should().BeEquivalentTo(b));
     }
-
-    // --- ImmutableOptionSet -------------------------------------------------------------
-
-#pragma warning disable CS0618 // ImmutableOptionSet is obsolete, but its wire format is still tested
-
-    [Fact]
-    public void ImmutableOptionSet_Empty_CrossCompat()
-    {
-        AssertBytesCrossDecode(
-            default(ImmutableOptionSet),
-            (a, b) => a.Items.IsEmpty.Should().BeTrue());
-    }
-
-    [Fact]
-    public void ImmutableOptionSet_Populated_CrossCompat()
-    {
-        var s = new ImmutableOptionSet()
-            .Set(42)
-            .Set("hello")
-            .Set((1, "tag"));
-        AssertBytesCrossDecode(s, (a, b) => a.Items.Should().BeEquivalentTo(b.Items));
-    }
-
-#pragma warning restore CS0618
 
     // --- PropertyBag --------------------------------------------------------------------
     //

@@ -12,22 +12,28 @@ public sealed class CastingTextSerializer<T>(
 {
     public ITextSerializer UntypedSerializer { get; } = untypedSerializer;
     public Type SerializedType { get; } = serializedType;
+    public ITextSerializer Root { get; } = untypedSerializer.Root;
+    IByteSerializer IByteSerializer<T>.Root => Root;
     public bool PreferStringApi => UntypedSerializer.PreferStringApi;
 
-    public T Read(string data)
-        => (T) UntypedSerializer.Read(data, SerializedType)!;
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
-        => (T) UntypedSerializer.Read(data, SerializedType, out readLength)!;
-    public T Read(ReadOnlyMemory<char> data)
-        => (T) UntypedSerializer.Read(data, SerializedType)!;
+    public T ReadUnscoped(string data)
+        => (T)UntypedSerializer.ReadUnscoped(data, SerializedType)!;
 
-    public string Write(T value)
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength)
+        => (T)UntypedSerializer.ReadUnscoped(data, SerializedType, out readLength)!;
+
+    public T ReadUnscoped(ReadOnlyMemory<char> data)
+        => (T)UntypedSerializer.ReadUnscoped(data, SerializedType)!;
+
+    public string WriteUnscoped(T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
-        => UntypedSerializer.Write(value, SerializedType);
-    public void Write(IBufferWriter<byte> bufferWriter, T value)
+        => UntypedSerializer.WriteUnscoped(value, SerializedType);
+
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
-        => UntypedSerializer.Write(bufferWriter, value, SerializedType);
-    public void Write(TextWriter textWriter, T value)
+        => UntypedSerializer.WriteUnscoped(bufferWriter, value, SerializedType);
+
+    public void WriteUnscoped(TextWriter textWriter, T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
-        => UntypedSerializer.Write(textWriter, value, SerializedType);
+        => UntypedSerializer.WriteUnscoped(textWriter, value, SerializedType);
 }

@@ -7,7 +7,7 @@ import {
     parseStreamRef,
     createMessageChannelPair,
     RpcWebSocketConnection,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcSystemCalls,
 } from '../src/index.js';
 import type { RpcServerPeer } from '../src/index.js';
@@ -135,10 +135,10 @@ function createRealTimeTestSetup(): RealTimeTestSetup {
 
     // Use WebSocket mock pair with default format.
     // The mock WS delivers via queueMicrotask, giving us async ACK delivery.
-    const format = RpcSerializationFormat.get('json5np');
+    const wireFormat = RpcWireFormat.get('json5np');
     const [clientWs, serverWs] = createMockWsPair();
-    const clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, clientHub.registry);
-    const serverConn = new RpcWebSocketConnection(serverWs, format.isBinary, format, serverHub.registry);
+    const clientConn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
+    const serverConn = new RpcWebSocketConnection(serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
 
     const clientPeer = new RpcClientPeer(clientHub, 'ws://test', 'json5np');
     clientPeer.connectWith(clientConn);

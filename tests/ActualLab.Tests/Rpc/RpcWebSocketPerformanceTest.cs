@@ -9,7 +9,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     {
         ExposeBackend = true;
         RpcFrameDelayerFactory = null;
-        SerializationFormat = "msgpack6c";
+        WireFormat = "msgpack6c";
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
@@ -73,9 +73,9 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     [InlineData(30_000, "njson5")]
     [InlineData(30_000, "mempack5")]
     [InlineData(30_000, "msgpack5")]
-    public async Task PerformanceTest(int iterationCount, string? serializationFormat = null)
+    public async Task PerformanceTest(int iterationCount, string? wireFormat = null)
     {
-        SerializationFormat = serializationFormat ?? SerializationFormat;
+        WireFormat = wireFormat ?? WireFormat;
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 

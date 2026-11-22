@@ -99,9 +99,10 @@ public class SystemJsonSerializer : TextSerializerBase
 
     // Read
 
-    public override object? Read(string data, Type type)
+    public override object? ReadUnscoped(string data, Type type)
         => JsonSerializer.Deserialize(data, type, Options);
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+
+    public override object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var reader = new Utf8JsonReader(data.Span);
         var result = JsonSerializer.Deserialize(ref reader, type, Options);
@@ -109,21 +110,21 @@ public class SystemJsonSerializer : TextSerializerBase
         return result;
     }
 
-    public override object? Read(ReadOnlyMemory<char> data, Type type)
+    public override object? ReadUnscoped(ReadOnlyMemory<char> data, Type type)
         => JsonSerializer.Deserialize(data.Span, type, Options);
 
     // Write
 
-    public override string Write(object? value, Type type)
+    public override string WriteUnscoped(object? value, Type type)
         => JsonSerializer.Serialize(value, type, Options);
 
-    public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
+    public override void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         var utf8JsonWriter = new Utf8JsonWriter(bufferWriter);
         JsonSerializer.Serialize(utf8JsonWriter, value, type, Options);
     }
 
-    public override void Write(TextWriter textWriter, object? value, Type type)
+    public override void WriteUnscoped(TextWriter textWriter, object? value, Type type)
     {
         var result = JsonSerializer.Serialize(value, type, Options);
         textWriter.Write(result);

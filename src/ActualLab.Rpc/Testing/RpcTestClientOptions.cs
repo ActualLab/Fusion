@@ -3,13 +3,13 @@ using ActualLab.Channels;
 namespace ActualLab.Rpc.Testing;
 
 /// <summary>
-/// Configuration options for <see cref="RpcTestClient"/>, including serialization format and channel settings.
+/// Configuration options for <see cref="RpcTestClient"/>, including wire format and channel settings.
 /// </summary>
 public record RpcTestClientOptions
 {
     public static RpcTestClientOptions Default { get; set; } = new();
 
-    public string SerializationFormatKey { get; init; } = "";
+    public string WireFormatKey { get; init; } = "";
     public ChannelOptions ChannelOptions { get; init; } = new BoundedChannelOptions(500) {
         FullMode = BoundedChannelFullMode.Wait,
         SingleReader = true,

@@ -1,5 +1,3 @@
-using Newtonsoft.Json.Serialization;
-
 namespace ActualLab.Reflection;
 
 /// <summary>
@@ -7,15 +5,9 @@ namespace ActualLab.Reflection;
 /// </summary>
 public static class TypeNameHelpers
 {
-    public static string GetAssemblyQualifiedName(this Type type, bool fullName = true, ISerializationBinder? binder = null)
+    public static string GetAssemblyQualifiedName(this Type type, bool fullName = true)
     {
-        string aqn;
-        if (binder is null)
-            aqn = type.AssemblyQualifiedName!;
-        else {
-            binder.BindToName(type, out string? assemblyName, out string? typeName);
-            aqn = typeName + (assemblyName is null ? "" : ", " + assemblyName);
-        }
+        var aqn = type.AssemblyQualifiedName!;
         return fullName ? aqn : RemoveAssemblyDetails(aqn);
     }
 

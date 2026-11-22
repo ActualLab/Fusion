@@ -32,7 +32,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task BasicTypes(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("basic-types", format);
     }
@@ -43,7 +43,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task ErrorPropagation(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("error-propagation", format);
     }
@@ -54,7 +54,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task OverloadResolution(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("overload-resolution", format);
     }
@@ -66,7 +66,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task ComputeInvalidation(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("compute-invalidation", format);
     }
@@ -77,7 +77,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task StreamNoReconnect(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("stream-no-reconnect", format);
     }
@@ -88,7 +88,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task StreamUnwritableItem(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("stream-unwritable-item", format);
     }
@@ -99,7 +99,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task AutoReconnection(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("auto-reconnect", format);
     }
@@ -116,7 +116,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("msgpack6c")]
     public async Task ReconnectNoDuplicate(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await using var _ = await WebHost.Serve();
         await RunScenario("reconnect-no-duplicate", format, TimeSpan.FromSeconds(20));
     }
@@ -124,7 +124,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task ReconnectionTorture()
     {
-        SerializationFormat = "json5";
+        WireFormat = "json5";
         await using var _ = await WebHost.Serve();
         await RunScenario("reconnection-torture", "json5", TimeSpan.FromSeconds(60));
     }
@@ -144,7 +144,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("R3")]
     public async Task ReconnectMatrix(string cell)
     {
-        SerializationFormat = "json5";
+        WireFormat = "json5";
         await using var _ = await WebHost.Serve();
         await RunScenario($"reconnect-matrix:{cell}", "json5", TimeSpan.FromSeconds(30));
     }
@@ -152,7 +152,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task ServerRestart()
     {
-        SerializationFormat = "json5";
+        WireFormat = "json5";
         ServerControlService.Reset();
 
         var serving = await WebHost.Serve();

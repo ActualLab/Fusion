@@ -89,6 +89,7 @@ public class TypeEvolutionTester<TOld, TNew>
 
     public void CheckMemoryPackByteSerializer(TOld value, ITestOutputHelper? output = null)
     {
+#if !NETFRAMEWORK // MemoryPack doesn't run on .NET Framework
         var s = new MemoryPackByteSerializer();
         using var buffer = s.Write(value, typeof(TOld));
         var bytes = buffer.WrittenMemory.ToArray();
@@ -100,5 +101,6 @@ public class TypeEvolutionTester<TOld, TNew>
         AssertEqual(value, v0);
         var v1 = (TNew)s.Read(bytes.AsMemory(readLength), typeof(TNew), out _)!;
         AssertEqual(value, v1);
+#endif
     }
 }

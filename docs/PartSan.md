@@ -27,7 +27,7 @@ opens around every log call:
 public sealed partial record ApiCredentials(
     [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string UserId,
     [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
-    [property: MemoryPackAllowSerialize] // MemoryPack-only: it can't see the registered formatter
+    [property: MemoryPackAllowSerialize] // MemoryPack-only: its formatter is registered at runtime
     SanitizedString<Sanitizers.PrefixAndLengthHint> ApiKey
 );
 ```
@@ -85,10 +85,10 @@ what a plain `string` member produces:
 | Format | Converter |
 |--------|-----------|
 | System.Text.Json | `SanitizedStringJsonConverter` |
-| Newtonsoft.Json | `SanitizedStringNewtonsoftJsonConverter` |
-| MemoryPack | `SanitizedStringMemoryPackFormatter` |
+| Newtonsoft.Json | `SanitizedStringNewtonsoftJsonConverter` (`ActualLab.Serialization.NewtonsoftJson`) |
+| MemoryPack | `SanitizedStringMemoryPackFormatter` (`ActualLab.Serialization.MemoryPack`) |
 | MessagePack | `SanitizedStringMessagePackFormatter<>` |
-| Nerdbank.MessagePack | `SanitizedStringNerdbankConverter<>` |
+| Nerdbank.MessagePack | `SanitizedStringNerdbankConverter<>` (`ActualLab.Serialization.NerdbankMessagePack`) |
 | `TypeConverter` (config binding, ASP.NET model binding, …) | `SanitizedStringTypeConverter` |
 
 So the JSON for the record above still contains the key:

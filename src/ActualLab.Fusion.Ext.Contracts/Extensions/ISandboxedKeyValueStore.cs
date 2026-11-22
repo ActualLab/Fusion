@@ -29,19 +29,19 @@ public interface ISandboxedKeyValueStore : IComputeService
 /// <summary>
 /// Command to set one or more key-value entries in the <see cref="ISandboxedKeyValueStore"/>.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record SandboxedKeyValueStore_Set(
-    [property: DataMember, MemoryPackOrder(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1)] (string Key, string Value, Moment? ExpiresAt)[] Items
+    [property: DataMember] Session Session,
+    [property: DataMember] (string Key, string Value, Moment? ExpiresAt)[] Items
 ) : ISessionCommand<Unit>;
 
 /// <summary>
 /// Command to remove one or more keys from the <see cref="ISandboxedKeyValueStore"/>.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record SandboxedKeyValueStore_Remove(
-    [property: DataMember, MemoryPackOrder(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1)] string[] Keys
+    [property: DataMember] Session Session,
+    [property: DataMember] string[] Keys
 ) : ISessionCommand<Unit>;

@@ -292,4 +292,7 @@ All time types support multiple serialization formats:
 | `Moment` | `long` (EpochOffsetTicks) |
 | `CpuTimestamp` | `long` (Value) |
 
-Attributes applied: `[DataContract]`, `[MemoryPackable]`, `[MessagePackObject]`, plus JSON converters.
+Attributes applied: `[DataContract]` and `[MessagePackFormatter]`, plus System.Text.Json converters.
+Newtonsoft.Json and MemoryPack support comes from the `ActualLab.Serialization.NewtonsoftJson` and
+`ActualLab.Serialization.MemoryPack` packages. Both types are unmanaged structs, so a
+`[MemoryPackable]` type with members of these types needs no `[MemoryPackAllowSerialize]`.

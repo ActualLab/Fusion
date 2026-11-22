@@ -23,7 +23,7 @@ public partial class RpcRef : IEquatable<RpcRef>
     public bool IsServer { get; init; }
     public bool IsBackend { get; init; }
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
-    public string SerializationFormat { get; init; } = "";
+    public string WireFormat { get; init; } = "";
     public string HostInfo { get; init; } = "";
 
     // Properties that require initialization

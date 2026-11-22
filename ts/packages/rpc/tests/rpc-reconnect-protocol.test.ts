@@ -54,7 +54,7 @@ const NoResendServiceDef = defineRpcService('NoResendService', {
     },
 });
 
-describe.each(FORMATS)('RPC $sys.Reconnect protocol [%s]', (formatKey) => {
+describe.each(FORMATS)('RPC $sys.Reconnect protocol [%s]', (wireFormatKey) => {
     let serverHub: RpcHub;
     let clientHub: RpcHub;
     let conn: RpcTestConnection;
@@ -73,10 +73,10 @@ describe.each(FORMATS)('RPC $sys.Reconnect protocol [%s]', (formatKey) => {
             },
         });
 
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', formatKey);
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', wireFormatKey);
         clientHub.addPeer(clientPeer);
 
-        conn = new RpcTestConnection(clientHub, serverHub, clientPeer, formatKey);
+        conn = new RpcTestConnection(clientHub, serverHub, clientPeer, wireFormatKey);
         await conn.connect();
     });
 

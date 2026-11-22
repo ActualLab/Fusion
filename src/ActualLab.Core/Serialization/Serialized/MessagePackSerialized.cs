@@ -19,8 +19,7 @@ public static class MessagePackSerialized
 /// <summary>
 /// A <see cref="ByteSerialized{T}"/> variant that uses <see cref="MessagePackByteSerializer"/> for serialization.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public partial class MessagePackSerialized<T> : ByteSerialized<T>
 {
     private static IByteSerializer<T>? _serializer;

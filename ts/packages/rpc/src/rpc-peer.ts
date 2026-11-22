@@ -63,7 +63,7 @@
 //     handleSystemCall or RpcServiceHost.dispatch.
 //   - RpcRef / RpcRoute / routing — .NET peers are bound to an RpcRoute (one route
 //     generation of a stable RpcRef, which encodes client/server, versions,
-//     serialization format).  TS peers are keyed by string ref (URL for clients,
+//     wire format).  TS peers are keyed by string ref (URL for clients,
 //     "server://{uuid}" for servers).
 //   - StopMode / ComputeAutoStopMode — controls behavior of inbound calls when
 //     peer stops (cancel vs keep-incomplete).  TS has no stop mode.
@@ -102,7 +102,7 @@ import type { RpcHub } from './rpc-hub.js';
 import { RpcRemoteObjectTracker } from './rpc-remote-object-tracker.js';
 import { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
 import { RpcStream } from './rpc-stream.js';
-import { RpcSerializationFormat, RpcSerializationFormatResolver } from './rpc-serialization-format.js';
+import { RpcWireFormat, RpcWireFormatResolver } from './rpc-wire-format.js';
 import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
 import { base64Decode, base64Encode, base64UrlEncode } from './base64.js';
 import {
@@ -120,7 +120,7 @@ function yieldToEventLoop(): Promise<void> {
     return new Promise<void>(resolve => setTimeout(resolve, 0));
 }
 
-/** WebSocket close code sent by the server when the client's serialization format is unsupported. */
+/** WebSocket close code sent by the server when the client's wire format is unsupported. */
 
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
 
@@ -135,17 +135,17 @@ export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string | Promise
 
 /** Default connection URL provider — sets `clientId` and `f` query parameters,
  *  replacing any existing values to keep the wire format consistent with the
- *  peer's actual `serializationFormat`. Adds the reconnect proof (`c` + `p`)
+ *  peer's actual `wireFormat`. Adds the reconnect proof (`c` + `p`)
  *  once the peer holds a server-issued secret. */
 export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = async peer => {
-    const formatKey = peer.serializationFormat.key;
+    const wireFormatKey = peer.wireFormat.key;
     // Neither value needs percent-encoding: `c` is decimal digits and `p` is
     // base64url, and `URLSearchParams` encodes neither `-` nor `_`.
     const proof = await peer.computeReconnectProof();
     try {
         const url = new URL(peer.ref);
         url.searchParams.set('clientId', peer.clientId);
-        url.searchParams.set('f', formatKey);
+        url.searchParams.set('f', wireFormatKey);
         if (proof !== undefined) {
             url.searchParams.set('c', proof.counter);
             url.searchParams.set('p', proof.proof);
@@ -154,7 +154,7 @@ export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = async peer
     } catch {
         // Fallback for non-URL refs (tests/harnesses that pass "ws://test" etc.)
         const sep = peer.ref.includes('?') ? '&' : '?';
-        let url = peer.ref + sep + `clientId=${peer.clientId}&f=${formatKey}`;
+        let url = peer.ref + sep + `clientId=${peer.clientId}&f=${wireFormatKey}`;
         if (proof !== undefined)
             url += `&c=${proof.counter}&p=${proof.proof}`;
         return url;
@@ -184,8 +184,8 @@ export let sanitizeUrl = (url: string): string => {
     }
 };
 
-/** Extract the serialization format key from an `f=` query parameter, if any. */
-function parseFormatFromUrl(url: string): string | undefined {
+/** Extract the wire format key from an `f=` query parameter, if any. */
+function parseWireFormatKeyFromUrl(url: string): string | undefined {
     try {
         const f = new URL(url).searchParams.get('f');
         return f ?? undefined;
@@ -451,18 +451,18 @@ export abstract class RpcPeer {
     }
 
     /**
-     * The serialization format used by this peer for outgoing messages.
+     * The wire format used by this peer for outgoing messages.
      * If not set explicitly, defaults to the resolver's default (JSON /
      * json5np). Subclasses can pre-assign in their constructor.
      */
-    private _serializationFormat: RpcSerializationFormat | undefined;
+    private _wireFormat: RpcWireFormat | undefined;
 
-    get serializationFormat(): RpcSerializationFormat {
-        return this._serializationFormat ?? RpcSerializationFormatResolver.Default.defaultFormat;
+    get wireFormat(): RpcWireFormat {
+        return this._wireFormat ?? RpcWireFormatResolver.Default.defaultFormat;
     }
 
-    set serializationFormat(value: RpcSerializationFormat) {
-        this._serializationFormat = value;
+    set wireFormat(value: RpcWireFormat) {
+        this._wireFormat = value;
     }
 
     call(
@@ -480,7 +480,7 @@ export abstract class RpcPeer {
             RelatedId: callId,
             CallType: options?.callTypeId ?? 0,
         };
-        outboundCall.serializedWireData = this.serializationFormat.serializeMessage(
+        outboundCall.serializedWireData = this.wireFormat.serializeMessage(
             envelope,
             args,
             this._connection?.encoder,
@@ -525,7 +525,7 @@ export abstract class RpcPeer {
                     // wire, so there is nothing to cancel remotely either.
                     const conn = this.wireConnection;
                     if (conn !== undefined)
-                        this.hub.systemCallSender.cancel(conn, this.serializationFormat, callId);
+                        this.hub.systemCallSender.cancel(conn, this.wireFormat, callId);
                 }
             };
             signal.addEventListener('abort', onAbort, { once: true });
@@ -544,7 +544,7 @@ export abstract class RpcPeer {
         // (they both flip together in `_setConnectionState` / `conn.closed`).
         const conn = this._connection!;
         const envelope: RpcMessage = { Method: method, RelatedId: 0 };
-        const wireData = this.serializationFormat.serializeMessage(
+        const wireData = this.wireFormat.serializeMessage(
             envelope,
             args,
             conn.encoder,
@@ -704,7 +704,7 @@ export abstract class RpcPeer {
                             const conn = this.wireConnection;
                             if (conn !== undefined)
                                 this.hub.systemCallSender.ok(
-                                    conn, this.serializationFormat, relatedId, ref);
+                                    conn, this.wireFormat, relatedId, ref);
                         };
                         if (call !== undefined) {
                             call.setResult(send);
@@ -718,7 +718,7 @@ export abstract class RpcPeer {
                         const conn = this.wireConnection;
                         if (conn !== undefined)
                             this.hub.systemCallSender.ok(
-                                conn, this.serializationFormat, relatedId, result);
+                                conn, this.wireFormat, relatedId, result);
                     };
                     call.setResult(send);
                     this.inboundCalls.markCompleted(call);
@@ -731,7 +731,7 @@ export abstract class RpcPeer {
                         const conn = this.wireConnection;
                         if (conn !== undefined)
                             this.hub.systemCallSender.error(
-                                conn, this.serializationFormat, relatedId, e);
+                                conn, this.wireFormat, relatedId, e);
                     };
                     call.setResult(send);
                     this.inboundCalls.markCompleted(call);
@@ -778,7 +778,7 @@ export abstract class RpcPeer {
                 // the client may misinterpret as a disconnect of its own shared objects (e.g.
                 // RpcStreamSender) when the IDs collide numerically.
                 try {
-                    this.hub.systemCallSender.keepAlive(conn, this.serializationFormat, [
+                    this.hub.systemCallSender.keepAlive(conn, this.wireFormat, [
                         ...this.remoteObjects.keys(),
                     ]);
                 }
@@ -900,7 +900,7 @@ export class RpcClientPeer extends RpcPeer {
      *  Initialized from `hub.limits` at construction; override per peer. */
     prematureDisconnectTimeoutMs: number;
     readonly peerChanged = new EventHandlerSet<void>();
-    /** Fired when the server rejects the connection due to an unsupported serialization format (close code 4010). */
+    /** Fired when the server rejects the connection due to an unsupported wire format (close code 4001). */
     readonly unsupportedFormat = new EventHandlerSet<{ reason: string }>();
     readonly reconnectsAtChanged = new EventHandlerSet<void>();
 
@@ -921,7 +921,7 @@ export class RpcClientPeer extends RpcPeer {
 
     /**
      * @param hub RpcHub instance this peer will be tracked by
-     * @param url Full WebSocket URL — the serialization format is taken from
+     * @param url Full WebSocket URL — the wire format is taken from
      *            the `f=` query parameter (e.g. `wss://host/rpc/ws?f=msgpack6`);
      *            falls back to the resolver's default when absent. Use
      *            {@link RpcRefBuilder.forClient} to compose URLs with a format.
@@ -937,8 +937,8 @@ export class RpcClientPeer extends RpcPeer {
         this.handshakeTimeoutMs = hub.limits.handshakeTimeoutMs;
         this.prematureDisconnectTimeoutMs = hub.limits.prematureDisconnectTimeoutMs;
         this.clientId = guidToBase64Url(this.id);
-        const resolver = RpcSerializationFormatResolver.Default;
-        this.serializationFormat = resolver.get(parseFormatFromUrl(url) ?? resolver.defaultFormatKey);
+        const resolver = RpcWireFormatResolver.Default;
+        this.wireFormat = resolver.get(parseWireFormatKeyFromUrl(url) ?? resolver.defaultFormatKey);
         if (mustStart)
             this.start();
     }
@@ -966,7 +966,7 @@ export class RpcClientPeer extends RpcPeer {
         // The handshake goes out before `Connected` releases deferred calls —
         // the run loop's order.
         this.hub.systemCallSender.handshake(
-            conn, this.serializationFormat, this.id, this.hub.hubId,
+            conn, this.wireFormat, this.id, this.hub.hubId,
             this.nextOwnHandshakeIndex());
         this._isConnected = true;
         this.connectionStateChanged.trigger(RpcConnectionState.Connected);
@@ -1085,8 +1085,8 @@ export class RpcClientPeer extends RpcPeer {
                         (new WebSocket(connUrl) as unknown as WebSocketLike);
                     const conn = new RpcWebSocketConnection(
                         ws,
-                        this.serializationFormat.isBinary,
-                        this.serializationFormat,
+                        this.wireFormat.isBinary,
+                        this.wireFormat,
                         this.hub.registry
                     );
 
@@ -1154,7 +1154,7 @@ export class RpcClientPeer extends RpcPeer {
                     try {
                         this.hub.systemCallSender.handshake(
                             conn,
-                            this.serializationFormat,
+                            this.wireFormat,
                             this.id,
                             this.hub.hubId,
                             this.nextOwnHandshakeIndex()
@@ -1237,10 +1237,10 @@ export class RpcClientPeer extends RpcPeer {
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _disposed can change during await
                 if (this._disposed) break;
 
-                // Server rejected our serialization format — stop reconnecting and notify listeners
+                // Server rejected our wire format — stop reconnecting and notify listeners
                 if (lastCloseCode === RPC_CLOSE_CODE_UNSUPPORTED_FORMAT) {
                 // Mirrors RpcPeer.cs:518 — "Can't (re)connect, will shut down".
-                    warnLog?.log(`'${this.ref}': Unsupported serialization format - shutting down`);
+                    warnLog?.log(`'${this.ref}': Unsupported wire format - shutting down`);
                     this.unsupportedFormat.trigger({ reason: lastCloseReason });
                     this._disposed = true;
                     break;
@@ -1423,7 +1423,7 @@ export class RpcClientPeer extends RpcPeer {
                 return null;
             }
 
-            const isBinary = this.serializationFormat.isBinary;
+            const isBinary = this.wireFormat.isBinary;
             const stagesArg: Map<number, Uint8Array> | Record<string, string> = isBinary
                 ? new Map<number, Uint8Array>()
                 : {};
@@ -1575,7 +1575,7 @@ export class RpcServerPeer extends RpcPeer {
             // $sys.Reconnect referencing an older one is rejected (R16).
             this.hub.systemCallSender.handshake(
                 this._connection,
-                this.serializationFormat,
+                this.wireFormat,
                 this.id,
                 this.hub.hubId,
                 this.nextOwnHandshakeIndex()

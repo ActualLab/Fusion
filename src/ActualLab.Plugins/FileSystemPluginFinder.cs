@@ -4,6 +4,7 @@ using System.Runtime.Loader;
 #endif
 using ActualLab.Caching;
 using ActualLab.IO;
+using ActualLab.Plugins.Caching;
 using ActualLab.Plugins.Internal;
 using ActualLab.Plugins.Metadata;
 

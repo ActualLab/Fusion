@@ -8,7 +8,7 @@ namespace ActualLab.Tests.Rpc;
 [Trait("Category", "Rpc")]
 public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
-    protected string SerializationFormat { get; set; } = RpcTestBase.DefaultSerializationFormat;
+    protected string WireFormat { get; set; } = RpcTestBase.DefaultWireFormat;
     protected bool UseLogging { get; set; } = true;
     protected bool UseDebugLog { get; set; } = true;
 
@@ -60,8 +60,10 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
                 ? new RpcServerPeer(hub, route)
                 : new RpcClientPeer(hub, route),
         });
-        services.AddSingleton<RpcSerializationFormatResolver>(
-            _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
+        services.AddRpc().ConfigureWireFormats(f => {
+            f.Add([.. RpcTestFormats.Catalog]);
+            f.DefaultFormat = f[WireFormat];
+        });
     }
 
     protected Task ConnectionDisruptor(

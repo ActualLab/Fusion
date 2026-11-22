@@ -13,6 +13,7 @@ public readonly struct RpcBuilder
 {
     public IServiceCollection Services { get; }
     public RpcConfiguration Configuration { get; }
+    public RpcWireFormatConfiguration WireFormats => Configuration.WireFormats;
     public RpcServiceMode DefaultServiceMode { get; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
@@ -39,7 +40,7 @@ public readonly struct RpcBuilder
         }
 
         DefaultServiceMode = defaultServiceMode.Or(RpcServiceMode.Server);
-        Configuration = services.AddInstance(new RpcConfiguration());
+        Configuration = configuration = services.AddInstance(new RpcConfiguration());
         if (saveDefaultServiceMode)
             Configuration.DefaultServiceMode = DefaultServiceMode;
 
@@ -58,7 +59,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcHttpClientOptions.Default);
 #endif
         services.AddSingleton(_ => RpcDiagnosticsOptions.Default);
-        services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
         services.AddSingleton(_ => RpcInterceptor.Options.Default);
         services.AddSingleton(_ => RpcLimits.Default);
 
@@ -79,6 +79,9 @@ public readonly struct RpcBuilder
         AddMiddleware(_ => new RpcArgumentNullabilityValidator());
         AddMiddleware(_ => new RpcRouteValidator());
 
+        // Wire formats
+        services.AddSingleton(_ => new RpcWireFormatResolver(configuration.WireFormats));
+
         // And finally, invoke the configuration action
         configure?.Invoke(this);
     }
@@ -89,6 +92,14 @@ public readonly struct RpcBuilder
         RpcServiceMode serviceMode,
         bool makeDefault = false)
         => new(Services, null, serviceMode, makeDefault);
+
+    // Wire formats
+
+    public RpcBuilder ConfigureWireFormats(Action<RpcWireFormatConfiguration> configure)
+    {
+        configure.Invoke(Configuration.WireFormats);
+        return this;
+    }
 
     // WebSocket client
 

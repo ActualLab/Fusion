@@ -19,7 +19,7 @@ public class PluginInfo
     public ImmutableHashSet<TypeRef> AllDependencies { get; protected set; }
     public int OrderByDependencyIndex { get; protected internal set; }
 
-    [Newtonsoft.Json.JsonConstructor, JsonConstructor]
+    [JsonConstructor]
     public PluginInfo(TypeRef type,
         ImmutableArray<TypeRef> ancestors,
         ImmutableArray<TypeRef> interfaces,
@@ -48,9 +48,9 @@ public class PluginInfo
 
         Type = type;
         Ancestors = ImmutableArray.Create(
-            type.GetAllBaseTypes().Select(t => (TypeRef) t).ToArray());
+            type.GetAllBaseTypes().Select(t => (TypeRef)t).ToArray());
         Interfaces = ImmutableArray.Create(
-            type.GetInterfaces().Select(t => (TypeRef) t).ToArray());
+            type.GetInterfaces().Select(t => (TypeRef)t).ToArray());
         CastableTo = ImmutableHashSet.Create(
             Ancestors.AddRange(Interfaces).Add(type).ToArray());
         Capabilities = pluginInfoProvider.GetCapabilities(type);
@@ -60,7 +60,7 @@ public class PluginInfo
             .Where(p => p != type && (
                 allAssemblyRefs.Contains(p.Assembly) ||
                 CastableTo.Contains(p)))
-            .Select(t => (TypeRef) t)
+            .Select(t => (TypeRef)t)
             .Concat(Dependencies)
             .ToImmutableHashSet();
     }

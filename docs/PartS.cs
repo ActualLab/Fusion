@@ -2,8 +2,10 @@
 using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ActualLab.Api;
 using ActualLab.Collections;
 using ActualLab.Collections.Internal;
+using ActualLab.Rpc;
 using ActualLab.Serialization;
 using MemoryPack;
 using MessagePack;
@@ -21,7 +23,7 @@ public class MyClass
     public string Name { get; set; } = "";
 }
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public partial class MyPayload { }
 public class MyObject { }
 
@@ -56,7 +58,7 @@ public static class DefaultSerializers
     public static void Example()
     {
         #region PartS_DefaultSerializers
-        // Binary serializer - MemoryPack on .NET 6+, MessagePack on .NET Standard
+        // Binary serializer - MessagePack
         IByteSerializer binary = ByteSerializer.Default;
 
         // Text serializer - System.Text.Json
@@ -65,6 +67,7 @@ public static class DefaultSerializers
 
         #region PartS_ChangeDefaultSerializer
         // Use Newtonsoft.Json as default text serializer
+        // (requires ActualLab.Serialization.NewtonsoftJson)
         TextSerializer.Default = NewtonsoftJsonSerializer.Default;
         #endregion
     }
@@ -73,10 +76,10 @@ public static class DefaultSerializers
     {
         #region PartS_SerializerInstances
         // Access default instances
-        var memPack = MemoryPackByteSerializer.Default;
         var msgPack = MessagePackByteSerializer.Default;
         var sysJson = SystemJsonSerializer.Default;
-        var newtonsoft = NewtonsoftJsonSerializer.Default;
+        var memPack = MemoryPackByteSerializer.Default;   // ActualLab.Serialization.MemoryPack
+        var newtonsoft = NewtonsoftJsonSerializer.Default; // ActualLab.Serialization.NewtonsoftJson
 
         // Create with custom options
         var prettyJson = new SystemJsonSerializer(new JsonSerializerOptions { WriteIndented = true });
@@ -124,9 +127,9 @@ public static class TypeDecoratedSerialization
     {
         #region PartS_TypeDecoratedInstances
         var sysJsonTD = SystemJsonSerializer.DefaultTypeDecorating;
+        var msgPackTD = MessagePackByteSerializer.DefaultTypeDecorating;
         var newtonsoftTD = NewtonsoftJsonSerializer.DefaultTypeDecorating;
         var memPackTD = MemoryPackByteSerializer.DefaultTypeDecorating;
-        var msgPackTD = MessagePackByteSerializer.DefaultTypeDecorating;
         #endregion
     }
 }
@@ -136,9 +139,9 @@ public static class TypeDecoratedSerialization
 // ============================================================================
 
 #region PartS_ByteSerializedMessage
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public partial record MyMessage(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] ByteSerialized<MyPayload> Payload);
+    [property: DataMember(Order = 0), Key(0)] ByteSerialized<MyPayload> Payload);
 #endregion
 
 public static class SerializedWrappers
@@ -183,28 +186,21 @@ public static class SerializedWrappers
 
 /*
 #region PartS_UniSerializedStructure
-[DataContract, MemoryPackable, MessagePackObject]
-public readonly partial struct UniSerialized<T>
+[JsonConverter(typeof(UniSerializedJsonConverter))]
+[MessagePackFormatter(typeof(UniSerializedMessagePackFormatter<>))]
+public readonly struct UniSerialized<T>
 {
-    [JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value { get; init; }
-
-    // System.Text.Json uses this
-    [JsonInclude]
-    public string Json { get; init; }
-
-    // Newtonsoft.Json uses this (via JsonProperty attribute)
-    public string NewtonsoftJson { get; init; }
-
-    // MemoryPack uses this
-    [MemoryPackOrder(0)]
-    public byte[] MemoryPack { get; init; }
-
-    // MessagePack uses this
-    [DataMember, Key(0)]
-    public MessagePackData MessagePack { get; init; }
 }
+
+// Every format's converter writes Value as a nested payload produced by the serializer
+// that serializes the UniSerialized<T> itself (ByteSerializer.Current), wrapped as:
+// - System.Text.Json:      { "json": "..." }
+// - Newtonsoft.Json:       { "NewtonsoftJson": "..." }
+// - MessagePack, Nerdbank: [ bin ]
+// - MemoryPack:            a version-tolerant object with a single byte array member
 #endregion
+
 */
 
 public static class UniSerializedExamples
@@ -229,10 +225,11 @@ public static class UniSerializedExamples
 /*
 #region PartS_PropertyBagItem
 // Internal structure of PropertyBagItem
-[DataContract, MemoryPackable, MessagePackObject]
-public partial record struct PropertyBagItem(
-    [property: DataMember] string Key,
-    [property: DataMember] TypeDecoratingUniSerialized<object> Serialized);
+[DataContract]
+public partial record struct PropertyBagItem<TSchema>(
+    [property: DataMember(Order = 0), Key(0)] string Key,
+    [property: DataMember(Order = 1), Key(1)] TypeDecoratingUniSerialized<TSchema, object> Serialized)
+    where TSchema : TypeSchema, new();
 #endregion
 */
 
@@ -241,14 +238,34 @@ public partial record struct PropertyBagItem(
 // ============================================================================
 
 #region PartS_AnnotatedRecord
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
-public partial record MyRecord(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Name,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] int Value)
-{
-    [System.Text.Json.Serialization.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public MyRecord() : this("", 0) { }
-}
+[DataContract, MessagePackObject]
+[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor]
+public sealed partial record MyRecord(
+    [property: DataMember(Order = 0), Key(0)] string Name,
+    [property: DataMember(Order = 1), Key(1)] int Value);
+#endregion
+
+#region PartS_AnnotatedRecordMemoryPack
+// Only if you use MemoryPack (ActualLab.Serialization.MemoryPack)
+[DataContract, MessagePackObject, MemoryPackable(GenerateType.VersionTolerant)]
+[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor, MemoryPackConstructor]
+public sealed partial record MyMemoryPackRecord(
+    [property: DataMember(Order = 0), Key(0), MemoryPackOrder(0)] string Name,
+    [property: DataMember(Order = 1), Key(1), MemoryPackOrder(1)] int Value);
+#endregion
+
+#region PartS_MemoryPackAllowSerialize
+[DataContract, MessagePackObject, MemoryPackable(GenerateType.VersionTolerant)]
+[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor, MemoryPackConstructor]
+public sealed partial record Note(
+    // ActualLab types: [MemoryPackAllowSerialize] is required since v16
+    [property: DataMember(Order = 0), Key(0), MemoryPackOrder(0), MemoryPackAllowSerialize] Session Session,
+    [property: DataMember(Order = 1), Key(1), MemoryPackOrder(1), MemoryPackAllowSerialize] Symbol Tag,
+    [property: DataMember(Order = 2), Key(2), MemoryPackOrder(2), MemoryPackAllowSerialize] Option<string> Title,
+    // Not needed for ApiArray/ApiList/ApiSet/ApiMap, unmanaged structs
+    // and Option/ApiOption/ApiNullable over an unmanaged T
+    [property: DataMember(Order = 3), Key(3), MemoryPackOrder(3)] ApiArray<string> Lines,
+    [property: DataMember(Order = 4), Key(4), MemoryPackOrder(4)] Option<int> Priority);
 #endregion
 
 // ============================================================================
@@ -261,10 +278,14 @@ public static class SerializerKindExamples
     {
         #region PartS_SerializerKindUsage
         // Get default serializer for a kind
-        IByteSerializer serializer = SerializerKind.MemoryPack.GetDefaultSerializer();
+        IByteSerializer serializer = SerializerKind.MessagePack.GetDefaultSerializer();
 
         // Get type-decorated variant
-        IByteSerializer tdSerializer = SerializerKind.MemoryPack.GetDefaultTypeDecoratingSerializer();
+        IByteSerializer tdSerializer = SerializerKind.MessagePack.GetDefaultTypeDecoratingSerializer();
+
+        // MemoryPack and NewtonsoftJson are available once their package registers them
+        if (SerializerKind.MemoryPack.IsAvailable())
+            serializer = SerializerKind.MemoryPack.GetDefaultSerializer();
         #endregion
     }
 }
@@ -281,7 +302,7 @@ public static class SerializerConfiguration
         // Change default binary serializer
         ByteSerializer.Default = MessagePackByteSerializer.Default;
 
-        // Change default text serializer
+        // Change default text serializer (requires ActualLab.Serialization.NewtonsoftJson)
         TextSerializer.Default = NewtonsoftJsonSerializer.Default;
 
         // Change System.Text.Json options
@@ -294,7 +315,28 @@ public static class SerializerConfiguration
         NewtonsoftJsonSerializer.DefaultSettings = new JsonSerializerSettings {
             TypeNameHandling = TypeNameHandling.Auto,
             NullValueHandling = NullValueHandling.Ignore,
+            // Keep it: ActualLab types carry no Newtonsoft.Json attributes since v16
+            ContractResolver = new NewtonsoftJsonContractResolver(),
         };
+        #endregion
+    }
+}
+
+// ============================================================================
+// Upgrading to v16
+// ============================================================================
+
+public static class UpgradingToV16
+{
+    public static void RpcFormats(IServiceCollection services)
+    {
+        #region PartS_UpgradeRpcFormats
+        services.AddRpc().ConfigureWireFormats(f => {
+            f.AddMemoryPack();     // ActualLab.Serialization.MemoryPack: mempack5(c), mempack6(c)
+            f.AddNewtonsoftJson(); // ActualLab.Serialization.NewtonsoftJson: njson5, njson5np
+            f.AddLZ4Variants(); // "-lz4" variants of the formats added so far
+            f.DefaultFormat = f["msgpack6c-lz4"];
+        });
         #endregion
     }
 }
@@ -345,7 +387,14 @@ public class PartS : DocPart
         // SerializerKind
         _ = typeof(SerializerKind);
 
+        // Package registration
+        MemoryPackSerialization.Register();
+        NewtonsoftJsonSerialization.Register();
+        _ = typeof(TypeDecoratingMemoryPackSerialized<,>);
+
         // Defaults
+        if (ByteSerializer.Default != MessagePackByteSerializer.Default)
+            throw new InvalidOperationException("ByteSerializer.Default must be MessagePack.");
         _ = ByteSerializer.Default;
         _ = TextSerializer.Default;
 

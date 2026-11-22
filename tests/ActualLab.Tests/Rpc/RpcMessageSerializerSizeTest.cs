@@ -15,7 +15,7 @@ public class RpcMessageSerializerSizeTest(ITestOutputHelper @out) : TestBase(@ou
     public void HeaderValueAtLimitRoundTripsInEveryFormat()
     {
         var value = new string('v', RpcByteMessageSerializer.MaxHeaderSize);
-        foreach (var format in RpcSerializationFormat.All) {
+        foreach (var format in RpcTestFormats.Catalog) {
             var (peer, services) = NewPeer(format);
             using var _ = services;
 
@@ -30,7 +30,7 @@ public class RpcMessageSerializerSizeTest(ITestOutputHelper @out) : TestBase(@ou
     public void HeaderValueOverLimitIsRejectedInEveryFormat()
     {
         var value = new string('v', RpcByteMessageSerializer.MaxHeaderSize + 1);
-        foreach (var format in RpcSerializationFormat.All) {
+        foreach (var format in RpcTestFormats.Catalog) {
             var (peer, services) = NewPeer(format);
             using var _ = services;
 
@@ -45,7 +45,7 @@ public class RpcMessageSerializerSizeTest(ITestOutputHelper @out) : TestBase(@ou
     public void MethodRefAtLimitRoundTripsInEveryFormat()
     {
         var serviceName = new string('s', RpcMethodRef.MaxUtf8NameLength - MethodNameSuffix.Length);
-        foreach (var format in RpcSerializationFormat.All) {
+        foreach (var format in RpcTestFormats.Catalog) {
             var (peer, services) = NewPeer(format, serviceName);
             using var _ = services;
             var methodDef = peer.Hub.ServiceRegistry[typeof(ILongNameTestService)].Methods.Single();
@@ -66,21 +66,21 @@ public class RpcMessageSerializerSizeTest(ITestOutputHelper @out) : TestBase(@ou
         Assert.Throws<ArgumentOutOfRangeException>(() => new RpcMethodRef(name));
         // A service name that long is rejected as soon as its RpcMethodDef is built
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => NewPeer(RpcSerializationFormat.MemoryPackV6, name).Peer.Hub.ServiceRegistry
+            () => NewPeer(RpcDefaultWireFormats.MessagePackV6, name).Peer.Hub.ServiceRegistry
                 [typeof(ILongNameTestService)].Methods.Single());
     }
 
     [Fact]
     public void OverLimitInboundMethodRefIsRejected()
     {
-        var (peer, services) = NewPeer(RpcSerializationFormat.MemoryPackV6);
+        var (peer, services) = NewPeer(RpcDefaultWireFormats.MessagePackV6);
         using var _1 = services;
         var serializer = peer.MessageSerializer;
 
         ReadV5Message(serializer, RpcMethodRef.MaxUtf8NameLength).Should().BeNull();
         ReadV5Message(serializer, RpcMethodRef.MaxUtf8NameLength + 1).Should().BeOfType<FormatException>();
 
-        var (jsonPeer, jsonServices) = NewPeer(RpcSerializationFormat.SystemJsonV5);
+        var (jsonPeer, jsonServices) = NewPeer(RpcDefaultWireFormats.SystemJsonV5);
         using var _2 = jsonServices;
         var jsonSerializer = jsonPeer.MessageSerializer;
 
@@ -145,11 +145,11 @@ public class RpcMessageSerializerSizeTest(ITestOutputHelper @out) : TestBase(@ou
         => services.GetRequiredService<RpcSystemCallSender>().OkMethodDef;
 
     private static (RpcClientPeer Peer, ServiceProvider Services) NewPeer(
-        RpcSerializationFormat format, string longNameServiceName = "")
+        RpcWireFormat format, string longNameServiceName = "")
     {
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
-        var rpc = services.AddRpc();
+        var rpc = services.AddRpc().AddTestFormats();
         if (!longNameServiceName.IsNullOrEmpty())
             rpc.AddServer<ILongNameTestService, LongNameTestService>(longNameServiceName);
         var serviceProvider = services.BuildServiceProvider();

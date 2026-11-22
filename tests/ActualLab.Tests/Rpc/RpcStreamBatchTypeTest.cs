@@ -54,7 +54,9 @@ public class RpcStreamBatchTypeTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Theory]
+#if !NETFRAMEWORK
     [InlineData("mempack6")]
+#endif
     [InlineData("msgpack6")]
     [InlineData("json5")]
     [InlineData("njson5")]
@@ -77,7 +79,9 @@ public class RpcStreamBatchTypeTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Theory]
+#if !NETFRAMEWORK
     [InlineData("mempack6")]
+#endif
     [InlineData("msgpack6")]
     [InlineData("json5")]
     [InlineData("njson5")]
@@ -95,7 +99,9 @@ public class RpcStreamBatchTypeTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Theory]
+#if !NETFRAMEWORK
     [InlineData("mempack6")]
+#endif
     [InlineData("msgpack6")]
     [InlineData("json5")]
     [InlineData("njson5")]
@@ -122,7 +128,7 @@ public class RpcStreamBatchTypeTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     private static ArgumentListSerializer GetArgumentSerializer(string formatKey)
-        => RpcSerializationFormat.All
+        => RpcTestFormats.Catalog
             .Single(x => string.Equals(x.Key, formatKey, StringComparison.Ordinal))
             .ArgumentListSerializer;
 

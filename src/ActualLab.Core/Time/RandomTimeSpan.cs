@@ -7,17 +7,15 @@ namespace ActualLab.Time;
 /// Represents a time span with a random jitter component defined by an origin and max delta.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
-[DataContract, MemoryPackable, MessagePackObject(true)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, SerializationConstructor]
-// Unmanaged struct, so no need for [method: MemoryPackConstructor]
+[DataContract, MessagePackObject(true)]
+[method: JsonConstructor, SerializationConstructor]
 public readonly partial record struct RandomTimeSpan(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] TimeSpan Origin,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] TimeSpan MaxDelta = default
+    [property: DataMember(Order = 0)] TimeSpan Origin,
+    [property: DataMember(Order = 1)] TimeSpan MaxDelta = default
 ) {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public TimeSpan Min => (Origin - MaxDelta).Positive();
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public TimeSpan Max => (Origin + MaxDelta).Positive();
 
     public RandomTimeSpan(TimeSpan origin, double maxDelta)

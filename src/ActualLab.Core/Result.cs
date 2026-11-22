@@ -271,44 +271,43 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 /// <remarks>
 /// Wire-format note: any change to the wire shape (driven by <see cref="ResultMessagePackFormatter{T}"/>
-/// and the [DataMember]/[MemoryPackOrder] members below) MUST be mirrored in
+/// and the [DataMember]/members below) MUST be mirrored in
 /// <c>ResultNerdbankConverter&lt;T&gt;</c> (ActualLab.Serialization.NerdbankMessagePack) so the
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
 [StructLayout(LayoutKind.Auto)]
 [DebuggerDisplay("({" + nameof(ValueOrDefault) + "}, Error = {" + nameof(Error) + "})")]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(ResultMessagePackFormatter<>))]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 {
     /// <inheritdoc />
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0)]
     public T? ValueOrDefault { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public Exception? Error { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1)]
     public ExceptionInfo? ExceptionInfo => Error?.ToExceptionInfo();
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Error is null;
     }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool HasError {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Error is not null;
     }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public T Value {
         get {
             if (Error is not null)
@@ -335,7 +334,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
         Error = error;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public Result(T valueOrDefault, ExceptionInfo? exceptionInfo)
     {
         if (exceptionInfo is { IsNone: false } vExceptionInfo) {

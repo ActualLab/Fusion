@@ -19,6 +19,7 @@ You should reference these packages based on your project type:
 - [ActualLab.Core](https://www.nuget.org/packages/ActualLab.Core/) &ndash; Base abstractions and helpers
 - [ActualLab.Generators](https://www.nuget.org/packages/ActualLab.Generators/) &ndash; Generic Roslyn-based proxy type generator used by ActualLab.Rpc and Fusion
 - [ActualLab.Interception](https://www.nuget.org/packages/ActualLab.Interception/) &ndash; Call interception API used by `ActualLab.Generators`
+- [ActualLab.Core.Legacy](https://www.nuget.org/packages/ActualLab.Core.Legacy/) &ndash; Obsolete types moved out of `ActualLab.Core` (`OptionSet`, `ImmutableOptionSet`)
 
 ### ActualLab.Rpc
 
@@ -51,11 +52,17 @@ You should reference these packages based on your project type:
 ### Fusion Extensions (`IAuth`, etc.)
 
 - [ActualLab.Fusion.Ext.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Contracts/) &ndash; Contracts (client-side package)
+- [ActualLab.Fusion.Ext.Backend.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Backend.Contracts/) &ndash; Backend contracts (`IAuthBackend`, `IKeyValueStore` and their commands)
 - [ActualLab.Fusion.Ext.Services](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Services/) &ndash; Implementations (server-side package)
 
-### Nerdbank.MessagePack Serialization Support
+### Optional Serialization Packages
 
-- [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) &ndash; Optional Nerdbank.MessagePack serialization support for RPC (registers `nmsgpack6`/`nmsgpack6c` formats)
+`ActualLab.Core` supports System.Text.Json and MessagePack. Since v16, other serializers come from
+separate packages (see [Upgrading to v16](./PartS.md#upgrading-to-v16)):
+
+- [ActualLab.Serialization.MemoryPack](https://www.nuget.org/packages/ActualLab.Serialization.MemoryPack/) &ndash; MemoryPack serialization support (`MemoryPackByteSerializer`, formatters for ActualLab types, `mempack*` RPC formats via `AddFormats(f => f.AddMemoryPack())`)
+- [ActualLab.Serialization.NewtonsoftJson](https://www.nuget.org/packages/ActualLab.Serialization.NewtonsoftJson/) &ndash; Newtonsoft.Json serialization support (`NewtonsoftJsonSerializer`, `njson*` RPC formats via `AddFormats(f => f.AddNewtonsoftJson())`); `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Contracts` and `ActualLab.Fusion.Ext.Services` reference it
+- [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) &ndash; Nerdbank.MessagePack serialization support (`nmsgpack*` RPC formats via `AddFormats(f => f.AddNerdbankMessagePack())`)
 
 <br />
 

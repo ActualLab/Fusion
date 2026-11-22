@@ -4,7 +4,7 @@ import {
     RpcSystemCallHandler,
     RpcStream,
     RpcStreamSender,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcSystemCalls,
     RpcOutboundCall,
     REMOTE_EXCEPTION_TYPE_REF,
@@ -43,10 +43,10 @@ describe('R2: JS errors carry a RemoteException TypeRef on the wire', () => {
 
     it('$sys.Error sends TypeRef + "{name}: {message}"', () => {
         const sender = new RpcSystemCallSender();
-        const format = RpcSerializationFormat.get('json5np');
+        const wireFormat = RpcWireFormat.get('json5np');
         const { conn, sent } = captureConn();
 
-        sender.error(conn, format, 5, new RangeError('out'));
+        sender.error(conn, wireFormat, 5, new RangeError('out'));
         const { message, args } = deserializeMessage(sent());
         expect(message.Method).toBe(RpcSystemCalls.error);
         expect(message.RelatedId).toBe(5);

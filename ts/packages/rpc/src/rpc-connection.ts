@@ -33,7 +33,7 @@ import {
     createBinaryEncoder,
 } from './rpc-serialization.js';
 import type { RpcMessage } from './rpc-message.js';
-import type { RpcSerializationFormat } from './rpc-serialization-format.js';
+import type { RpcWireFormat } from './rpc-wire-format.js';
 import type { RpcMethodRegistry } from './rpc-method-registry.js';
 
 const { warnLog } = getLogs('RpcConnection');
@@ -105,7 +105,7 @@ export class RpcWebSocketConnection implements RpcConnection {
         return this._decoder;
     }
 
-    private _format: RpcSerializationFormat | undefined;
+    private _wireFormat: RpcWireFormat | undefined;
     private _methodRegistry: RpcMethodRegistry | undefined;
 
     readonly binaryMode: boolean;
@@ -116,12 +116,12 @@ export class RpcWebSocketConnection implements RpcConnection {
     constructor(
         ws: WebSocketLike,
         binaryMode = false,
-        format?: RpcSerializationFormat,
+        wireFormat?: RpcWireFormat,
         methodRegistry?: RpcMethodRegistry
     ) {
         this._ws = ws;
         this.binaryMode = binaryMode;
-        this._format = format;
+        this._wireFormat = wireFormat;
         this._methodRegistry = methodRegistry;
 
         if (binaryMode && ws.binaryType !== undefined)
@@ -235,12 +235,12 @@ export class RpcWebSocketConnection implements RpcConnection {
         this._sendRaw(serializeBinaryFrame(messages));
     }
 
-    /** Split a binary frame using the format (compact-aware) or default splitter. */
+    /** Split a binary frame using the wire format (compact-aware) or default splitter. */
     private _splitBinary(
         frame: Uint8Array
     ): { message: RpcMessage; args: unknown[] }[] {
-        if (this._format) {
-            return this._format.splitBinaryFrame(
+        if (this._wireFormat) {
+            return this._wireFormat.splitBinaryFrame(
                 frame,
                 this._decoder,
                 this._methodRegistry

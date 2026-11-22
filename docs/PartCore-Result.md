@@ -224,18 +224,21 @@ public interface IOption
 Both `Result<T>` and `Option<T>` support all serialization formats:
 
 ```cs
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackFormatter(typeof(OptionMessagePackFormatter<>))]
 public readonly partial struct Option<T> { ... }
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackFormatter(typeof(ResultMessagePackFormatter<>))]
 public readonly partial struct Result<T> { ... }
 ```
 
-Attributes applied:
-- `[DataContract]` — MessagePack and DataContractSerializer
-- `[MemoryPackable]` — MemoryPack
-- `[MessagePackObject]` — MessagePack
-- JSON converters for System.Text.Json and Newtonsoft.Json
+- System.Text.Json and MessagePack support is built in (`[DataContract]`, the
+  System.Text.Json attributes and the MessagePack formatters above).
+- Newtonsoft.Json support comes from `ActualLab.Serialization.NewtonsoftJson`, which reads the
+  System.Text.Json and `[DataContract]` attributes via `NewtonsoftJsonContractResolver`.
+- MemoryPack support comes from `ActualLab.Serialization.MemoryPack`, which registers formatters for
+  both types. A `[MemoryPackable]` type of yours needs `[MemoryPackAllowSerialize]` on a
+  `Result<T>` member, and on an `Option<T>` member unless `T` is unmanaged &ndash; see
+  [Upgrading to v16](./PartS.md#upgrading-to-v16).
 
 
 ## Best Practices

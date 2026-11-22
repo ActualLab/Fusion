@@ -10,6 +10,51 @@ public class TypeRefCollection;
 [Collection(nameof(TypeRefCollection))]
 public class TypeRefTest(ITestOutputHelper @out) : TestBase(@out)
 {
+#pragma warning disable CS0618 // OptionSet & ImmutableOptionSet are obsolete
+    [Fact]
+    public void TypesMovedOutOfCoreShouldResolveByTheirOldNames()
+    {
+        // arrange
+        var int32Name = typeof(int).AssemblyQualifiedName!;
+        var cases = new (string OldName, Type Type)[] {
+            ($"ActualLab.Serialization.NewtonsoftJsonSerialized`1[[{int32Name}]], ActualLab.Core",
+                typeof(NewtonsoftJsonSerialized<int>)),
+            ("ActualLab.Collections.OptionSet, ActualLab.Core", typeof(ActualLab.Collections.OptionSet)),
+            ("ActualLab.Collections.ImmutableOptionSet, ActualLab.Core", typeof(ActualLab.Collections.ImmutableOptionSet)),
+#if !NETFRAMEWORK
+            ($"ActualLab.Serialization.MemoryPackSerialized`1[[{int32Name}]], ActualLab.Core",
+                typeof(MemoryPackSerialized<int>)),
+#endif
+        };
+
+        // act
+        var resolved = cases.Select(c => TypeRef.Resolve(c.OldName)).ToList();
+
+        // assert
+        resolved.Should().Equal(cases.Select(c => c.Type));
+    }
+#pragma warning restore CS0618
+
+    [Fact]
+    public void AddMovedTypeShouldResolveTheOldName()
+    {
+        // arrange
+        var typeName = typeof(StaticType).FullName!;
+        var oldName = $"{typeName}, ActualLab.Core"; // As if StaticType once lived in ActualLab.Core
+        var movedTypes = TypeRef.MovedTypes;
+        try {
+            // act
+            TypeRef.AddMovedType(typeName, typeof(StaticType).Assembly.GetName().Name!);
+            var type = TypeRef.Resolve(oldName);
+
+            // assert
+            type.Should().Be(typeof(StaticType));
+        }
+        finally {
+            TypeRef.MovedTypes = movedTypes;
+        }
+    }
+
     [Fact]
     public void BasicTest()
     {

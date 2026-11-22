@@ -47,7 +47,7 @@ describe('RpcStreamSender disconnect pause', () => {
         // Complete the handshake so the server peer reaches Connected —
         // its stream acks (like all non-handshake sends) are gated on it (R5).
         clientHub.systemCallSender.handshake(
-            cc, clientPeer.serializationFormat, clientPeer.id, clientHub.hubId, 1);
+            cc, clientPeer.wireFormat, clientPeer.id, clientHub.hubId, 1);
 
         await delay(10);
     });

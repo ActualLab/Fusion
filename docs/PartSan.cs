@@ -15,7 +15,7 @@ namespace Docs.PartSan;
 public sealed partial record ApiCredentials(
     [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string UserId,
     [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
-    [property: MemoryPackAllowSerialize] // MemoryPack-only: it can't see the registered formatter
+    [property: MemoryPackAllowSerialize] // MemoryPack-only: its formatter is registered at runtime
     SanitizedString<Sanitizers.PrefixAndLengthHint> ApiKey
 );
 #endregion

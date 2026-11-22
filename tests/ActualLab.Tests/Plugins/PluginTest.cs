@@ -1,5 +1,5 @@
 using System.Reflection;
-using ActualLab.Caching;
+using ActualLab.Plugins.Caching;
 using ActualLab.IO;
 using ActualLab.Plugins;
 using ActualLab.Plugins.Metadata;
@@ -176,7 +176,7 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
             var serviceProvider = hostBuilder.ServiceProviderFactory(hostBuilder.Services);
             var pluginFinder = serviceProvider.GetService<IPluginFinder>();
             if (pluginFinder is FileSystemPluginFinder fileSystemPluginFinder) {
-                var cache = (FileSystemCache<string, string>) fileSystemPluginFinder.Cache;
+                var cache = (FileSystemCache<string, string>)fileSystemPluginFinder.Cache;
                 cache.Clear();
             }
         }

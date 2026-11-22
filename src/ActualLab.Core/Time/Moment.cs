@@ -13,7 +13,6 @@ namespace ActualLab.Time;
 // [StructLayout(LayoutKind.Auto)]
 [DataContract, MessagePackFormatter(typeof(MomentMessagePackFormatter))]
 [JsonConverter(typeof(MomentJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(MomentNewtonsoftJsonConverter))]
 [TypeConverter(typeof(MomentTypeConverter))]
 public readonly partial struct Moment(long epochOffsetTicks)
     : IEquatable<Moment>, IComparable<Moment>
@@ -36,7 +35,7 @@ public readonly partial struct Moment(long epochOffsetTicks)
     [DataMember(Order = 0), Key(0)]
     public readonly long EpochOffsetTicks = epochOffsetTicks;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public TimeSpan EpochOffset {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => new(EpochOffsetTicks);

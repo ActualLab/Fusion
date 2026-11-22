@@ -6,6 +6,6 @@ namespace ActualLab.Rpc.WebSockets;
 /// </summary>
 public static class RpcWebSocketCloseCode
 {
-    /// <summary>Server doesn't support the client's requested serialization format.</summary>
+    /// <summary>Server doesn't support the client's requested wire format.</summary>
     public const int UnsupportedFormat = 4001;
 }

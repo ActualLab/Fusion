@@ -3,7 +3,7 @@ import {
     RpcClientPeer,
     type RpcConnection,
     type RpcServerPeer,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcWebSocketConnection,
     createMessageChannelPair,
 } from '../src/index.js';
@@ -18,7 +18,7 @@ function delay(ms: number): Promise<void> {
  * connect/disconnect/reconnect/host-switch across all supported wire
  * formats.
  *
- * When `formatKey` is a text format (`json5np`), uses the lightweight
+ * When `wireFormatKey` is a text format (`json5np`), uses the lightweight
  * `RpcMessageChannelConnection` (MessagePort-based). For binary formats
  * (`msgpack6`, `msgpack6c`), uses a mock WebSocket pair wrapped in
  * `RpcWebSocketConnection` so the binary decoder runs.
@@ -28,30 +28,30 @@ export class RpcTestConnection {
     serverHub: RpcHub;
     clientPeer: RpcClientPeer;
     serverPeer: RpcServerPeer | undefined;
-    /** Serialization format for this connection (default: `json5np`). */
-    readonly formatKey: string;
+    /** Wire format for this connection (default: `json5np`). */
+    readonly wireFormatKey: string;
 
     constructor(
         clientHub: RpcHub,
         serverHub: RpcHub,
         clientPeer: RpcClientPeer,
-        formatKey = 'json5np',
+        wireFormatKey = 'json5np',
     ) {
         this.clientHub = clientHub;
         this.serverHub = serverHub;
         this.clientPeer = clientPeer;
-        this.formatKey = formatKey;
+        this.wireFormatKey = wireFormatKey;
     }
 
     async connect(isPeerChanged = true): Promise<void> {
-        const format = RpcSerializationFormat.get(this.formatKey);
+        const wireFormat = RpcWireFormat.get(this.wireFormatKey);
         let clientConn: RpcConnection, serverConn: RpcConnection;
-        if (format.isBinary) {
+        if (wireFormat.isBinary) {
             const [clientWs, serverWs] = createMockWsPair();
             clientConn = new RpcWebSocketConnection(
-                clientWs, format.isBinary, format, this.clientHub.registry);
+                clientWs, wireFormat.isBinary, wireFormat, this.clientHub.registry);
             serverConn = new RpcWebSocketConnection(
-                serverWs, format.isBinary, format, this.serverHub.registry);
+                serverWs, wireFormat.isBinary, wireFormat, this.serverHub.registry);
         } else {
             const [a, b] = createMessageChannelPair();
             clientConn = a;
@@ -64,7 +64,7 @@ export class RpcTestConnection {
             // New server peer — fresh identity.
             const ref = `server://${crypto.randomUUID()}`;
             this.serverPeer = this.serverHub.getServerPeer(ref);
-            this.serverPeer.format = format;
+            this.serverPeer.wireFormat = wireFormat;
             this.serverPeer.accept(serverConn);
         } else {
             // Same-peer reconnect: reuse the existing server peer so its

@@ -6,29 +6,8 @@
     <Description>Server-side components of ActualLab.Rpc</Description>
   </PropertyGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net11'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion10)" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion9)" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion8)" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion7)" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net6'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion6)" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net5'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion5)" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('netcore'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion3)" />
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

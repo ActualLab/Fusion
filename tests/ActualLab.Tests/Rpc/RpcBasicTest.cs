@@ -190,8 +190,10 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceActivityPropagationWithoutOutboundActivityTest()
     {
         var stoppedActivities = new ConcurrentQueue<Activity>();
+        // Read first: listening from inside RpcInstruments' type initializer would see a null ActivitySource
+        var activitySourceName = RpcInstruments.ActivitySource.Name;
         using var listener = new ActivityListener {
-            ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
+            ShouldListenTo = source => source.Name == activitySourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStopped = stoppedActivities.Enqueue,
         };
@@ -283,8 +285,10 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceErrorActivityTest()
     {
         var stoppedActivities = new ConcurrentQueue<Activity>();
+        // Read first: listening from inside RpcInstruments' type initializer would see a null ActivitySource
+        var activitySourceName = RpcInstruments.ActivitySource.Name;
         using var listener = new ActivityListener {
-            ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
+            ShouldListenTo = source => source.Name == activitySourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStopped = stoppedActivities.Enqueue,
         };
@@ -323,9 +327,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
     [Theory]
     [MemberData(nameof(RpcTestFormats.All), MemberType = typeof(RpcTestFormats))]
-    public async Task BasicTest(string serializationFormat)
+    public async Task BasicTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -464,11 +468,13 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5")]
     [InlineData("json5np")]
+#if !NETFRAMEWORK
     [InlineData("mempack6")]
+#endif
     [InlineData("msgpack6")]
-    public async Task NonPolymorphTest(string serializationFormat)
+    public async Task NonPolymorphTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -495,11 +501,13 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5")]
     [InlineData("json5np")]
+#if !NETFRAMEWORK
     [InlineData("mempack6")]
+#endif
     [InlineData("msgpack6")]
-    public async Task NonPolymorphStreamTest(string serializationFormat)
+    public async Task NonPolymorphStreamTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -525,9 +533,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
     [Theory]
     [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
-    public async Task PolymorphTest(string serializationFormat)
+    public async Task PolymorphTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -547,9 +555,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5np")]
     [InlineData("njson5np")]
-    public async Task PolymorphTest_NP_ShouldFail(string serializationFormat)
+    public async Task PolymorphTest_NP_ShouldFail(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var client = services.RpcHub().GetClient<ITestRpcService>();
         var backendClient = services.RpcHub().GetClient<ITestRpcBackend>();
@@ -569,9 +577,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5np")]
     [InlineData("njson5np")]
-    public async Task StreamItemThatCantBeSerializedFailsTheStream(string serializationFormat)
+    public async Task StreamItemThatCantBeSerializedFailsTheStream(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var client = services.RpcHub().GetClient<ITestRpcService>();
 
@@ -583,9 +591,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5")]
     [InlineData("json5np")]
-    public async Task StreamItemThatCantBeDeserializedFailsTheStream(string serializationFormat)
+    public async Task StreamItemThatCantBeDeserializedFailsTheStream(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var client = services.RpcHub().GetClient<ITestRpcService>();
 
@@ -615,9 +623,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
     [Theory]
     [MemberData(nameof(RpcTestFormats.All), MemberType = typeof(RpcTestFormats))]
-    public async Task StreamTest(string serializationFormat)
+    public async Task StreamTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -627,7 +635,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         (await stream1.ToListAsync()).Should().Equal(expected1);
         await AssertNoObjects(clientPeer);
 
-        if (serializationFormat.EndsWith("np"))
+        if (wireFormat.EndsWith("np"))
             return; // Polymorphic streams are going to "hang" w/ non-polymorphic serializer
 
         var expected2 = Enumerable.Range(0, 5)

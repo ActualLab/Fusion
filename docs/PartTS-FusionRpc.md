@@ -90,7 +90,7 @@ The invalidation flow between .NET server and TypeScript client:
 8. **React re-renders** via `useComputedState`
 
 A computed invalidated **mid-computation** on the server is still reported: the server sends
-`$sys-c.Invalidate` (through the peer's current connection and serialization format) as soon as the
+`$sys-c.Invalidate` (through the peer's current connection and wire format) as soon as the
 result is ready, so a mutation racing a slow compute method never leaves the client stale. If the
 client happens to receive the `Invalidate` **before** the result, the call is transparently retried
 (up to 3 attempts while connected) rather than hanging. Regular (non-compute) calls to compute

@@ -14,7 +14,7 @@ See [ActualLab.Rpc in .NET](./PartR.md) for the full conceptual overview.
 | **Service definition** | Reflection on C# interfaces | Explicit `defineRpcService()` or `@rpcService`/`@rpcMethod` decorators |
 | **Client creation** | DI: `fusion.AddClient<T>()` | `hub.addClient<T>(peer, def)` |
 | **Transport** | Pluggable (WebSocket, WebTransport) | WebSocket only (browser + Node.js) |
-| **Serialization** | MemoryPack, MessagePack, System.Text.Json | JSON (`json5np`) or MessagePack (`msgpack6`/`msgpack6c`); no MemoryPack, no polymorphism |
+| **Serialization** | MessagePack (default), System.Text.Json; MemoryPack, Newtonsoft.Json via packages | JSON (`json5np`) or MessagePack (`msgpack6`/`msgpack6c`); no MemoryPack, no polymorphism |
 | **Reconnection** | `RpcClientPeerReconnectDelayer` profiles | Exponential backoff: 100 ms &rarr; 10 s max |
 | **Middleware** | `IRpcMiddleware[]` pipeline | Direct dispatch (no middleware) |
 | **Versioning** | API version sets in handshake | No versioning |
@@ -149,7 +149,7 @@ import {
 const peer = new RpcClientPeer(hub, "ws://localhost:5005/rpc/ws");
 
 // Node.js / tests: pass mustStart=false so you can set webSocketFactory first.
-// RpcRefBuilder.forClient bakes the serialization format into the URL as ?f=...
+// RpcRefBuilder.forClient bakes the wire format into the URL as ?f=...
 import WebSocket from "ws";
 const peer2 = new RpcClientPeer(
   hub,
@@ -415,7 +415,7 @@ The TypeScript port uses the same wire format as .NET `ActualLab.Rpc`:
 - Messages are JSON objects with `Method`, `RelatedId`, `CallType`, and `Headers` fields
 - Arguments follow the envelope, separated by `\x02` (ARG_DELIMITER)
 - Multiple messages per frame, separated by `\x03` (FRAME_DELIMITER)
-- Default serialization format: `json5np` (System.Text.Json without polymorphic type wrapping);
+- Default wire format: `json5np` (System.Text.Json without polymorphic type wrapping);
   the binary MessagePack formats `msgpack6`/`msgpack6c` are also supported (select via the `?f=`
   URL key). MemoryPack (`mempack*`) is **not** supported &mdash; the resolver throws for it.
   Polymorphic payloads are not decoded either; they fail loudly rather than corrupting a frame.

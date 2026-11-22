@@ -86,7 +86,7 @@ public class RpcWebSocketServer : RpcServiceBase
                 return;
             }
 
-            if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
+            if (Hub.WireFormats.GetClientRejectionReason(rpcRef.WireFormat) is { } rejectionReason) {
                 Log.LogWarning(
                     "'{PeerRef}': Rejected {Request}: {Reason}",
                     rpcRef, requestDescription, rejectionReason);
@@ -98,7 +98,7 @@ public class RpcWebSocketServer : RpcServiceBase
 #endif
                 await webSocket.CloseAsync(
                     (WebSocketCloseStatus)RpcWebSocketCloseCode.UnsupportedFormat,
-                    $"Unsupported RPC serialization format: '{rpcRef.SerializationFormat}'",
+                    $"Unsupported RPC wire format: '{rpcRef.WireFormat}'",
                     cancellationToken
                     ).ConfigureAwait(false);
                 return;

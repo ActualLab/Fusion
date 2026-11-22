@@ -15,17 +15,16 @@ namespace ActualLab.Rpc.Infrastructure;
 /// (<c>rpc-peer.ts</c>), so the Nerdbank wire stays byte-compatible with MessagePack-CSharp
 /// and both runtimes read the same fields.
 /// </remarks>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public sealed partial record RpcHandshake(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] Guid RemotePeerId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] VersionSet? RemoteApiVersionSet,
-    [property: DataMember(Order = 2), MemoryPackOrder(2), Key(2)] Guid RemoteHubId,
-    [property: DataMember(Order = 3), MemoryPackOrder(3), Key(3)] int ProtocolVersion,
-    [property: DataMember(Order = 4), MemoryPackOrder(4), Key(4)] int Index,
+    [property: DataMember(Order = 0), Key(0)] Guid RemotePeerId,
+    [property: DataMember(Order = 1), Key(1)] VersionSet? RemoteApiVersionSet,
+    [property: DataMember(Order = 2), Key(2)] Guid RemoteHubId,
+    [property: DataMember(Order = 3), Key(3)] int ProtocolVersion,
+    [property: DataMember(Order = 4), Key(4)] int Index,
     // Server -> client only: the per-peer reconnect secret (see RpcReconnectProof).
     // A client always sends null here, and the server ignores whatever a client sends.
-    [property: DataMember(Order = 5), MemoryPackOrder(5), Key(5)] string? Secret = null
+    [property: DataMember(Order = 5), Key(5)] string? Secret = null
 ) {
     public const int MinimumProtocolVersion = 2;
     public const int CurrentProtocolVersion = 2;

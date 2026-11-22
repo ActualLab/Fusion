@@ -32,14 +32,14 @@ public partial class RpcRef
 
     public static RpcRef NewServer(
         string hostInfo,
-        string serializationFormat,
+        string wireFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
         => new RpcRef() {
             IsServer = true,
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
-            SerializationFormat = serializationFormat,
+            WireFormat = wireFormat,
             HostInfo = hostInfo,
         }.Initialize();
 
@@ -51,13 +51,13 @@ public partial class RpcRef
 
     public static RpcRef NewClient(
         string hostInfo,
-        string serializationFormat,
+        string wireFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
         => new RpcRef() {
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
-            SerializationFormat = serializationFormat,
+            WireFormat = wireFormat,
             HostInfo = hostInfo,
         }.Initialize();
 

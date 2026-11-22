@@ -26,7 +26,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <!-- efcore.pg 11 pins EF Core to 11, so the other providers here must follow it -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion11)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion11)" />
@@ -37,7 +36,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion10)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion10)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion10)" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion10)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion10)" />
@@ -48,7 +46,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion9)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion9)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion9)" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion9)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion9)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion9)" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion9)" />
@@ -59,7 +56,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion8)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion8)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion8)" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion8)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion8)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion8)" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion8)" />
@@ -70,7 +66,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion7)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion7)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion7)" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion7)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion7)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion7)" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion7)" />

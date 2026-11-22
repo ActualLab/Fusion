@@ -17,7 +17,7 @@ import {
     RpcStream,
     RpcWebSocketConnection,
     RpcMessageChannelConnection,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcSystemCalls,
     defineRpcService,
     parseStreamRef,
@@ -86,7 +86,7 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
         const serverHub = new RpcHub('server-hub');
         const clientHub = new RpcHub('client-hub');
         hubs.push(serverHub, clientHub);
-        const format = RpcSerializationFormat.get('json5np');
+        const wireFormat = RpcWireFormat.get('json5np');
         const [clientWs, serverWs] = createMockWsPair();
 
         const sentFrames: unknown[] = [];
@@ -97,9 +97,9 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
         };
 
         const clientConn = new RpcWebSocketConnection(
-            clientWs, format.isBinary, format, clientHub.registry);
+            clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
         const serverConn = new RpcWebSocketConnection(
-            serverWs, format.isBinary, format, serverHub.registry);
+            serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
         const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
         peers.push(clientPeer);
         clientPeer.connectWith(clientConn);
@@ -137,7 +137,7 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
     it('R5: aborting a pre-handshake call does not put $sys.Cancel on the wire', async () => {
         const clientHub = new RpcHub('client-hub');
         hubs.push(clientHub);
-        const format = RpcSerializationFormat.get('json5np');
+        const wireFormat = RpcWireFormat.get('json5np');
         const [clientWs] = createMockWsPair();
         await delay(5); // let the mock socket reach OPEN
 
@@ -148,7 +148,7 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
             origSend(data);
         };
 
-        const conn = new RpcWebSocketConnection(clientWs, format.isBinary, format, clientHub.registry);
+        const conn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
         const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         peers.push(peer);
         clientHub.addPeer(peer);
@@ -172,7 +172,7 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
     it('R5: a stream started before the handshake completes sends no ack', async () => {
         const clientHub = new RpcHub('client-hub');
         hubs.push(clientHub);
-        const format = RpcSerializationFormat.get('json5np');
+        const wireFormat = RpcWireFormat.get('json5np');
         const [clientWs] = createMockWsPair();
         await delay(5); // let the mock socket reach OPEN
 
@@ -183,7 +183,7 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
             origSend(data);
         };
 
-        const conn = new RpcWebSocketConnection(clientWs, format.isBinary, format, clientHub.registry);
+        const conn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
         const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         peers.push(peer);
         clientHub.addPeer(peer);
@@ -349,17 +349,17 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
     it('R16: a $sys.Reconnect with a stale handshake index is rejected', async () => {
         const serverHub = new RpcHub('server-hub');
         hubs.push(serverHub);
-        const format = RpcSerializationFormat.get('json5np');
+        const wireFormat = RpcWireFormat.get('json5np');
         const [clientWs, serverWs] = createMockWsPair();
-        const serverConn = new RpcWebSocketConnection(serverWs, format.isBinary, format, serverHub.registry);
-        const clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, serverHub.registry);
+        const serverConn = new RpcWebSocketConnection(serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
+        const clientConn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, serverHub.registry);
         const serverPeer: RpcServerPeer = serverHub.getServerPeer('server://test');
-        serverPeer.serializationFormat = format;
+        serverPeer.wireFormat = wireFormat;
         serverPeer.accept(serverConn);
         // The $sys.Reconnect replies below are gated on the peer reaching
         // `Connected`, so the handshake has to actually happen.
         serverHub.systemCallSender.handshake(
-            clientConn, format, 'client-peer', serverHub.hubId, 1);
+            clientConn, wireFormat, 'client-peer', serverHub.hubId, 1);
         await delay(5);
 
         // Pin the server's own handshake index to a known generation.

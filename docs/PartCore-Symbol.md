@@ -107,18 +107,20 @@ int hash2 = b.GetHashCode();  // Same value, computed once
 Symbol supports all serialization formats:
 
 ```cs
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public partial class MyEntity
 {
-    [DataMember, MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public Symbol Id { get; init; }
 
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), Key(1)]
     public Symbol Category { get; init; }
 }
 ```
 
-Serialized as plain strings, but interned on deserialization.
+Serialized as plain strings, but interned on deserialization. If `MyEntity` is also
+`[MemoryPackable]`, add `[MemoryPackAllowSerialize]` to its `Symbol` members &ndash; see
+[Upgrading to v16](./PartS.md#upgrading-to-v16).
 
 
 ## Common Patterns

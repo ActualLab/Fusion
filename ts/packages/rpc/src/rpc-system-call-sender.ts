@@ -15,7 +15,7 @@
 //   - RpcOutboundContext / PrepareCallForSendNoWait pipeline — .NET creates a full
 //     outbound context with MethodDef, ArgumentList, etc., then serialises via the
 //     peer's MessageSerializer.  TS directly calls serializeMessage() (JSON) since
-//     there's only one serialization format.
+//     there's only one wire format.
 //   - Tracing / CallLogger integration — .NET logs each system call through the
 //     peer's CallLogger.  TS has no tracing infrastructure.
 //   - StopMode-aware Error() — .NET checks peer.StopMode to decide whether to
@@ -26,7 +26,7 @@ import { getLogs } from './logging.js';
 import { toExceptionInfo, type RpcErrorFilter } from './rpc-error.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcConnection } from './rpc-connection.js';
-import type { RpcSerializationFormat } from './rpc-serialization-format.js';
+import type { RpcWireFormat } from './rpc-wire-format.js';
 import type { RpcMethodRegistry } from './rpc-method-registry.js';
 
 const { errorLog } = getLogs('RpcSystemCallSender');
@@ -40,7 +40,7 @@ const { errorLog } = getLogs('RpcSystemCallSender');
  * on every call showed up as ~2-4% self time + non-trivial GC pressure in
  * the 300-pull video-load-test profile.
  *
- * The sender itself is a per-Hub singleton and `_send`/format.serializeMessage
+ * The sender itself is a per-Hub singleton and `_send`/wireFormat.serializeMessage
  * are fully synchronous (no awaits, no re-entrancy on a single-threaded event
  * loop), so we reuse a small pool of preallocated envelope + arg-array slots
  * per hot method. Mutate fields just before the send call; the encoder reads
@@ -94,11 +94,11 @@ export class RpcSystemCallSender {
 
     protected _send(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         envelope: RpcMessage,
         args?: unknown[]
     ): void {
-        const wireData = format.serializeMessage(
+        const wireData = wireFormat.serializeMessage(
             envelope,
             args,
             conn.encoder,
@@ -113,13 +113,13 @@ export class RpcSystemCallSender {
 
     handshake(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         peerId: string,
         hubId: string,
         index: number
     ): void {
         // RpcHandshake uses [MessagePackObject] array mode for binary.
-        const handshakeArg = format.isBinary
+        const handshakeArg = wireFormat.isBinary
             ? [peerId, null, hubId, 2, index]
             : {
                 RemotePeerId: peerId,
@@ -128,21 +128,21 @@ export class RpcSystemCallSender {
                 ProtocolVersion: 2,
                 Index: index,
             };
-        this._send(conn, format, { Method: RpcSystemCalls.handshake }, [
+        this._send(conn, wireFormat, { Method: RpcSystemCalls.handshake }, [
             handshakeArg,
         ]);
     }
 
     ok(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         relatedId: number,
         result: unknown
     ): void {
         try {
             this._send(
                 conn,
-                format,
+                wireFormat,
                 { Method: RpcSystemCalls.ok, RelatedId: relatedId },
                 [result]
             );
@@ -150,13 +150,13 @@ export class RpcSystemCallSender {
         catch (e) {
             // Mirrors RpcSystemCallSender.cs:104 — "Failed to send Ok response".
             errorLog?.log(`Failed to send Ok response for call #${relatedId}`, e);
-            this.error(conn, format, relatedId, e);
+            this.error(conn, wireFormat, relatedId, e);
         }
     }
 
     error(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         relatedId: number,
         error: unknown
     ): void {
@@ -165,7 +165,7 @@ export class RpcSystemCallSender {
         // (decision D3).
         this._send(
             conn,
-            format,
+            wireFormat,
             { Method: RpcSystemCalls.error, RelatedId: relatedId },
             [toExceptionInfo(error, this.errorFilter)]
         );
@@ -173,10 +173,10 @@ export class RpcSystemCallSender {
 
     cancel(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         relatedId: number
     ): void {
-        this._send(conn, format, {
+        this._send(conn, wireFormat, {
             Method: RpcSystemCalls.cancel,
             RelatedId: relatedId,
         });
@@ -184,10 +184,10 @@ export class RpcSystemCallSender {
 
     keepAlive(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         activeCallIds: number[]
     ): void {
-        this._send(conn, format, { Method: RpcSystemCalls.keepAlive }, [
+        this._send(conn, wireFormat, { Method: RpcSystemCalls.keepAlive }, [
             activeCallIds,
         ]);
     }
@@ -197,17 +197,17 @@ export class RpcSystemCallSender {
     // instead of hanging. Mirrors .NET RpcSystemCallSender.Disconnect.
     disconnect(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         localIds: number[]
     ): void {
-        this._send(conn, format, { Method: RpcSystemCalls.disconnect }, [
+        this._send(conn, wireFormat, { Method: RpcSystemCalls.disconnect }, [
             localIds,
         ]);
     }
 
     item(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         localId: number,
         index: number,
         item: unknown
@@ -215,13 +215,13 @@ export class RpcSystemCallSender {
         this._itemEnv.RelatedId = localId;
         this._itemArgs[0] = index;
         this._itemArgs[1] = item;
-        this._send(conn, format, this._itemEnv, this._itemArgs);
+        this._send(conn, wireFormat, this._itemEnv, this._itemArgs);
         this._itemArgs[1] = null;
     }
 
     batch(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         localId: number,
         index: number,
         items: unknown[]
@@ -229,13 +229,13 @@ export class RpcSystemCallSender {
         this._batchEnv.RelatedId = localId;
         this._batchArgs[0] = index;
         this._batchArgs[1] = items;
-        this._send(conn, format, this._batchEnv, this._batchArgs);
+        this._send(conn, wireFormat, this._batchEnv, this._batchArgs);
         this._batchArgs[1] = null;
     }
 
     end(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         localId: number,
         index: number,
         error: {
@@ -246,12 +246,12 @@ export class RpcSystemCallSender {
         this._endEnv.RelatedId = localId;
         this._endArgs[0] = index;
         this._endArgs[1] = error;
-        this._send(conn, format, this._endEnv, this._endArgs);
+        this._send(conn, wireFormat, this._endEnv, this._endArgs);
     }
 
     ack(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         localId: number,
         nextIndex: number,
         hostId: string
@@ -259,17 +259,17 @@ export class RpcSystemCallSender {
         this._ackEnv.RelatedId = localId;
         this._ackArgs[0] = nextIndex;
         this._ackArgs[1] = hostId;
-        this._send(conn, format, this._ackEnv, this._ackArgs);
+        this._send(conn, wireFormat, this._ackEnv, this._ackArgs);
     }
 
     ackEnd(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         localId: number,
         hostId: string
     ): void {
         this._ackEndEnv.RelatedId = localId;
         this._ackEndArgs[0] = hostId;
-        this._send(conn, format, this._ackEndEnv, this._ackEndArgs);
+        this._send(conn, wireFormat, this._ackEndEnv, this._ackEndArgs);
     }
 }

@@ -121,14 +121,14 @@ public class RpcReconnectProofClientTest : RpcTestBase
 
     private RpcServerPeer? GetServerPeer(string clientId)
     {
-        var rpcRef = RpcRef.NewServer(clientId, SerializationFormat);
+        var rpcRef = RpcRef.NewServer(clientId, WireFormat);
         return WebServices.RpcHub().TryGetServerPeer(rpcRef, out var peer) ? peer : null;
     }
 
     private async Task<HttpStatusCode?> RawConnect(
         string clientId, string? counterText = null, string? proof = null)
     {
-        var query = $"?clientId={clientId}&f={SerializationFormat}";
+        var query = $"?clientId={clientId}&f={WireFormat}";
         if (counterText is not null)
             query += $"&c={counterText}";
         if (proof is not null)
@@ -188,7 +188,7 @@ public class RpcReconnectProofDisabledTest(ITestOutputHelper @out) : RpcTestBase
         var clientPeer = hub.GetClientPeer(ClientPeerRef);
         var whenDisconnected = clientPeer.ConnectionState.Value.WhenDisconnected;
         var uri = new Uri($"ws://{WebHost.ServerUri.Authority}/rpc/ws"
-            + $"?clientId={clientPeer.ClientId}&f={SerializationFormat}");
+            + $"?clientId={clientPeer.ClientId}&f={WireFormat}");
 
         using (var webSocket = new ClientWebSocket()) {
             await webSocket.ConnectAsync(uri, CancellationToken.None);

@@ -36,8 +36,8 @@ public static class RpcWebSocketServerDefaultDelegates
         static (server, context, isBackend) => {
             var query = context.Request.Query;
             var clientId = query[server.Options.ClientIdParameterName].SingleOrDefault() ?? "";
-            var serializationFormat = query[server.Options.SerializationFormatParameterName].SingleOrDefault() ?? "";
-            return RpcRef.NewServer(clientId, serializationFormat, isBackend);
+            var wireFormat = query[server.Options.WireFormatParameterName].SingleOrDefault() ?? "";
+            return RpcRef.NewServer(clientId, wireFormat, isBackend);
         };
 
 #if NET6_0_OR_GREATER

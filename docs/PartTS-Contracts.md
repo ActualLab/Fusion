@@ -162,4 +162,4 @@ const item = await api.Get('~', id);
 ```
 
 The generator's output is also what the cross-language E2E tests (`ts/e2e/ts-dotnet-e2e.ts`)
-run against a real .NET server in every serialization format.
+run against a real .NET server in every wire format.

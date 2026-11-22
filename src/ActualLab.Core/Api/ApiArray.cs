@@ -29,29 +29,25 @@ public static class ApiArray
 /// </summary>
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(ApiArrayMessagePackFormatter<>))]
-[method: MemoryPackConstructor]
 public readonly partial struct ApiArray<T>(T[] items)
     : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];
     public static readonly ApiArray<T> Empty = default!;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0)]
     public T[] Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => field ?? EmptyItems;
     } = items is { Length: 0 } ? null! : items;
 
-    [MemoryPackIgnore]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Items.Length;
     }
 
-    [MemoryPackIgnore]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Items.Length == 0;

@@ -46,7 +46,7 @@ import {
     defineRpcService,
     wireMethodName,
     type RpcConnection,
-    type RpcSerializationFormat,
+    type RpcWireFormat,
     type WebSocketLike,
     type RpcServiceDef,
     type RpcMethodDef,
@@ -117,10 +117,10 @@ class FusionSystemCallHandler extends RpcSystemCallHandler {
 class FusionSystemCallSender extends RpcSystemCallSender {
     invalidate(
         conn: RpcConnection,
-        format: RpcSerializationFormat,
+        wireFormat: RpcWireFormat,
         relatedId: number
     ): void {
-        this._send(conn, format, {
+        this._send(conn, wireFormat, {
             Method: FUSION_INVALIDATE_METHOD,
             RelatedId: relatedId,
         });
@@ -251,7 +251,7 @@ export class FusionHub extends RpcHub {
                             if (conn !== undefined)
                                 this.systemCallSender.invalidate(
                                     conn,
-                                    peer.serializationFormat,
+                                    peer.wireFormat,
                                     callId
                                 );
                         }, 0);
@@ -372,7 +372,7 @@ const outboundCallReleaser = new FinalizationRegistry<{
     call.whenInvalidated.resolve();
     const conn = peer.wireConnection;
     if (conn !== undefined)
-        peer.hub.systemCallSender.cancel(conn, peer.serializationFormat, call.callId);
+        peer.hub.systemCallSender.cancel(conn, peer.wireFormat, call.callId);
 });
 
 // Wires both directions of the client computed ↔ outbound compute call binding:
@@ -425,7 +425,7 @@ function bindComputedToCall(
         call.whenInvalidated.resolve();
         const conn = peer.wireConnection;
         if (conn !== undefined)
-            peer.hub.systemCallSender.cancel(conn, peer.serializationFormat, call.callId);
+            peer.hub.systemCallSender.cancel(conn, peer.wireFormat, call.callId);
     });
 }
 

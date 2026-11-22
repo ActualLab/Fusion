@@ -19,9 +19,11 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     private IByteSerializer BaseSerializer { get; } = baseSerializer;
+    private IByteSerializer BaseSerializerRoot { get; } = baseSerializer.Root;
 
     public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
     {
+        // Items are serialized with Read/WriteUnscoped in a single scope per argument list
         if (needsPolymorphism) { // Rare case
             PolySerialize(arguments, buffer);
             return;
@@ -34,6 +36,7 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
         _serializeVisitor = null;
         visitor.ItemSerializers = GetItemSerializers(arguments.Type);
         visitor.Buffer = buffer;
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         try {
             arguments.Read(visitor);
         }
@@ -55,6 +58,7 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
         _deserializeVisitor = null; // Same as in Serialize
         visitor.ItemSerializers = GetItemSerializers(arguments.Type);
         visitor.Data = data;
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         try {
             arguments.Write(visitor);
         }
@@ -68,6 +72,7 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
 
     private void PolySerialize(ArgumentList arguments, ArrayPoolBuffer<byte> buffer)
     {
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         var itemTypes = arguments.Type.ItemTypes;
         for (var i = 0; i < itemTypes.Length; i++) {
             var type = itemTypes[i];
@@ -81,16 +86,17 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
                 else {
                     var itemType = item.GetType();
                     ByteTypeSerializer.WriteDerivedItemType(buffer, type, itemType);
-                    BaseSerializer.Write(buffer, item, itemType);
+                    BaseSerializer.WriteUnscoped(buffer, item, itemType);
                 }
             }
             else
-                BaseSerializer.Write(buffer, item, type);
+                BaseSerializer.WriteUnscoped(buffer, item, type);
         }
     }
 
     private void PolyDeserialize(ArgumentList arguments, ReadOnlyMemory<byte> data)
     {
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         var itemTypes = arguments.Type.ItemTypes;
         for (var i = 0; i < itemTypes.Length; i++) {
             var type = itemTypes[i];
@@ -103,11 +109,11 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
             if (IsPolymorphic(type)) {
                 var itemType = ByteTypeSerializer.ReadDerivedItemType(ref data, type);
                 item = itemType != typeof(NullValue)
-                    ? BaseSerializer.Read(ref data, itemType)
+                    ? BaseSerializer.ReadUnscoped(ref data, itemType)
                     : null;
             }
             else
-                item = BaseSerializer.Read(ref data, type);
+                item = BaseSerializer.ReadUnscoped(ref data, type);
             arguments.SetUntyped(i, item);
         }
     }
@@ -179,7 +185,7 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
 
         // No type check: the item at this position is T, so its serializer is ItemSerializer<T>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public new static ItemSerializer<T> GetUnchecked(ItemSerializer?[] serializers, int index)
+        public static new ItemSerializer<T> GetUnchecked(ItemSerializer?[] serializers, int index)
         {
             var serializer = ItemSerializer.GetUnchecked(serializers, index);
             Debug.Assert(serializer is ItemSerializer<T>);
@@ -188,8 +194,8 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
 
         public ItemSerializer(IByteSerializer<T> serializer)
         {
-            Write = serializer.Write;
-            Read = serializer.Read;
+            Write = serializer.WriteUnscoped;
+            Read = serializer.ReadUnscoped;
             WriteUntyped = WriteUntypedImpl;
             ReadUntyped = ReadUntypedImpl;
         }
@@ -219,10 +225,10 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
         }
 
         private void WriteUntypedImpl(IBufferWriter<byte> buffer, object? item)
-            => _serializer.Write(buffer, item, _itemType);
+            => _serializer.WriteUnscoped(buffer, item, _itemType);
 
         private object? ReadUntypedImpl(ref ReadOnlyMemory<byte> data)
-            => _serializer.Read(ref data, _itemType);
+            => _serializer.ReadUnscoped(ref data, _itemType);
     }
 
     private sealed class SerializeVisitor : ArgumentListReader
@@ -268,4 +274,4 @@ public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) :
                 ? serializer.ReadUntyped.Invoke(ref Data)
                 : defaultValue;
     }
-}
+}

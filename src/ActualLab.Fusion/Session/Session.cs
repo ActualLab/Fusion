@@ -12,9 +12,8 @@ namespace ActualLab.Fusion;
 /// <summary>
 /// Represents an authenticated user session identified by a unique string <see cref="Id"/>.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(SessionMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(SessionMessagePackFormatter))]
 [JsonConverter(typeof(SessionJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
 public sealed partial class Session : IHasId<string>,
     IEquatable<Session>, IConvertibleTo<string>, ISanitized
@@ -36,7 +35,7 @@ public sealed partial class Session : IHasId<string>,
     private string? _sanitizedId;
     private byte[]? _sha256Hash;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
+    [DataMember(Order = 0)]
     public string Id { get; }
     // We use a non-cryptographic hash here because it's on the wire (SessionAuthInfo.SessionHash,
     // Auth_SignOut.KickUserSessionHash), and changing it would break those comparisons across
@@ -44,15 +43,15 @@ public sealed partial class Session : IHasId<string>,
     // impossible to guess SessionId by knowing it; on the other hand, ~4B hash variants are
     // enough to identify a Session of a given user, and that's the only purpose of this hash.
     // Use Sha256Hash when a strong, collision-resistant identifier is needed.
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public string Hash => field ??= ComputeHash();
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public ReadOnlyMemory<byte> Sha256Hash => _sha256Hash ??= ComputeSha256Hash();
 
     public static Session New()
         => Factory.Invoke();
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     public Session(string id)
     {
         // The check is here to prevent use of sessions with empty or other special Ids,
