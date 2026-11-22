@@ -26,9 +26,9 @@
     <rect x="120" y="100" width="160" height="40" rx="8" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" />
     <text x="200" y="125" font-family="'SF Mono','Fira Code',Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">ServiceRegistry</text>
 
-    <!-- SerializationFormats -->
+    <!-- WireFormats -->
     <rect x="380" y="100" width="180" height="40" rx="8" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" />
-    <text x="470" y="125" font-family="'SF Mono','Fira Code',Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">SerializationFormats</text>
+    <text x="470" y="125" font-family="'SF Mono','Fira Code',Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">WireFormats</text>
 
     <!-- Peers Collection -->
     <rect x="660" y="100" width="160" height="40" rx="8" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" />

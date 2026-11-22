@@ -11,7 +11,7 @@ import {
     RpcClientPeer,
     RpcType,
     RpcRemoteExecutionMode,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcWebSocketConnection,
     rpcService,
     rpcMethod,
@@ -358,8 +358,8 @@ describe('End-to-end Fusion over RPC', () => {
         );
     });
 
-    it('F9: invalidation is sent via the peer serialization format (msgpack, no JSON frame)', async () => {
-        const format = RpcSerializationFormat.get('msgpack6');
+    it('F9: invalidation is sent via the peer wire format (msgpack, no JSON frame)', async () => {
+        const wireFormat = RpcWireFormat.get('msgpack6');
         const [clientWs, serverWs] = createMockWsPair();
 
         // The invalidation must go out as a binary msgpack frame, never a
@@ -376,13 +376,13 @@ describe('End-to-end Fusion over RPC', () => {
         const clientConn = new RpcWebSocketConnection(
             clientWs,
             true,
-            format,
+            wireFormat,
             clientHub.registry
         );
         const serverConn = new RpcWebSocketConnection(
             serverWs,
             true,
-            format,
+            wireFormat,
             serverHub.registry
         );
 
@@ -397,7 +397,7 @@ describe('End-to-end Fusion over RPC', () => {
         const serverPeer = serverHub.getServerPeer(
             `server://${crypto.randomUUID()}`
         );
-        serverPeer.serializationFormat = format;
+        serverPeer.wireFormat = wireFormat;
         serverPeer.accept(serverConn);
         await delay(20);
 

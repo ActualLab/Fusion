@@ -106,7 +106,7 @@ public class UserService : IComputeService
 | Dependency tracking | None | Automatic |
 | Stampede protection | Yes | Yes |
 | Real-time client updates | No | Yes |
-| Serialization | Configurable | MemoryPack (optimized) |
+| Serialization | Configurable | MessagePack by default; System.Text.Json, MemoryPack and others are configurable |
 | TTL-based expiration | Yes | Optional (invalidation-based preferred) |
 
 ## When to Use Each

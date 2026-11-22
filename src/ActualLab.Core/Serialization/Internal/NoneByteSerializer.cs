@@ -9,10 +9,12 @@ public sealed class NoneByteSerializer : IByteSerializer
 {
     public static readonly NoneByteSerializer Instance = new();
 
-    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public IByteSerializer Root => this;
+
+    public object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
         => throw Errors.NoSerializer();
 
-    public void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
         => throw Errors.NoSerializer();
 
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null)
@@ -26,9 +28,11 @@ public sealed class NoneByteSerializer<T> : IByteSerializer<T>
 {
     public static readonly NoneByteSerializer<T> Instance = new();
 
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
+    public IByteSerializer Root => NoneByteSerializer.Instance;
+
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength)
         => throw Errors.NoSerializer();
 
-    public void Write(IBufferWriter<byte> bufferWriter, T value)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value)
         => throw Errors.NoSerializer();
 }

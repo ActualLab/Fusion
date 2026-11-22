@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="K4os.Compression.LZ4" />
-    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="Ulid" />
     <PackageReference Include="Ulid.MessagePack" />
@@ -22,8 +21,6 @@
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
-    <PackageReference Include="MemoryPack.Core" />
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net11'))">

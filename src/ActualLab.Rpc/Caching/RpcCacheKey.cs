@@ -13,18 +13,18 @@ namespace ActualLab.Rpc.Caching;
 /// the entire lifetime of the key, including while the key is used in a hash-based collection.
 /// Built-in key producers satisfy this ownership contract; custom callers are responsible for it.
 /// </remarks>
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public readonly int HashCode;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public readonly string Name;
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), Key(1)]
     public readonly ReadOnlyMemory<byte> ArgumentData;
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcCacheKey(string name, ReadOnlyMemory<byte> argumentData)
     {

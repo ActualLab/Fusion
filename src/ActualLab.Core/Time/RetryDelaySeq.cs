@@ -1,17 +1,13 @@
-using MessagePack;
-
 namespace ActualLab.Time;
 
 /// <summary>
 /// Defines a retry delay sequence with support for fixed and exponential backoff
 /// strategies, including configurable jitter spread.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[MessagePackObject(true)]
 public partial record RetryDelaySeq(
-    [property: DataMember, MemoryPackOrder(0)] TimeSpan Min,
-    [property: DataMember, MemoryPackOrder(1)] TimeSpan Max,
-    [property: DataMember, MemoryPackOrder(2)] double Spread)
+    TimeSpan Min,
+    TimeSpan Max,
+    double Spread)
 {
     public const double DefaultSpread = 0.1;
     public const double DefaultMultiplier = 1.41421356237; // Math.Sqrt(2)
@@ -27,16 +23,13 @@ public partial record RetryDelaySeq(
     public static RetryDelaySeq Exp(TimeSpan min, TimeSpan max, double spread = DefaultSpread, double multiplier = DefaultMultiplier)
         => new (min, max, spread, multiplier);
 
-    [DataMember, MemoryPackOrder(3)]
     public double Multiplier { get; init; } = DefaultMultiplier;
 
-    [IgnoreMember]
     public virtual TimeSpan this[int failureCount] {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => GetDelay(failureCount);
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public RetryDelaySeq(
         TimeSpan min, TimeSpan max,
         double spread = DefaultSpread,

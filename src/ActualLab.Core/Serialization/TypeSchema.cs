@@ -1,3 +1,5 @@
+using ActualLab.Collections.Slim;
+using ActualLab.OS;
 using ActualLab.Text;
 using ActualLab.Time;
 
@@ -36,7 +38,14 @@ public abstract class TypeSchema
 public static class TypeSchema<TSchema>
     where TSchema : TypeSchema, new()
 {
-    private static readonly SerializerCache[] Caches = [new(), new(), new(), new(), new()];
+    // Indexed by the SerializerKind value
+    private static readonly SerializerCache[] Caches = Enumerable.Range(0, SerializerKindExt.MaxKindCount)
+        .Select(_ => new SerializerCache())
+        .ToArray();
+
+    // Strong references: there are just a few base serializers, and lookups must be fast
+    private static readonly ConcurrentDictionary<IByteSerializer, IByteSerializer> BaseSerializerCache
+        = new(HardwareInfo.ProcessorCountPo2, 7, ReferenceEqualityComparer<IByteSerializer>.Instance);
 
     public static readonly TSchema Instance = new();
 
@@ -48,6 +57,27 @@ public static class TypeSchema<TSchema>
         => TypeFilter is { } typeFilter
             ? Caches[(int)serializerKind].Get(serializerKind, typeFilter)
             : serializerKind.GetDefaultTypeDecoratingSerializer();
+
+    // Uses the shared SerializerKind path when baseSerializer is that kind's default serializer,
+    // so a replaced DefaultTypeDecorating serializer is still honored
+    public static IByteSerializer GetTypeDecoratingSerializer(IByteSerializer baseSerializer, SerializerKind serializerKind)
+        => ReferenceEquals(baseSerializer, serializerKind.GetDefaultSerializer())
+            ? GetTypeDecoratingSerializer(serializerKind)
+            : GetTypeDecoratingSerializer(baseSerializer);
+
+    // For serializers that aren't SerializerKind defaults - e.g. the ones format packages own
+    public static IByteSerializer GetTypeDecoratingSerializer(IByteSerializer baseSerializer)
+        => BaseSerializerCache.GetOrAdd(baseSerializer, static s => CreateTypeDecoratingSerializer(s, TypeFilter));
+
+    // Private methods
+
+    private static IByteSerializer CreateTypeDecoratingSerializer(
+        IByteSerializer baseSerializer, Func<Type, bool>? typeFilter)
+        => baseSerializer is ITextSerializer textSerializer
+            ? new TypeDecoratingTextSerializer(textSerializer, typeFilter)
+            : new TypeDecoratingByteSerializer(baseSerializer, typeFilter);
+
+    // Nested types
 
     private sealed class SerializerCache
     {
@@ -61,11 +91,7 @@ public static class TypeSchema<TSchema>
             if (_entry is { } entry && ReferenceEquals(entry.BaseSerializer, baseSerializer))
                 return entry.Serializer;
 
-            IByteSerializer serializer = serializerKind switch {
-                SerializerKind.SystemJson or SerializerKind.NewtonsoftJson
-                    => new TypeDecoratingTextSerializer((ITextSerializer)baseSerializer, typeFilter),
-                _ => new TypeDecoratingByteSerializer(baseSerializer, typeFilter),
-            };
+            var serializer = CreateTypeDecoratingSerializer(baseSerializer, typeFilter);
             Volatile.Write(ref _entry, new Entry(baseSerializer, serializer));
             return serializer;
         }

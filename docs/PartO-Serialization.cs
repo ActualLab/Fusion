@@ -2,7 +2,6 @@ using System.Runtime.Serialization;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Interception;
-using MemoryPack;
 using Microsoft.EntityFrameworkCore;
 using MessagePack;
 using Newtonsoft.Json;
@@ -128,6 +127,8 @@ public static class CustomizingSerialization
                 TypeNameHandling = TypeNameHandling.Auto,
                 NullValueHandling = NullValueHandling.Ignore,
                 DateParseHandling = DateParseHandling.None,
+                // Required: ActualLab types carry no Newtonsoft.Json attributes since v16
+                ContractResolver = new NewtonsoftJsonContractResolver(),
                 // Add custom converters if needed
                 Converters = { new MyCustomConverter() },
             }),
@@ -137,7 +138,7 @@ public static class CustomizingSerialization
 
     public static void UseTypeDecoratedSerializer(IServiceCollection services)
     {
-        JsonSerializerSettings customSettings = new();
+        JsonSerializerSettings customSettings = new() { ContractResolver = new NewtonsoftJsonContractResolver() };
 
         #region PartOSerialization_TypeDecoratedSerializer
         services.AddSingleton(_ => DbLogEntrySerializer.Default with {
@@ -157,23 +158,20 @@ public static class CustomizingSerialization
 
 #region PartOSerialization_CommandRecord
 // Command types must be serializable
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public sealed partial record CreateTodoCommand(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] string Title,
-    [property: DataMember, MemoryPackOrder(1), Key(1)] string? Description
+    [property: DataMember(Order = 0), Key(0)] string Title,
+    [property: DataMember(Order = 1), Key(1)] string? Description
 ) : ICommand<Todo>;
 #endregion
 
 #region PartOSerialization_FullyAnnotatedCommand
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject]
+[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor]
 public sealed partial record MyCommand(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Id,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] string Data
-) : ICommand<string>
-{
-    [System.Text.Json.Serialization.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public MyCommand() : this("", "") { }
-}
+    [property: DataMember(Order = 0), Key(0)] string Id,
+    [property: DataMember(Order = 1), Key(1)] string Data
+) : ICommand<string>;
 #endregion
 
 // ============================================================================

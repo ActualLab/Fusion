@@ -44,7 +44,7 @@ public record RpcPeerOptions
         => route.Ref.ConnectionKind;
 
     protected static bool DefaultTerminalErrorDetector(RpcPeer peer, Exception error)
-        => error is RpcReconnectFailedException or RpcSerializationFormatException;
+        => error is RpcReconnectFailedException or RpcWireFormatException;
 
     protected static Task<RpcConnection> DefaultServerConnectionFactory(
         RpcServerPeer peer, RpcTransport transport, PropertyBag properties,

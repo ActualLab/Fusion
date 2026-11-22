@@ -5,7 +5,7 @@ namespace ActualLab.Rpc.Compression;
 
 /// <summary>
 /// Compresses a connection's outbound frames and applies the reset policy.
-/// Exists only when the serialization format compresses the outbound direction.
+/// Exists only when the wire format compresses the outbound direction.
 /// </summary>
 /// <remarks>
 /// A frame is <c>[int32 length|flags][body]</c> - the two flags ride in the header word's top

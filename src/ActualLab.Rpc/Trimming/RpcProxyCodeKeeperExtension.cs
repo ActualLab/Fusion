@@ -41,8 +41,8 @@ public class RpcProxyCodeKeeperExtension : ProxyCodeKeeper.IExtension
         CodeKeeper.Keep<RpcServiceDef>();
         CodeKeeper.Keep<RpcServiceRegistry>();
         CodeKeeper.Keep<RpcConfiguration>();
-        CodeKeeper.Keep<RpcSerializationFormat>();
-        CodeKeeper.Keep<RpcSerializationFormatResolver>();
+        CodeKeeper.Keep<RpcWireFormat>();
+        CodeKeeper.Keep<RpcWireFormatResolver>();
         CodeKeeper.Keep<ByteArgumentListSerializer>();
         CodeKeeper.Keep<RpcByteMessageSerializerV4>();
         CodeKeeper.Keep<RpcDefaultCallTracer>();

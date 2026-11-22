@@ -132,7 +132,7 @@ On all cores of the same machine, a Fusion service serves 330.53M cached calls/s
 ### Why is Fusion faster?
 
 - **In-process caching**: Cached values stay in memory — no network hop
-- **Binary serialization**: MemoryPack is faster than Redis protocol
+- **Binary serialization**: MessagePack (or MemoryPack) is faster than Redis protocol
 - **Connection multiplexing**: Efficient batching over fewer connections
 - **No deserialization overhead**: Cached objects are already deserialized
 

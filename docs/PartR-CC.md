@@ -14,7 +14,7 @@ ActualLab.Rpc is built around a few core abstractions:
 
 - Peer connections and their lifecycle
 - RPC service client and server proxies
-- Configuration, serialization formats, and middleware
+- Configuration, wire formats, and middleware
 
 ### Key Properties
 
@@ -22,7 +22,7 @@ ActualLab.Rpc is built around a few core abstractions:
 |------------------------|-----------------------------------------------------------------------|
 | `Configuration`        | RPC configuration settings                                            |
 | `ServiceRegistry`      | Registry of RPC service definitions                                   |
-| `SerializationFormats` | Available serialization format resolvers                              |
+| `WireFormats` | The wire format resolver                              |
 | `Peers`                | Collection of active peer instances                                   |
 | `DefaultPeer`          | The default peer for outbound calls                                   |
 | `LoopbackPeer`         | Peer for in-process loopback connections - **for use in tests only**  |
@@ -69,7 +69,7 @@ var defaultPeer = rpcHub.DefaultPeer;
 | `IsServer` | Whether this refers to a server-side peer |
 | `IsBackend` | Whether this is a backend (internal) peer |
 | `ConnectionKind` | Type of connection (Remote, Loopback, Local, None) |
-| `SerializationFormat` | Name of serialization format to use |
+| `WireFormat` | Name of wire format to use |
 | `HostInfo` | Host identifier (URL or other identifier) |
 | `Versions` | Supported API versions |
 
@@ -114,7 +114,7 @@ clientRef = clientRef.Initialize();
 | `ConnectionState` | Current connection state (AsyncState) |
 | `ConnectionKind` | Type of connection |
 | `Versions` | Supported API versions |
-| `SerializationFormat` | Current serialization format |
+| `WireFormat` | Current wire format |
 | `InboundCalls` | Tracker for incoming RPC calls |
 | `OutboundCalls` | Tracker for outgoing RPC calls |
 

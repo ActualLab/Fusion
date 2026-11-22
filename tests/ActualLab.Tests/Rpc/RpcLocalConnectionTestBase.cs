@@ -115,9 +115,9 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     // This test mirrors RpcWebSocketTest.PerformanceTest exactly to allow comparison
     [FullRunOnlyTheory]
     [InlineData(500_000, "mempack6c")]
-    public async Task PerformanceTestV2(int iterationCount, string serializationFormat)
+    public async Task PerformanceTestV2(int iterationCount, string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 

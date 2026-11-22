@@ -14,7 +14,7 @@ public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void FixedTest()
     {
-        var s = RetryDelaySeq.Fixed(1).AssertPassesThroughAllSerializers();
+        var s = RetryDelaySeq.Fixed(1);
         s.Min.Should().Be(TimeSpan.FromSeconds(1));
         s.Max.Should().Be(TimeSpan.FromSeconds(1));
         s.Spread.Should().Be(RetryDelaySeq.DefaultSpread);
@@ -35,7 +35,7 @@ public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void ExpTest()
     {
-        var s = RetryDelaySeq.Exp(1, 10).AssertPassesThroughAllSerializers();
+        var s = RetryDelaySeq.Exp(1, 10);
         s.Min.Should().Be(TimeSpan.FromSeconds(1));
         s.Max.Should().Be(TimeSpan.FromSeconds(10));
         s.Spread.Should().Be(RetryDelaySeq.DefaultSpread);

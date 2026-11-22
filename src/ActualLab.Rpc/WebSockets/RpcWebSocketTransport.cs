@@ -154,7 +154,7 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                 if (messageType == WebSocketMessageType.Close) {
                     if (WebSocket.CloseStatus.HasValue
                         && (int)WebSocket.CloseStatus.Value == RpcWebSocketCloseCode.UnsupportedFormat)
-                        throw Errors.UnsupportedSerializationFormat(WebSocket.CloseStatusDescription.NullIfEmpty());
+                        throw Errors.UnsupportedWireFormat(WebSocket.CloseStatusDescription.NullIfEmpty());
                     yield break;
                 }
                 if (messageType != MessageType)

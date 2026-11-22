@@ -14,9 +14,9 @@ public class DefaultMessagePackResolver : IFormatterResolver
 {
     public static readonly IFormatterResolver Instance = new DefaultMessagePackResolver();
 
-    public static IEnumerable<IFormatterResolver> Resolvers { get; set; } = new [] {
+    public static IEnumerable<IFormatterResolver> Resolvers { get; set; } = [
         StandardResolver.Instance,
-    };
+    ];
 
     public static readonly Dictionary<Type, Type> Formatters = new() {
         { typeof(Unit), typeof(UnitMessagePackFormatter) },

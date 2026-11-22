@@ -38,7 +38,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
     private readonly int _frameSize;
     private readonly int _maxBufferSize;
     private readonly int _maxFrameSize;
-    // Both come from the peer's serialization format, and the two directions are independent -
+    // Both come from the peer's wire format, and the two directions are independent -
     // so either can be null on its own
     private readonly RpcFrameEncoder? _frameEncoder;
     private readonly RpcFrameDecoder? _frameDecoder;
@@ -103,7 +103,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
                 $"Max frame size must be within 1..{RpcFrameCodec.MaxFrameSize}.");
         _maxBufferSize = maxBufferSize;
 
-        // Compression is a property of the peer's serialization format, so both ends know it
+        // Compression is a property of the peer's wire format, so both ends know it
         // before the first frame - there is nothing to negotiate and no arming step.
         if (peer.InboundCompression is { } inbound)
             _frameDecoder = new RpcFrameDecoder(

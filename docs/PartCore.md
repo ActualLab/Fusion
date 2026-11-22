@@ -71,6 +71,8 @@ Specialized collections and data structures. See [PropertyBag documentation](./P
 ### ActualLab.Serialization
 
 Unified serialization infrastructure. See [Unified Serialization](./PartS.md) for details.
+MemoryPack and Newtonsoft.Json support lives in the `ActualLab.Serialization.MemoryPack` and
+`ActualLab.Serialization.NewtonsoftJson` packages.
 
 | Type | Description | Source |
 |------|-------------|--------|
@@ -108,7 +110,6 @@ Caching infrastructure.
 
 | Type | Description | Source |
 |------|-------------|--------|
-| `FileSystemCache` | Simple file-based cache | [FileSystemCache.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Caching/FileSystemCache.cs) |
 | `MemoizingCache<TKey, TValue>` | In-memory memoization cache | [MemoizingCache.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Caching/MemoizingCache.cs) |
 
 ### ActualLab.Versioning

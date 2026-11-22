@@ -12,12 +12,12 @@ namespace ActualLab.Rpc.Infrastructure;
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public readonly partial record struct RpcObjectId(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] Guid HostId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] long LocalId)
+    [property: DataMember(Order = 0), Key(0)] Guid HostId,
+    [property: DataMember(Order = 1), Key(1)] long LocalId)
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsNone => LocalId == 0 && HostId == default;
 
     public override string ToString()

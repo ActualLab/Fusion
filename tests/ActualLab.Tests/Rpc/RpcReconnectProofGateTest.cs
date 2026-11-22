@@ -16,7 +16,7 @@ namespace ActualLab.Tests.Rpc;
 [Trait("Category", "Rpc")]
 public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    private static readonly string Format = RpcTestBase.DefaultSerializationFormat;
+    private static readonly string Format = RpcTestBase.DefaultWireFormat;
 
     [Fact]
     public async Task UnknownClientIdConnectsWithoutProof()

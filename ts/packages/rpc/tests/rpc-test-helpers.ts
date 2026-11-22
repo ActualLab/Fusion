@@ -2,7 +2,7 @@ import {
     RpcHub,
     RpcClientPeer,
     RpcWebSocketConnection,
-    RpcSerializationFormat,
+    RpcWireFormat,
 } from '../src/index.js';
 import type { RpcConnection, RpcServerPeer } from '../src/index.js';
 import { createMockWsPair } from './mock-ws.js';
@@ -14,16 +14,16 @@ export interface TestHubPair {
     serverPeer: RpcServerPeer;
 }
 
-export function createTestHubPair(formatKey: string): TestHubPair {
+export function createTestHubPair(wireFormatKey: string): TestHubPair {
     const serverHub = new RpcHub('server-hub');
     const clientHub = new RpcHub('client-hub');
-    const format = RpcSerializationFormat.get(formatKey);
+    const wireFormat = RpcWireFormat.get(wireFormatKey);
 
     const [clientWs, serverWs] = createMockWsPair();
-    const clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, clientHub.registry);
-    const serverConn = new RpcWebSocketConnection(serverWs, format.isBinary, format, serverHub.registry);
+    const clientConn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
+    const serverConn = new RpcWebSocketConnection(serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
 
-    const clientPeer = new RpcClientPeer(clientHub, 'ws://test', formatKey);
+    const clientPeer = new RpcClientPeer(clientHub, 'ws://test', wireFormatKey);
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
@@ -46,7 +46,7 @@ export function sendClientHandshake(
     index = 1,
 ): void {
     clientHub.systemCallSender.handshake(
-        clientConn, clientPeer.serializationFormat, clientPeer.id, clientHub.hubId, index);
+        clientConn, clientPeer.wireFormat, clientPeer.id, clientHub.hubId, index);
 }
 
 export const FORMATS = ['json5np', 'msgpack6', 'msgpack6c'] as const;

@@ -225,10 +225,6 @@ Defines the contract for asynchronously resolving values by key.
 
 Base class for async key resolvers implementing `IAsyncKeyResolver<TKey, TValue>`.
 
-###### `FileSystemCacheBase<TKey, TValue>`, `FileSystemCache<TKey, TValue>`
-
-Base class for file system-backed caches with atomic read/write operations.
-
 ###### `GenericInstanceFactory`
 
 Base class for factories that produce instances cached by `GenericInstanceCache`.
@@ -336,10 +332,6 @@ Default implementation of `IMutableList<T>` that wraps an `ImmutableList<T>` wit
 ###### `MutablePropertyBag`
 
 A thread-safe mutable property bag backed by an immutable `PropertyBag` with atomic update operations and change notifications.
-
-###### `OptionSet`
-
-A thread-safe mutable set of named options. **Obsolete** - use `MutablePropertyBag` instead.
 
 ###### `PruningCache<TKey, TValue>`
 
@@ -477,7 +469,7 @@ The built-in policies, each named after what it leaves visible and each passing 
 
 ###### `SanitizedString<TSanitizer>` (struct), `ISanitizedString`
 
-A drop-in for a `string` member whose `ToString()` masks while `Sanitization.IsActive` and serializes its raw value always - converters ship for System.Text.Json, Newtonsoft.Json, MemoryPack, MessagePack and Nerdbank. `ISanitizedString` is the non-generic face, so a serializer or log formatter can read `Value` without knowing the policy.
+A drop-in for a `string` member whose `ToString()` masks while `Sanitization.IsActive` and serializes its raw value always - converters ship for System.Text.Json and MessagePack, and with the Newtonsoft.Json, MemoryPack and Nerdbank packages. `ISanitizedString` is the non-generic face, so a serializer or log formatter can read `Value` without knowing the policy.
 
 ###### `SanitizingLogger`, `SanitizingLoggerFactory`, `SanitizingLoggerFactoryExt`
 
@@ -1001,7 +993,7 @@ Defines whether data is stored as raw bytes or as text.
 
 ###### `SerializerKind` (enum), `SerializerKindExt`
 
-Defines the available serializer implementations.
+Defines the available serializer implementations. `MessagePack` and `SystemJson` are built in; `MemoryPack` and `NewtonsoftJson` resolve through a registry their packages fill (`Register`, `IsAvailable`).
 
 ###### `IBox`, `Box<T>` (record), `Box`
 
@@ -1019,14 +1011,6 @@ A string wrapper representing a raw JSON value with proper serialization support
 
 A legacy variant of `TypeDecoratingTextSerializer` that uses list-format type decoration.
 
-###### `MemoryPackByteSerializer<T>`
-
-A typed `MemoryPackByteSerializer` that serializes values of type `T`.
-
-###### `MemoryPackSerialized<T>`
-
-A `ByteSerialized<T>` variant that uses `MemoryPackByteSerializer` for serialization.
-
 ###### `MessagePackByteSerializer<T>`
 
 A typed `MessagePackByteSerializer` that serializes values of type `T`.
@@ -1038,14 +1022,6 @@ A `ByteSerialized<T>` variant that uses `MessagePackByteSerializer` for serializ
 ###### `IMutableBox`, `MutableBox<T>`, `MutableBox`
 
 A mutable boxed value, its serializable implementation, and factory methods.
-
-###### `NewtonsoftJsonSerialized<T>`
-
-A `TextSerialized<T>` variant that uses `NewtonsoftJsonSerializer` for serialization.
-
-###### `NewtonsoftJsonSerializer`
-
-An `ITextSerializer` implementation backed by Newtonsoft.Json (JSON.NET).
 
 ###### `RemoteException`
 
@@ -1067,17 +1043,9 @@ A wrapper that auto-serializes its `Value` to a string on access via `ITextSeria
 
 An `IByteSerializer` decorator that prefixes serialized data with type information.
 
-###### `TypeDecoratingMemoryPackSerialized<T>`
-
-A `ByteSerialized<T>` variant that uses type-decorating MemoryPack serialization.
-
 ###### `TypeDecoratingMessagePackSerialized<T>`
 
 A `ByteSerialized<T>` variant that uses type-decorating MessagePack serialization.
-
-###### `TypeDecoratingNewtonsoftJsonSerialized<T>`
-
-A `TextSerialized<T>` variant that uses type-decorating Newtonsoft.Json serialization.
 
 ###### `TypeDecoratingSystemJsonSerialized<T>`
 
@@ -1124,10 +1092,6 @@ A ref struct that parses a delimited string into individual items using `ListFor
 ###### `ReflectionFormatProvider`
 
 An `IFormatProvider` that resolves format placeholders by reflecting on the argument's properties.
-
-###### `StringAsSymbolMemoryPackFormatterAttribute`
-
-Attribute that applies `StringAsSymbolMemoryPackFormatter` to a string field or property for MemoryPack serialization.
 
 ###### `Base64UrlEncoder`
 
@@ -1511,9 +1475,9 @@ Wraps an `RpcTransport` and associated properties for a single RPC connection.
 
 Base exception type for RPC-related errors.
 
-###### `RpcSerializationFormatException`
+###### `RpcWireFormatException`
 
-Thrown when a client requests an RPC serialization format that the server does not support.
+Thrown when a client requests an RPC wire format that the server does not support.
 
 ###### `RpcHub`
 
@@ -1559,9 +1523,13 @@ Exception indicating that an RPC call must be re-routed to a different peer.
 
 A single route generation of an `RpcRef`: carries the resolved target info for this generation and signals when a route change (reroute) occurs. A static route (`RpcRoute.NewStatic`) belongs to a ref that never reroutes.
 
-###### `RpcSerializationFormat`, `RpcSerializationFormatResolver` (record)
+###### `RpcWireFormat`, `RpcDefaultWireFormats`, `RpcWireFormatResolver`
 
-Defines a named RPC serialization format with its argument and message serializer factories. The resolver's `ClientDeniedFormatKeys` lists the formats a client may not pin via `?f=…` — `njson5` and `njson5np` by default.
+Defines a named RPC wire format with its argument and message serializer factories; `WithLZ4()` makes an LZ4-compressed variant. `RpcDefaultWireFormats` holds the built-in formats (`json5`, `json5np`, `msgpack5(c)`, `msgpack6(c)`), their list `All`, the `DefaultFormat` one (`msgpack6`) and `BackendOnlyFormatKeys` (`njson5`, `njson5np`). The resolver is the format registry of a container, built from `RpcConfiguration.WireFormats`; its `BackendOnlyFormatKeys` lists the formats a client may not pin via `?f=…`.
+
+###### `RpcWireFormatConfiguration`
+
+The format set, default format and backend-only formats of one DI container: `RpcConfiguration.WireFormats`, configured via `RpcBuilder.ConfigureWireFormats(...)` and frozen with the configuration. Format packages add `AddMemoryPack()`, `AddNewtonsoftJson()` and `AddNerdbankMessagePack()` extensions; `AddLZ4Variants()` adds the `-lz4` / `-lz4f` variants.
 
 ###### `RpcSerializableAttribute`
 
@@ -2684,10 +2652,6 @@ Provides shared `ActivitySource` and `Meter` instances for Fusion diagnostics.
 
 A compute service that provides auto-invalidating time-related computed values.
 
-###### `IKeyValueStore`, `KeyValueStoreExt`
-
-A shard-aware key-value store service with compute method support for invalidation. It's an `IBackendService`, so it's reachable only from a backend peer — frontend clients go through `ISandboxedKeyValueStore`.
-
 ###### `ISandboxedKeyValueStore`, `SandboxedKeyValueStoreExt`
 
 A session-scoped key-value store that enforces key prefix constraints based on the current session and user.
@@ -2699,14 +2663,6 @@ Defines the high-level connection state kinds for an RPC peer.
 ###### `SortDirection` (enum)
 
 Defines sort direction values for ordered queries.
-
-###### `KeyValueStore_Remove` (record)
-
-Backend command to remove one or more keys from the `IKeyValueStore`.
-
-###### `KeyValueStore_Set` (record)
-
-Backend command to set one or more key-value entries in the `IKeyValueStore`.
 
 ###### `PageRef<TKey>` (record)
 
@@ -3294,18 +3250,6 @@ Extension methods for `FusionBlazorBuilder` to add Blazor authentication and pre
 
 The primary authentication service contract, providing sign-out, user editing, presence updates, and session/user query methods.
 
-###### `IAuthBackend`
-
-Backend authentication service contract for sign-in, session setup, and session options management.
-
-###### `AuthBackend_SetupSession` (record)
-
-Backend command to set up or update session metadata (IP address, user agent, options).
-
-###### `AuthBackend_SignIn` (record)
-
-Backend command to sign in a user with the specified identity.
-
 ###### `Auth_EditUser` (record)
 
 Command to edit the current user's profile (e.g., name) within a session.
@@ -3456,6 +3400,10 @@ Implementation of `ISandboxedKeyValueStore` that delegates to `IKeyValueStore` w
 
 An `IByteSerializer` implementation backed by Nerdbank.MessagePack with custom converters for Fusion types.
 
+###### `NerdbankMessagePackSerialization`
+
+Registers `SerializerKind.NerdbankMessagePack`; runs from a module initializer, calling `Register()` again is harmless.
+
 ###### `NerdbankMessagePackSerialized<T>`
 
 A `ByteSerialized<T>` variant that uses `NerdbankMessagePackByteSerializer` for serialization.
@@ -3464,9 +3412,101 @@ A `ByteSerialized<T>` variant that uses `NerdbankMessagePackByteSerializer` for 
 
 A `ByteSerialized<T>` variant that uses type-decorating Nerdbank.MessagePack serialization.
 
-###### `RpcNerdbankSerializationFormat`
+###### `RpcNerdbankWireFormats`
 
-Registers `nmsgpack6`/`nmsgpack6c` RPC serialization formats backed by Nerdbank.MessagePack. Call `Register()` at startup to enable.
+The `nmsgpack6`/`nmsgpack6c` RPC wire formats backed by Nerdbank.MessagePack (add their LZ4 variants with `f.AddLZ4Variants()`). Enable them with `rpc.ConfigureWireFormats(f => f.AddNerdbankMessagePack())`.
+
+## ActualLab.Serialization.MemoryPack
+
+### ActualLab.Serialization
+
+###### `MemoryPackByteSerializer`, `MemoryPackByteSerializer<T>`
+
+An `IByteSerializer` implementation backed by MemoryPack. Targets .NET Core 3.1+ / .NET Standard 2.1 (no .NET Framework).
+
+###### `MemoryPackSerialization`
+
+Registers the MemoryPack formatters of ActualLab types (run by the package's module initializer) and `SerializerKind.MemoryPack`. `Register<T>()` registers closed formatters for generic ActualLab types nested in an app type, e.g. a `Dictionary<string, Option<MyStruct>>` member.
+
+###### `MemoryPackSerialized<T>`, `TypeDecoratingMemoryPackSerialized<TSchema, T>`
+
+`ByteSerialized<T>` variants that use (type-decorating) `MemoryPackByteSerializer` for serialization.
+
+###### `RpcMemoryPackWireFormats`, `RpcWireFormatConfigurationExt`
+
+The `mempack5(c)` / `mempack6(c)` RPC wire formats (add their LZ4 variants with `f.AddLZ4Variants()`); enable them with `rpc.ConfigureWireFormats(f => f.AddMemoryPack())`.
+
+###### `StringAsSymbolMemoryPackFormatterAttribute`
+
+Attribute that applies `StringAsSymbolMemoryPackFormatter` to a string field or property for MemoryPack serialization.
+
+### ActualLab.Serialization.Trimming
+
+###### `MemoryPackCodeKeeperExtension`
+
+A `CodeKeeper.IExtension` that keeps the MemoryPack serialization code of the types `CodeKeeper.KeepSerializable<T>()` is called for.
+
+## ActualLab.Serialization.NewtonsoftJson
+
+### ActualLab.Serialization
+
+###### `NewtonsoftJsonSerializer`
+
+An `ITextSerializer` implementation backed by Newtonsoft.Json (JSON.NET).
+
+###### `NewtonsoftJsonContractResolver`
+
+A `DefaultContractResolver` that reads the System.Text.Json and `[DataContract]` attributes of ActualLab types and supplies their converters. Use it (or a subclass) in custom `JsonSerializerSettings`.
+
+###### `NewtonsoftJsonSerialization`
+
+Registers `SerializerKind.NewtonsoftJson`; runs from a module initializer, calling `Register()` again is harmless.
+
+###### `NewtonsoftJsonSerialized<T>`, `TypeDecoratingNewtonsoftJsonSerialized<TSchema, T>`
+
+`TextSerialized<T>` variants that use (type-decorating) `NewtonsoftJsonSerializer` for serialization.
+
+###### `RpcNewtonsoftJsonWireFormats`, `RpcWireFormatConfigurationExt`
+
+The `njson5` / `njson5np` RPC wire formats; enable them with `rpc.ConfigureWireFormats(f => f.AddNewtonsoftJson())`. Clients can't select them unless you remove them from `f.BackendOnlyFormatKeys`.
+
+## ActualLab.Core.Legacy
+
+### ActualLab.Collections
+
+###### `OptionSet`, `ImmutableOptionSet` (record struct)
+
+A thread-safe mutable set of named options and its immutable counterpart. **Obsolete** - use `MutablePropertyBag` / `PropertyBag` instead.
+
+## ActualLab.Fusion.Ext.Backend.Contracts
+
+### ActualLab.Fusion.Authentication
+
+###### `IAuthBackend`
+
+Backend authentication service contract for sign-in, session setup, and session options management.
+
+###### `AuthBackend_SetupSession` (record)
+
+Backend command to set up or update session metadata (IP address, user agent, options).
+
+###### `AuthBackend_SignIn` (record)
+
+Backend command to sign in a user with the specified identity.
+
+### ActualLab.Fusion.Extensions
+
+###### `IKeyValueStore`
+
+A shard-aware key-value store service with compute method support for invalidation. It's an `IBackendService`, so it's reachable only from a backend peer — frontend clients go through `ISandboxedKeyValueStore`. `KeyValueStoreExt` is in `ActualLab.Fusion.Ext.Services`.
+
+###### `KeyValueStore_Remove` (record)
+
+Backend command to remove one or more keys from the `IKeyValueStore`.
+
+###### `KeyValueStore_Set` (record)
+
+Backend command to set one or more key-value entries in the `IKeyValueStore`.
 
 ## ActualLab.Redis
 

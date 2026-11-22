@@ -1,15 +1,13 @@
 using Nerdbank.MessagePack;
+using PolyType;
 
 namespace ActualLab.Serialization.Internal;
 
 /// <summary>
-/// Nerdbank.MessagePack converter for <see cref="TextSerialized{T}"/> and its subclasses
-/// (notably <see cref="NewtonsoftJsonSerialized{T}"/>). The legacy MessagePack wire format
-/// — dictated by <c>[Key(0)] string Data</c> — is a 1-element array <c>[Data]</c> carrying
-/// the serialized JSON string. Nerdbank's default reflection provider would otherwise emit
-/// <c>{"Data": ...}</c> (map), which breaks both raw byte compatibility AND downstream
-/// composites like <see cref="ImmutableOptionSet"/> / <see cref="PropertyBag"/> whose
-/// Dictionary-of-NewtonsoftJsonSerialized member carries this shape by reference.
+/// Nerdbank.MessagePack converter for <see cref="TextSerialized{T}"/> subclasses. The legacy
+/// MessagePack wire format - dictated by <c>[Key(0)] string Data</c> - is a 1-element array
+/// <c>[Data]</c> carrying the serialized text; Nerdbank's default reflection provider would emit
+/// <c>{"Data": ...}</c> (map) instead.
 /// </summary>
 public class TextSerializedNerdbankConverter<T, TSerialized> : MessagePackConverter<TSerialized?>
     where TSerialized : TextSerialized<T>, new()
@@ -38,9 +36,26 @@ public class TextSerializedNerdbankConverter<T, TSerialized> : MessagePackConver
 }
 
 /// <summary>
-/// Closed-over-NewtonsoftJsonSerialized convenience so the converter can be registered as
-/// an open generic by the default <see cref="NerdbankMessagePackByteSerializer"/>.
+/// Applies <see cref="TextSerializedNerdbankConverter{T,TSerialized}"/> to <c>NewtonsoftJsonSerialized&lt;T&gt;</c>,
+/// which lives in ActualLab.Serialization.NewtonsoftJson - a package this one doesn't reference.
 /// </summary>
-public sealed class NewtonsoftJsonSerializedNerdbankConverter<T>
-    : TextSerializedNerdbankConverter<T, NewtonsoftJsonSerialized<T>>
-{ }
+public sealed class NewtonsoftJsonSerializedNerdbankConverterFactory : IMessagePackConverterFactory
+{
+    private const string NewtonsoftJsonSerializedTypeName = "ActualLab.Serialization.NewtonsoftJsonSerialized`1";
+
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume serializable types are fully preserved")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "We assume serializable types are fully preserved")]
+    public MessagePackConverter? CreateConverter(Type type, ITypeShape? shape, in ConverterContext context)
+    {
+        if (!type.IsGenericType)
+            return null;
+
+        var genericType = type.GetGenericTypeDefinition();
+        if (!string.Equals(genericType.FullName, NewtonsoftJsonSerializedTypeName, StringComparison.Ordinal))
+            return null;
+
+        var valueType = type.GetGenericArguments()[0];
+        var converterType = typeof(TextSerializedNerdbankConverter<,>).MakeGenericType(valueType, type);
+        return (MessagePackConverter)converterType.CreateInstance();
+    }
+}

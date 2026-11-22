@@ -34,8 +34,8 @@ public static class RpcWebSocketServerDefaultDelegates
         static (server, context, isBackend) => {
             var query = context.Request.Query;
             var clientId = query[server.Settings.ClientIdParameterName];
-            var serializationFormat = query[server.Settings.SerializationFormatParameterName];
-            return RpcRef.NewServer(clientId, serializationFormat, isBackend);
+            var wireFormat = query[server.Settings.WireFormatParameterName];
+            return RpcRef.NewServer(clientId, wireFormat, isBackend);
         };
 
     public static RpcWebSocketServerAcceptContextFactory AcceptContextFactory { get; set; } =

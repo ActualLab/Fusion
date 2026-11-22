@@ -16,7 +16,7 @@ import {
     RpcHub,
     RpcStreamSender,
     RpcSystemCalls,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcWebSocketConnection,
 } from '../src/index.js';
 import type { RpcServerPeer } from '../src/index.js';
@@ -24,7 +24,7 @@ import { createMockWsPair } from './mock-ws.js';
 import { delay } from './rpc-test-helpers.js';
 
 describe('RpcStreamSender pre-handshake send gate', () => {
-    const format = RpcSerializationFormat.get('json5np');
+    const wireFormat = RpcWireFormat.get('json5np');
     // No `RpcClientPeer` here on purpose: `connectWith` sends a handshake, which
     // is exactly the state this suite needs the server peer NOT to be in. The
     // client side is a bare connection we drive by hand.
@@ -40,8 +40,8 @@ describe('RpcStreamSender pre-handshake send gate', () => {
         clientHub = new RpcHub('client-hub');
 
         const [clientWs, serverWs] = createMockWsPair();
-        clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, clientHub.registry);
-        const serverConn = new RpcWebSocketConnection(serverWs, format.isBinary, format, serverHub.registry);
+        clientConn = new RpcWebSocketConnection(clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
+        const serverConn = new RpcWebSocketConnection(serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
 
         serverPeer = serverHub.getServerPeer('server://test');
         serverPeer.accept(serverConn);
@@ -69,7 +69,7 @@ describe('RpcStreamSender pre-handshake send gate', () => {
 
     async function completeHandshake(): Promise<void> {
         clientHub.systemCallSender.handshake(
-            clientConn, format, clientPeerId, clientHub.hubId, 1);
+            clientConn, wireFormat, clientPeerId, clientHub.hubId, 1);
         await serverPeer.whenConnected();
     }
 

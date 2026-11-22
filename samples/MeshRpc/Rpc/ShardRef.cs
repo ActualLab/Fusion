@@ -1,13 +1,12 @@
 using System.Runtime.Serialization;
 using ActualLab.Mathematics;
-using MemoryPack;
 using MessagePack;
 
 namespace Samples.MeshRpc;
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public readonly partial record struct ShardRef(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key)
+    [property: DataMember(Order = 0)] int Key)
 {
     public const int ShardCount = MeshSettings.ShardCount;
 

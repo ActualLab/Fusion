@@ -85,9 +85,15 @@
     <ProjectReference Include="..\..\src\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Plugins\ActualLab.Plugins.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Testing\ActualLab.Testing.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Core.Legacy\ActualLab.Core.Legacy.csproj" />
   </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <ProjectReference Include="..\..\src\ActualLab.Rpc.Server\ActualLab.Rpc.Server.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.MemoryPack\ActualLab.Serialization.MemoryPack.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8'))">
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.NerdbankMessagePack\ActualLab.Serialization.NerdbankMessagePack.csproj" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <ProjectReference Include="..\..\src\ActualLab.Rpc.Server.NetFx\ActualLab.Rpc.Server.NetFx.csproj" />

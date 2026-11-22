@@ -13,7 +13,7 @@ Unlike traditional RPC where you return a complete list, streaming allows you to
 
 You might wonder why ActualLab.Rpc uses a dedicated `RpcStream<T>` type instead of the standard `IAsyncEnumerable<T>`. The key reasons are:
 
-1. **Serialization control**: ActualLab.Rpc supports multiple serialization formats &ndash; System.Text.Json, Newtonsoft.Json, MemoryPack, and MessagePack. Each has different serialization behavior, and `RpcStream<T>` provides custom converters for each format to ensure streams are serialized correctly as lightweight references rather than materialized collections.
+1. **Serialization control**: ActualLab.Rpc supports multiple serialization formats &ndash; System.Text.Json and MessagePack, plus Newtonsoft.Json, MemoryPack and Nerdbank.MessagePack via their packages. Each has different serialization behavior, and `RpcStream<T>` provides custom converters for each format to ensure streams are serialized correctly as lightweight references rather than materialized collections.
 
 2. **Bidirectional streaming**: Unlike `IAsyncEnumerable<T>` which is read-only, `RpcStream<T>` supports both server-to-client and client-to-server streaming. The same type works in both directions.
 
@@ -58,15 +58,15 @@ public interface ISimpleService : IRpcService
 }
 
 // A record containing an RpcStream
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record Table<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Title,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<Row<T>> Rows);
+    [property: DataMember(Order = 0), Key(0)] string Title,
+    [property: DataMember(Order = 1), Key(1)] RpcStream<Row<T>> Rows);
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record Row<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Index,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<T> Items);
+    [property: DataMember(Order = 0), Key(0)] int Index,
+    [property: DataMember(Order = 1), Key(1)] RpcStream<T> Items);
 ```
 
 The implementation creates streams from async enumerables:
@@ -163,10 +163,10 @@ Console.WriteLine($"Sum: {sum}"); // Output: Sum: 15
 Use the standard serialization attributes:
 
 ```cs
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject]
 public sealed partial record Table<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Title,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<Row<T>> Rows);
+    [property: DataMember(Order = 0), Key(0)] string Title,
+    [property: DataMember(Order = 1), Key(1)] RpcStream<Row<T>> Rows);
 ```
 
 ::: tip Nested Streams

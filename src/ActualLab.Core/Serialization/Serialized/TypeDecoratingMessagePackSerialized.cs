@@ -24,8 +24,7 @@ public static class TypeDecoratingMessagePackSerialized
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public partial class TypeDecoratingMessagePackSerialized<TSchema, T> : ByteSerialized<T>
     where TSchema : TypeSchema, new()
 {

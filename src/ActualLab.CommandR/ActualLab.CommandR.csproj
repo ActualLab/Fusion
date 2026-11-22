@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

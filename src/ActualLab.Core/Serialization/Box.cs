@@ -14,15 +14,14 @@ public interface IBox
 /// <summary>
 /// A serializable immutable box that wraps a single value of type <typeparamref name="T"/>.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(BoxMessagePackFormatter<>))]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[method: JsonConstructor, SerializationConstructor]
 public sealed partial record Box<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] T Value
+    [property: DataMember(Order = 0)] T Value
     ) : IBox
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public object? UntypedValue => Value;
 
     public Box() : this(default(T)!)

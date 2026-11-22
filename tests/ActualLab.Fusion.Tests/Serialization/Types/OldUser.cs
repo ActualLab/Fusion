@@ -23,7 +23,7 @@ public partial record OldUser : IHasId<Symbol>, IHasVersion<long>, IRequirementT
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 
-    [DataMember, MemoryPackOrder(0)]
+    [DataMember, MemoryPackOrder(0), MemoryPackAllowSerialize]
     public Symbol Id { get; init; }
     [DataMember, MemoryPackOrder(1)]
     public string Name { get; init; }

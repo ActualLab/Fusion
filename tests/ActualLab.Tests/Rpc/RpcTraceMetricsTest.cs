@@ -87,8 +87,10 @@ public class RpcTraceMetricsTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
     {
         var stoppedActivities = new ConcurrentQueue<Activity>();
         var clientDurations = new ConcurrentQueue<double>();
+        // Read first: listening from inside RpcInstruments' type initializer would see a null ActivitySource
+        var activitySourceName = RpcInstruments.ActivitySource.Name;
         using var listener = new ActivityListener {
-            ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
+            ShouldListenTo = source => source.Name == activitySourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStopped = stoppedActivities.Enqueue,
         };

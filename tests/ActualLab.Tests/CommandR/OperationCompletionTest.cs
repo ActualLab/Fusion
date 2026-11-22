@@ -48,7 +48,9 @@ public class OperationCompletionTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Theory]
+#if !NETFRAMEWORK
     [InlineData(SerializerKind.MemoryPack)]
+#endif
     [InlineData(SerializerKind.MessagePack)]
     [InlineData(SerializerKind.SystemJson)]
     [InlineData(SerializerKind.NewtonsoftJson)]
@@ -67,7 +69,9 @@ public class OperationCompletionTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Theory]
+#if !NETFRAMEWORK
     [InlineData(SerializerKind.MemoryPack)]
+#endif
     [InlineData(SerializerKind.MessagePack)]
     [InlineData(SerializerKind.SystemJson)]
     [InlineData(SerializerKind.NewtonsoftJson)]

@@ -11,15 +11,14 @@ namespace ActualLab.Rpc.Caching;
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public sealed partial record RpcCacheValue(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] ReadOnlyMemory<byte> Data,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] string Hash)
+    [property: DataMember(Order = 0), Key(0)] ReadOnlyMemory<byte> Data,
+    [property: DataMember(Order = 1), Key(1)] string Hash)
 {
     public static readonly RpcCacheValue RequestHash = new(default, "");
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool HasHash {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Hash is { Length: > 0 };

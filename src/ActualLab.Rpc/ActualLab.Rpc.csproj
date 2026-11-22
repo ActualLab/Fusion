@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- System.IO.Pipelines is in Microsoft.NETCore.App on net9+; older targets need the package -->

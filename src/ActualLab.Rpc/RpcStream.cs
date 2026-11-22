@@ -30,14 +30,14 @@ public abstract class RpcStream : IRpcObject
         AllowSynchronousContinuations = false, // We don't want sync handlers to "clog" the call processing loop
     };
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0)]
     public int AckPeriod {
         get;
         init => field = value > 0
             ? value
             : throw new ArgumentOutOfRangeException(nameof(AckPeriod), "Ack period must be positive.");
     } = 30;
-    [DataMember(Order = 1), MemoryPackOrder(1), Key("AckAdvance")]
+    [DataMember(Order = 1), Key("AckAdvance")]
     public int AckAdvance {
         get;
         init => field = value is > 0 and < int.MaxValue
@@ -45,23 +45,23 @@ public abstract class RpcStream : IRpcObject
             : throw new ArgumentOutOfRangeException(
                 nameof(AckAdvance), "Ack advance must be positive and below Int32.MaxValue.");
     } = 61;
-    [DataMember(Order = 3), MemoryPackOrder(3)]
+    [DataMember(Order = 3)]
     public bool AllowReconnect { get; init; } = true;
-    [DataMember(Order = 4), MemoryPackOrder(4)]
+    [DataMember(Order = 4)]
     public bool IsRealTime { get; init; }
     // See BufferSize and BatchSize below as well
 
     // Non-serialized members
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public RpcObjectId Id { get; protected set; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public RpcPeer? Peer { get; protected set; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public abstract Type ItemType { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public abstract RpcObjectKind Kind { get; }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public int BufferSize {
         get;
         init => field = value is >= 0 and < int.MaxValue
@@ -69,7 +69,7 @@ public abstract class RpcStream : IRpcObject
             : throw new ArgumentOutOfRangeException(
                 nameof(BufferSize), "Buffer size must be non-negative and below Int32.MaxValue.");
     }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
 
     public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource, bool allowReconnect = true)
@@ -122,10 +122,8 @@ public abstract class RpcStream : IRpcObject
 /// <summary>
 /// Typed RPC stream that supports serialization, remote enumeration, and batched delivery of items.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject(true)]
 [JsonConverter(typeof(RpcStreamJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(RpcStreamNewtonsoftJsonConverter))]
 public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 {
 #if NET9_0_OR_GREATER
@@ -140,7 +138,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private bool _isRegistered;
     private bool _isDisconnected;
 
-    [DataMember(Order = 2), MemoryPackOrder(2)]
+    [DataMember(Order = 2)]
     public RpcObjectId SerializedId {
         get {
             // This member must never be accessed directly - its only purpose is to be called on serialization
@@ -174,15 +172,15 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         }
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreMember]
     public override Type ItemType => typeof(T);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreMember]
     public override RpcObjectKind Kind => _localSource is not null ? RpcObjectKind.Local : RpcObjectKind.Remote;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public Func<T, bool> CanSkipTo { get; init; } = _ => true;
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public RpcStream() { }
 
     public RpcStream(IAsyncEnumerable<T> localSource)

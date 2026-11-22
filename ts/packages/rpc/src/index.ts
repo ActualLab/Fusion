@@ -122,16 +122,16 @@ export {
 export { RpcPeerStateMonitor } from './rpc-peer-state-monitor.js';
 
 export {
-    RpcSerializationFormat,
-    RpcSerializationFormatResolver,
-    RpcJsonSerializationFormat,
-    RpcMessagePackSerializationFormat,
-    RpcMessagePackCompactSerializationFormat,
-} from './rpc-serialization-format.js';
+    RpcWireFormat,
+    RpcWireFormatResolver,
+    RpcJsonWireFormat,
+    RpcMessagePackWireFormat,
+    RpcMessagePackCompactWireFormat,
+} from './rpc-wire-format.js';
 export type {
     RpcDeserializedMessage,
     RpcWireData,
-} from './rpc-serialization-format.js';
+} from './rpc-wire-format.js';
 
 export { RpcMethodRegistry } from './rpc-method-registry.js';
 export { xxh3_64, xxh3_64str, computeMethodHash } from './rpc-xxhash3.js';

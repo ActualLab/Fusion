@@ -22,8 +22,8 @@ public class RpcClientFormatGateTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task NewtonsoftFormatIsRejectedByDefault()
     {
-        ClientDeniedFormatKeys = RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys;
-        SerializationFormat = "njson5";
+        BackendOnlyFormatKeys = RpcDefaultWireFormats.BackendOnlyFormatKeys;
+        WireFormat = "njson5";
         await using var _ = await WebHost.Serve();
 
         await AssertFormatRejected(ClientServices.RpcHub().GetClientPeer(ClientPeerRef));
@@ -32,8 +32,8 @@ public class RpcClientFormatGateTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task NewtonsoftFormatConnectsWhenAllowed()
     {
-        ClientDeniedFormatKeys = ImmutableHashSet<string>.Empty;
-        SerializationFormat = "njson5";
+        BackendOnlyFormatKeys = ImmutableHashSet<string>.Empty;
+        WireFormat = "njson5";
         await using var _ = await WebHost.Serve();
 
         var client = ClientServices.RpcHub().GetClient<ITestRpcServiceClient>();
@@ -43,8 +43,8 @@ public class RpcClientFormatGateTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task AllowedFormatIsUnaffected()
     {
-        ClientDeniedFormatKeys = RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys;
-        SerializationFormat = "json5";
+        BackendOnlyFormatKeys = RpcDefaultWireFormats.BackendOnlyFormatKeys;
+        WireFormat = "json5";
         await using var _ = await WebHost.Serve();
 
         var client = ClientServices.RpcHub().GetClient<ITestRpcServiceClient>();
@@ -54,16 +54,21 @@ public class RpcClientFormatGateTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task UnregisteredFormatIsStillRejected()
     {
-        ClientDeniedFormatKeys = RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys;
+        BackendOnlyFormatKeys = RpcDefaultWireFormats.BackendOnlyFormatKeys;
         await using var _ = await WebHost.Serve();
 
-        var bogusFormat = new RpcSerializationFormat("bogus-format",
-            () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
-            RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
+        var bogusFormat = new RpcWireFormat("bogus-format",
+            () => RpcDefaultWireFormats.SystemJsonV5.ArgumentListSerializer,
+            RpcDefaultWireFormats.SystemJsonV5.MessageSerializerFactory,
+            DataFormat.Text);
         var clientServices = new ServiceCollection();
         clientServices.AddSingleton<TestServiceProviderTag>();
         ConfigureServices(clientServices, isClient: true);
-        clientServices.AddSingleton(_ => new RpcSerializationFormatResolver("bogus-format", [bogusFormat]));
+        var clientFormats = new RpcWireFormatConfiguration();
+        clientFormats.Clear();
+        clientFormats.Add(bogusFormat);
+        clientFormats.DefaultFormat = bogusFormat;
+        clientServices.AddSingleton(new RpcWireFormatResolver(clientFormats));
         await using var sp = clientServices.BuildServiceProvider();
 
         await AssertFormatRejected(sp.RpcHub().GetClientPeer(ClientPeerRef));
@@ -79,10 +84,10 @@ public class RpcClientFormatGateTest(ITestOutputHelper @out) : RpcTestBase(@out)
             while (!connectionState.IsFinal)
                 connectionState = await connectionState.WhenNext(cts.Token).ConfigureAwait(false);
         }
-        catch (RpcSerializationFormatException) {
+        catch (RpcWireFormatException) {
             // Expected - SetFinal(error) makes WhenNext throw
         }
         peer.ConnectionState.IsFinal.Should().BeTrue();
-        peer.ConnectionState.Value.Error.Should().BeOfType<RpcSerializationFormatException>();
+        peer.ConnectionState.Value.Error.Should().BeOfType<RpcWireFormatException>();
     }
 }

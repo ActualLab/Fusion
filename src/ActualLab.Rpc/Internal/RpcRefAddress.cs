@@ -18,7 +18,7 @@ public static class RpcRefAddress
         AddTag(sb, rpcRef.ConnectionKind.Format());
         AddTag(sb, rpcRef.IsBackend ? BackendTag : "");
         AddTag(sb, rpcRef.IsServer ? ServerTag : "");
-        AddTag(sb, rpcRef.SerializationFormat);
+        AddTag(sb, rpcRef.WireFormat);
         sb.Append(HostInfoDelimiter).Append(rpcRef.HostInfo);
         return sb.ToStringAndRelease();
     }
@@ -42,13 +42,13 @@ public static class RpcRefAddress
 
         var isBackend = HasNextTag(ref s, BackendTag);
         var isServer = HasNextTag(ref s, ServerTag);
-        var serializationFormat = GetNextTag(ref s).ToString();
+        var wireFormat = GetNextTag(ref s).ToString();
         var rpcRef = new RpcRef {
             Address = address,
             IsServer = isServer,
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
-            SerializationFormat = serializationFormat,
+            WireFormat = wireFormat,
             HostInfo = hostInfo,
         };
         if (initialize)

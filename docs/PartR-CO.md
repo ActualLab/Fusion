@@ -280,7 +280,7 @@ Configures WebSocket-based RPC client connections.
 |----------|------|---------|-------------|
 | `RequestPath` | `string` | `"/rpc/ws"` | WebSocket endpoint path for API calls |
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
-| `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
+| `WireFormatParameterName` | `string` | `"f"` | Query parameter for wire format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
 | `ReconnectProofCounterParameterName` | `string` | `"c"` | Query parameter for the reconnect proof counter |
 | `ReconnectProofParameterName` | `string` | `"p"` | Query parameter for the reconnect proof itself |
@@ -323,7 +323,7 @@ Configures WebSocket-based RPC server endpoints.
 | `ExposeBackend` | `bool` | `false` | Whether to expose backend services via WebSocket. **Use with caution!** |
 | `RequestPath` | `string` | `"/rpc/ws"` | WebSocket endpoint path for API calls |
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
-| `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
+| `WireFormatParameterName` | `string` | `"f"` | Query parameter for wire format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
 | `ReconnectProofCounterParameterName` | `string` | `"c"` | Query parameter for the reconnect proof counter |
 | `ReconnectProofParameterName` | `string` | `"p"` | Query parameter for the reconnect proof itself |
@@ -472,7 +472,7 @@ Configures test client for RPC testing with in-memory channels.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `SerializationFormatKey` | `string` | `""` | Serialization format identifier |
+| `WireFormatKey` | `string` | `""` | Wire format identifier |
 | `ChannelOptions` | `ChannelOptions` | BoundedChannelOptions(500) | Configuration for test message channels |
 | `ConnectionFactory` | `Func<...>` | Twisted channel pair | Factory to create test channel pairs |
 
@@ -481,8 +481,8 @@ Configures test client for RPC testing with in-memory channels.
 ```csharp
 // In tests
 services.AddRpc().Configure<RpcTestClientOptions>(options => {
-    // Use specific serialization format for testing
-    options.SerializationFormatKey = "json";
+    // Use specific wire format for testing
+    options.WireFormatKey = "json5";
 });
 ```
 

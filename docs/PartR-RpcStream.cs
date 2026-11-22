@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using ActualLab.Rpc;
-using MemoryPack;
+using MessagePack;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
 
@@ -29,15 +29,15 @@ public interface ISumService : IRpcService
 #endregion
 
 #region PartRStream_Records
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record Table<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Title,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<Row<T>> Rows);
+    [property: DataMember(Order = 0), Key(0)] string Title,
+    [property: DataMember(Order = 1), Key(1)] RpcStream<Row<T>> Rows);
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record Row<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Index,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<T> Items);
+    [property: DataMember(Order = 0), Key(0)] int Index,
+    [property: DataMember(Order = 1), Key(1)] RpcStream<T> Items);
 #endregion
 
 #region PartRStream_Implementation

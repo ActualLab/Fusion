@@ -5,6 +5,8 @@
     <AssemblyName>Docs</AssemblyName>
     <RootNamespace>Docs</RootNamespace>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <!-- MsgPack006: false positive on open generic [MessagePackFormatter] types, see ../Directory.Build.props -->
+    <NoWarn>$(NoWarn);MsgPack006</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +14,9 @@
     <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Npgsql\ActualLab.Fusion.EntityFramework.Npgsql.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Redis\ActualLab.Fusion.EntityFramework.Redis.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
+    <ProjectReference Include="..\src\ActualLab.Serialization.MemoryPack\ActualLab.Serialization.MemoryPack.csproj" />
+    <ProjectReference Include="..\src\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
+    <ProjectReference Include="..\src\ActualLab.Serialization.NerdbankMessagePack\ActualLab.Serialization.NerdbankMessagePack.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
   </ItemGroup>
 

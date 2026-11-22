@@ -11,7 +11,7 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
     {
-        SerializationFormat = "json5np";
+        WireFormat = "json5np";
         RpcFrameDelayerFactory = null;
         base.ConfigureServices(services, isClient);
 

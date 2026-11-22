@@ -113,7 +113,7 @@ public class FusionRpcCallTypeDowngradeTest(ITestOutputHelper @out) : TestBase(@
         {
             var serverPeerRef = RpcRef.NewServer(
                 clientPeer.ClientId,
-                clientPeer.SerializationFormat.Key,
+                clientPeer.WireFormat.Key,
                 clientPeer.Ref.IsBackend);
             var serverPeer = bridge.ServerHub.GetServerPeer(serverPeerRef);
             bridge.ServerPeer = serverPeer;

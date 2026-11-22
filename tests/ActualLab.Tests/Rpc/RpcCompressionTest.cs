@@ -122,7 +122,7 @@ public class RpcCompressionTest : RpcTestBase
 
     private async Task UseFormat(string format)
     {
-        SerializationFormat = format;
+        WireFormat = format;
         await Reset();
     }
 }

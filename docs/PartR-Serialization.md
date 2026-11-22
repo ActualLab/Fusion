@@ -1,6 +1,6 @@
-# RPC Serialization Formats
+# RPC Wire Formats
 
-ActualLab.Rpc supports multiple serialization formats with automatic version negotiation between clients and servers.
+ActualLab.Rpc supports multiple wire formats with automatic version negotiation between clients and servers.
 This enables gradual upgrades and interoperability between different Fusion versions.
 
 ## Overview
@@ -10,34 +10,27 @@ RPC serialization has two layers:
 1. **Argument serialization**: How method arguments are encoded
 2. **Message serialization**: How RPC messages (containing arguments) are framed
 
-Each combination of these is packaged as an `RpcSerializationFormat`.
+Each combination of these is packaged as an `RpcWireFormat`.
 
 
 ## Available Formats
 
-### Text Formats (JSON)
+`ActualLab.Rpc` ships the System.Text.Json and MessagePack formats. The MemoryPack,
+Newtonsoft.Json and Nerdbank.MessagePack formats live in their own packages, and every
+format outside the default set is opt-in through
+[`ConfigureWireFormats`](#configuring-formats).
+
+The **default set** &mdash; what a container serves when you don't configure it &mdash; is
+`json5`, `json5np`, `msgpack5`, `msgpack5c`, `msgpack6` and `msgpack6c`.
+
+### Text Formats (System.Text.Json)
 
 | Format | Key | Description |
 |--------|-----|-------------|
 | `SystemJsonV5` | `json5` | System.Text.Json with V4 arguments, V3 messages |
 | `SystemJsonV5NP` | `json5np` | System.Text.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper) |
-| `NewtonsoftJsonV5` | `njson5` | Newtonsoft.Json with V4 arguments, V3 messages. **Not client-selectable by default** &mdash; see [Client-Selectable Formats](#client-selectable-formats) |
-| `NewtonsoftJsonV5NP` | `njson5np` | Newtonsoft.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper). **Not client-selectable by default** |
 
 The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper entirely, producing plain JSON without type metadata. Use them when all argument and result types are concrete (non-abstract) and no polymorphic dispatch is needed.
-
-### Binary Formats (MemoryPack)
-
-| Format          | Key | Description           |
-|-----------------|-----|-----------------------|
-| `MemoryPackV5`  | `mempack5` | V4 args, V4 messages  |
-| `MemoryPackV5C` | `mempack5c` | Compact variant of V5 |
-| `MemoryPackV6`  | `mempack6` | V4 args, V5 messages  |
-| `MemoryPackV6C` | `mempack6c` | Compact variant of V6 |
-| `MemoryPackV6_LZ4`   | `mempack6-lz4`   | V6 + LZ4 frame compression, server &rarr; client |
-| `MemoryPackV6C_LZ4`  | `mempack6c-lz4`  | V6C + LZ4 frame compression, server &rarr; client |
-| `MemoryPackV6_LZ4F`  | `mempack6-lz4f`  | V6 + LZ4 frame compression, both directions |
-| `MemoryPackV6C_LZ4F` | `mempack6c-lz4f` | V6C + LZ4 frame compression, both directions |
 
 ### Binary Formats (MessagePack)
 
@@ -45,94 +38,135 @@ The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper e
 |------------------|-----|-----------------------|
 | `MessagePackV5`  | `msgpack5` | V4 args, V4 messages  |
 | `MessagePackV5C` | `msgpack5c` | Compact variant of V5 |
-| `MessagePackV6`  | `msgpack6` | V4 args, V5 messages  |
+| `MessagePackV6`  | `msgpack6` | V4 args, V5 messages; **the default format** |
 | `MessagePackV6C` | `msgpack6c` | Compact variant of V6 |
-| `MessagePackV6_LZ4`   | `msgpack6-lz4`   | V6 + LZ4 frame compression, server &rarr; client |
-| `MessagePackV6C_LZ4`  | `msgpack6c-lz4`  | V6C + LZ4 frame compression, server &rarr; client |
-| `MessagePackV6_LZ4F`  | `msgpack6-lz4f`  | V6 + LZ4 frame compression, both directions |
-| `MessagePackV6C_LZ4F` | `msgpack6c-lz4f` | V6C + LZ4 frame compression, both directions |
+
+These are static members of `RpcDefaultWireFormats`, and its `All` lists them:
+every container starts with this set. Their LZ4 variants (`msgpack6-lz4`, `msgpack6c-lz4`,
+`msgpack6-lz4f`, `msgpack6c-lz4f`, ...) aren't static members; add them with `f.AddLZ4Variants()`.
+
+### Binary Formats (MemoryPack)
+
+These formats require the `ActualLab.Serialization.MemoryPack` package (.NET Core 3.1+ /
+.NET Standard 2.1+, no .NET Framework). They are static members of
+`RpcMemoryPackWireFormats`; add them with `f.AddMemoryPack()`, and their LZ4 variants
+with `f.AddLZ4Variants()`.
+
+| Format          | Key | Description           |
+|-----------------|-----|-----------------------|
+| `MemoryPackV5`  | `mempack5` | V4 args, V4 messages  |
+| `MemoryPackV5C` | `mempack5c` | Compact variant of V5 |
+| `MemoryPackV6`  | `mempack6` | V4 args, V5 messages  |
+| `MemoryPackV6C` | `mempack6c` | Compact variant of V6 |
+
+The package produces the same bytes earlier Fusion versions did, so `mempack5` and `mempack6`
+peers on v15 and v16 still talk to each other.
+
+### Text Formats (Newtonsoft.Json)
+
+These formats require the `ActualLab.Serialization.NewtonsoftJson` package. They are static
+members of `RpcNewtonsoftJsonWireFormats`; add them with `f.AddNewtonsoftJson()`.
+
+| Format | Key | Description |
+|--------|-----|-------------|
+| `NewtonsoftJsonV5` | `njson5` | Newtonsoft.Json with V4 arguments, V3 messages. **Not client-selectable by default** &mdash; see [Client-Selectable Formats](#client-selectable-formats) |
+| `NewtonsoftJsonV5NP` | `njson5np` | Newtonsoft.Json, no-polymorphism variant. **Not client-selectable by default** |
 
 ### Binary Formats (Nerdbank.MessagePack)
 
-These formats require the `ActualLab.Serialization.NerdbankMessagePack` package.
-They are not registered by default &mdash; call `RpcNerdbankSerializationFormat.Register()` at startup to enable them.
+These formats require the `ActualLab.Serialization.NerdbankMessagePack` package. They are
+static members of `RpcNerdbankWireFormats`; add them with `f.AddNerdbankMessagePack()`.
 
 | Format                  | Key          | Description                       |
 |-------------------------|--------------|-----------------------------------|
 | `NerdbankMessagePackV6` | `nmsgpack6`  | Nerdbank.MessagePack, V4 args, V5 messages |
 | `NerdbankMessagePackV6C`| `nmsgpack6c` | Compact variant of V6             |
-| `NerdbankMessagePackV6_LZ4`   | `nmsgpack6-lz4`   | V6 + LZ4 frame compression, server &rarr; client |
-| `NerdbankMessagePackV6C_LZ4`  | `nmsgpack6c-lz4`  | V6C + LZ4 frame compression, server &rarr; client |
-| `NerdbankMessagePackV6_LZ4F`  | `nmsgpack6-lz4f`  | V6 + LZ4 frame compression, both directions |
-| `NerdbankMessagePackV6C_LZ4F` | `nmsgpack6c-lz4f` | V6C + LZ4 frame compression, both directions |
 
 ## Format Selection
 
 ### Default Format
 
-The default is `MemoryPackV6` (`mempack6`) &mdash; it's the key `RpcSerializationFormatResolver.Default` is created with. Override it process-wide by assigning a new resolver:
+The default is `MessagePackV6` (`msgpack6`). Before v16 it was `MemoryPackV6` (`mempack6`).
 
+A client sends its default format key in the connection URL, so the client's default decides
+which format a connection uses; a server only has to *serve* that format. Set the default per
+container with `f.DefaultFormat`:
+
+<!-- snippet: PartRSerialization_UseDefault -->
 ```cs
-RpcSerializationFormatResolver.Default = new RpcSerializationFormatResolver(
-    RpcSerializationFormat.MessagePackV6C.Key);
+// Compact MessagePack with LZ4-compressed server-to-client frames
+services.AddRpc().ConfigureWireFormats(f => {
+    f.AddLZ4Variants();
+    f.DefaultFormat = f["msgpack6c-lz4"];
+});
 ```
+<!-- endSnippet -->
+
+A container that never calls `ConfigureWireFormats` serves `RpcDefaultWireFormats.All`, and
+`RpcDefaultWireFormats.DefaultFormat` (`msgpack6`) is the default format of every container
+that doesn't set `f.DefaultFormat`. Both are read-only: what a container serves is configured only
+through `ConfigureWireFormats`.
 
 ### Client-Server Negotiation
 
-When a client connects, it requests its preferred serialization format via a URL parameter (e.g., `<endpoint>?f=msgpack6&clientId=...`). The server accepts the connection if it supports that format **and allows clients to select it**. Once connected, both parties simultaneously exchange `RpcHandshake` messages:
+When a client connects, it requests its preferred wire format via a URL parameter (e.g., `<endpoint>?f=msgpack6&clientId=...`). The server accepts the connection if it supports that format **and allows clients to select it**. Once connected, both parties simultaneously exchange `RpcHandshake` messages:
 
 <img src="/img/diagrams/PartR-Serialization-1.svg" alt="Client-Server Negotiation" style="width: 100%; max-width: 800px;" />
 
-### Accessing All Formats
+### Accessing Formats
+
+`RpcWireFormatResolver` is the registry a container actually uses. Resolve it from
+DI to see what that container serves:
 
 <!-- snippet: PartRSerialization_AccessingFormats -->
 ```cs
-// All registered formats
-ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
+// The formats this container serves
+var resolver = services.GetRequiredService<RpcWireFormatResolver>();
+RpcWireFormat defaultFormat = resolver.DefaultFormat;
+var format = resolver.Get("msgpack6c");
 
-// Find by key
-var format = RpcSerializationFormat.All.First(f => f.Key == "mempack6c");
+// The formats every container starts with (ActualLab.Rpc formats only)
+ImmutableList<RpcWireFormat> builtIn = RpcDefaultWireFormats.All;
 ```
 <!-- endSnippet -->
 
 ### Client-Selectable Formats
 
 A registered format isn't automatically a format a *client* may pin via `?f=…`.
-`RpcSerializationFormatResolver.ClientDeniedFormatKeys` is the allow-list's complement:
+`RpcWireFormatResolver.BackendOnlyFormatKeys` lists the formats only backends may use:
 every RPC server endpoint (WebSocket, HTTP/2, OWIN) rejects a connection whose requested
 key is in it. An empty `f` still means "server picks", so it's always accepted.
 
-**Since v14.2, `njson5` and `njson5np` are denied to clients by default.** Newtonsoft-backed
+**Since v14.2, `njson5` and `njson5np` are backend-only by default.** Newtonsoft-backed
 formats deserialize with `TypeNameHandling.Auto` and no `SerializationBinder`, so they honor
 nested `$type` markers &mdash; a gadget surface the other formats lack. Server-to-server and
 in-process use of these formats is unaffected; only client-pinned selection is blocked.
 
-To restore the previous behavior:
+The list is per container. To make more formats backend-only, e.g. the legacy V5 ones:
 
+<!-- snippet: PartRSerialization_ClientSelection -->
 ```cs
-RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys = ImmutableHashSet<string>.Empty;
+services.AddRpc().ConfigureWireFormats(f
+    => f.BackendOnlyFormatKeys = f.BackendOnlyFormatKeys.Union(["msgpack5", "msgpack5c"]));
 ```
+<!-- endSnippet -->
 
-Or to deny more, e.g. the legacy V5 formats:
+To let clients select the Newtonsoft formats again, take them off the list:
+`f.BackendOnlyFormatKeys = f.BackendOnlyFormatKeys.Except(["njson5", "njson5np"])`
+(after `f.AddNewtonsoftJson()`).
 
-```cs
-RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys
-    = RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys
-        .Add(RpcSerializationFormat.MemoryPackV5.Key)
-        .Add(RpcSerializationFormat.MessagePackV5.Key);
-```
-
-`DefaultClientDeniedFormatKeys` seeds `ClientDeniedFormatKeys` on every resolver created after
-it's assigned, so set it at startup, before the first `RpcSerializationFormatResolver` is built.
+`RpcDefaultWireFormats.BackendOnlyFormatKeys` seeds the list of every
+`RpcWireFormatConfiguration` and resolver. It's read-only: change the list per container
+through `RpcWireFormatConfiguration.BackendOnlyFormatKeys`.
 
 
 ## Format Structure
 
-Each `RpcSerializationFormat` consists of:
+Each `RpcWireFormat` consists of:
 
 <!-- snippet: PartRSerialization_FormatStructure -->
 ```cs
-public sealed class RpcSerializationFormatExample(
+public sealed class RpcWireFormatExample(
     string key,
     Func<ArgumentListSerializer> argumentSerializerFactory,
     Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory)
@@ -194,40 +228,79 @@ bytes a compression context may span before it's reset. Resetting bounds both th
 connection pins and how far a BREACH-style probe can correlate across frames &mdash; it does
 **not** make compressing a secret alongside attacker-controlled data within one frame safe.
 
-To compress with different settings, register a format of your own:
+Since v16 the LZ4 variants are not in the default set. `f.AddLZ4Variants()` adds the `-lz4`
+(`RpcCompressionMode.ServerToClient`) variant of every uncompressed binary format added so far.
+Pass compression modes to choose the variants, e.g. `RpcCompressionMode.Full` for `-lz4f`, and a
+filter first to cover only some formats, e.g. `f.AddLZ4Variants(x => x.Key.StartsWith("msgpack6"))`. Text formats are always skipped, since they
+can't be compressed. `RpcWireFormat.WithLZ4(...)` makes the LZ4 variant of a
+single format. A client can use a `-lz4` format only if the server serves it, so add the variants
+on both sides.
 
+To compress with different settings, add a format of your own:
+
+<!-- snippet: PartRSerialization_CustomLz4Format -->
 ```cs
 var lz4 = new RpcCompressionFormat("lz4",
     static () => new LZ4ByteCompressor(),
     static () => new LZ4ByteDecompressor(),
     new RpcCompressionOptions { MinCompressedFrameSize = 1024 });
-var format = new RpcSerializationFormat("msgpack6c-lz4-1k",
+var format = new RpcWireFormat("msgpack6c-lz4-1k",
     () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
     peer => new RpcByteMessageSerializerV5Compact(peer),
+    DataFormat.Bytes,
     lz4, RpcCompressionMode.ServerToClient);
+services.AddRpc().ConfigureWireFormats(f => f.Add(format));
 ```
+<!-- endSnippet -->
 
 
 ## Configuring Formats
 
-### Enabling Nerdbank.MessagePack Formats
+`services.AddRpc().ConfigureWireFormats(...)` configures the formats of one DI container:
+it edits `RpcConfiguration.WireFormats` (also available as `rpc.WireFormats`), an `RpcWireFormatConfiguration` that starts from
+`RpcDefaultWireFormats`. Every call on the same container edits the same set, and the
+container's `RpcWireFormatResolver` is built from it on first use. The set is frozen
+together with `RpcConfiguration` (when `RpcHub` is created) or when the resolver is built,
+so it can't change after that.
 
-Add the `ActualLab.Serialization.NerdbankMessagePack` package and call `Register()` at startup:
+| Member | What it does |
+|----------------|--------------|
+| `Add(params ReadOnlySpan<RpcWireFormat>)` | Adds formats; a format with the same key replaces the existing one (and becomes the default if the replaced one was) |
+| `Remove(params ReadOnlySpan<string> keys)` / `Clear()` | Removes formats by key / removes all of them |
+| `Reset()` | Restores the formats, the default format and the backend-only formats of `RpcDefaultWireFormats` |
+| `AddLZ4Variants([filter], params modes)` | Adds the LZ4 variants of every uncompressed binary format the filter accepts (all of them if there's no filter): `-lz4` for `ServerToClient` (the default), `-lz4f` for `Full`; keys already present are kept |
+| `DefaultFormat` | The default format (the one a client requests); it must be one of the added formats |
+| `BackendOnlyFormatKeys` | The formats clients can't select |
+| `AddMemoryPack()` | `mempack5`, `mempack5c`, `mempack6`, `mempack6c` (`ActualLab.Serialization.MemoryPack`) |
+| `AddNewtonsoftJson()` | `njson5`, `njson5np` (`ActualLab.Serialization.NewtonsoftJson`) |
+| `AddNerdbankMessagePack()` | `nmsgpack6`, `nmsgpack6c` (`ActualLab.Serialization.NerdbankMessagePack`) |
 
+### Enabling Package-Provided Formats
+
+<!-- snippet: PartRSerialization_AddFormats -->
 ```cs
-// Register nmsgpack6 / nmsgpack6c formats
-RpcNerdbankSerializationFormat.Register();
+services.AddRpc().ConfigureWireFormats(f => {
+    f.AddMemoryPack();          // mempack5, mempack5c, mempack6, mempack6c
+    f.AddNewtonsoftJson();      // njson5, njson5np
+    f.AddNerdbankMessagePack(); // nmsgpack6, nmsgpack6c
+    f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full); // "-lz4" and "-lz4f"
+    f.DefaultFormat = f["mempack6c-lz4"];
+});
 ```
+<!-- endSnippet -->
 
-### Registering Additional Formats
+Call `AddLZ4Variants()` after the `Add*` calls: it only sees the formats added before it.
+
+### Registering Custom Formats
 
 <!-- snippet: PartRSerialization_RegisterFormat -->
 ```cs
-RpcSerializationFormat.All = RpcSerializationFormat.All.Add(
-    new RpcSerializationFormat(
+services.AddRpc().ConfigureWireFormats(f => f.Add(
+    new RpcWireFormat(
         "custom",
         () => new MyArgumentListSerializer(),
-        peer => new MyMessageSerializer(peer)));
+        peer => new MyMessageSerializer(peer),
+        DataFormat.Bytes)));
 ```
 <!-- endSnippet -->
 
@@ -237,9 +310,7 @@ To disable older formats for security:
 
 <!-- snippet: PartRSerialization_RemoveFormats -->
 ```cs
-// To disable older formats for security:
-RpcSerializationFormat.All = RpcSerializationFormat.All
-    .RemoveAll(f => f.Key.StartsWith("mempack5") || f.Key.StartsWith("msgpack5"));
+services.AddRpc().ConfigureWireFormats(f => f.Remove("msgpack5", "msgpack5c"));
 ```
 <!-- endSnippet -->
 
@@ -250,9 +321,9 @@ When choosing formats, consider:
 
 | Factor | Recommendation |
 |--------|----------------|
-| Performance | Binary formats (MemoryPack > MessagePack > JSON) |
+| Performance | Binary formats (MessagePack, or MemoryPack from its package; both beat JSON) |
 | Debugging | JSON formats (human-readable) |
-| Compatibility | MessagePack for .NET Standard clients |
+| Compatibility | MessagePack: it's built in and works on every target, including .NET Framework |
 | Bandwidth | Compact variants (`*C`) |
 | Security | Latest versions; keep the Newtonsoft formats out of clients' reach (the default) |
 
@@ -333,7 +404,7 @@ set equals the producible set.
 ### Opting Out with `[RpcSerializable]`
 
 When the underlying serializer already handles polymorphism
-(e.g., via `[JsonDerivedType]`, `[MemoryPackUnion]`, or `[Union]`),
+(e.g., via `[JsonDerivedType]`, `[Union]`, or `[MemoryPackUnion]` if you use the MemoryPack formats),
 the RPC layer's `TypeRef` wrapping is redundant overhead.
 Apply `[RpcSerializable]` to the base type to tell RPC that
 the type can be serialized directly:
@@ -343,9 +414,6 @@ the type can be serialized directly:
 // The underlying serializers handle polymorphism via union attributes,
 // so we mark this type as RPC-serializable to opt out of TypeRef wrapping.
 [RpcSerializable]
-[MemoryPackable]
-[MemoryPackUnion(0, typeof(ShapeCircle))]
-[MemoryPackUnion(1, typeof(ShapeRect))]
 [MessagePackObject]
 [Union(0, typeof(ShapeCircle))]
 [Union(1, typeof(ShapeRect))]
@@ -353,24 +421,24 @@ the type can be serialized directly:
 [JsonDerivedType(typeof(ShapeRect), "rect")]
 public abstract partial class Shape
 {
-    [DataMember, MemoryPackOrder(0), Key(0)]
+    [DataMember, Key(0)]
     public string? Name { get; set; }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MessagePackObject]
 public partial class ShapeCircle : Shape
 {
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember, Key(1)]
     public double Radius { get; set; }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MessagePackObject]
 public partial class ShapeRect : Shape
 {
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember, Key(1)]
     public double Width { get; set; }
 
-    [DataMember, MemoryPackOrder(2), Key(2)]
+    [DataMember, Key(2)]
     public double Height { get; set; }
 }
 ```

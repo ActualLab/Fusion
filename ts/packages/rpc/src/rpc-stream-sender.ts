@@ -258,7 +258,7 @@ export class RpcStreamSender<T> implements IRpcObject {
     private _sendDisconnect(): void {
         const conn = this.peer.wireConnection;
         if (conn)
-            this.peer.hub.systemCallSender.disconnect(conn, this.peer.serializationFormat, [this.id.localId]);
+            this.peer.hub.systemCallSender.disconnect(conn, this.peer.wireFormat, [this.id.localId]);
 
         this.disconnect();
     }
@@ -282,7 +282,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         const conn = this.peer.wireConnection;
         if (conn) {
             this.peer.hub.systemCallSender.item(
-                conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, item,
+                conn, this.peer.wireFormat, this.id.localId, this._nextIndex, item,
             );
             this._pendingSendTimes.push({ index: this._nextIndex, sentAtMs: Date.now() });
             if (this._pendingSendTimes.length > MAX_PENDING_SEND_TIMES)
@@ -297,7 +297,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         const conn = this.peer.wireConnection;
         if (conn) {
             this.peer.hub.systemCallSender.batch(
-                conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, items,
+                conn, this.peer.wireFormat, this.id.localId, this._nextIndex, items,
             );
         }
         this._nextIndex += items.length;
@@ -323,7 +323,7 @@ export class RpcStreamSender<T> implements IRpcObject {
             ? toExceptionInfo(error)
             : { TypeRef: '', Message: '' };
         this.peer.hub.systemCallSender.end(
-            conn, this.peer.serializationFormat, this.id.localId, index, errorInfo,
+            conn, this.peer.wireFormat, this.id.localId, index, errorInfo,
         );
     }
 

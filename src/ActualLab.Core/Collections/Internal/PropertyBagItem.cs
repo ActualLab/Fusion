@@ -11,19 +11,18 @@ namespace ActualLab.Collections.Internal;
 /// Equality and comparison are based on the key only.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(PropertyBagItemMessagePackFormatter<>))]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[method: JsonConstructor, SerializationConstructor]
 public partial record struct PropertyBagItem<TSchema>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter, Key(0)] string Key,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] TypeDecoratingUniSerialized<TSchema, object> Serialized
+    [property: DataMember(Order = 0), Key(0)] string Key,
+    [property: DataMember(Order = 1), Key(1)] TypeDecoratingUniSerialized<TSchema, object> Serialized
     ) : IComparable<PropertyBagItem<TSchema>>
     where TSchema : TypeSchema, new()
 {
     public static readonly IComparer<PropertyBagItem<TSchema>> Comparer = new ComparerImpl();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public object Value => Serialized.Value;
 
     // Constructor-like methods

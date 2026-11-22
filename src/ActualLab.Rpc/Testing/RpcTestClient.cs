@@ -31,18 +31,18 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 
     public RpcTestConnection CreateConnection(string clientHostInfo, string serverHostInfo, bool isBackend = false)
     {
-        var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
-        var defaultClientFormatKey = serializationFormatResolver.DefaultFormatKey;
-        var serializationFormat = Options.SerializationFormatKey;
-        if (serializationFormat.IsNullOrEmpty())
-            serializationFormat = defaultClientFormatKey;
-        var clientSerializationFormat =
-            !string.Equals(serializationFormat, defaultClientFormatKey, StringComparison.Ordinal)
-            ? serializationFormat
+        var wireFormatResolver = Services.GetRequiredService<RpcWireFormatResolver>();
+        var defaultClientFormatKey = wireFormatResolver.DefaultFormat.Key;
+        var wireFormat = Options.WireFormatKey;
+        if (wireFormat.IsNullOrEmpty())
+            wireFormat = defaultClientFormatKey;
+        var clientWireFormat =
+            !string.Equals(wireFormat, defaultClientFormatKey, StringComparison.Ordinal)
+            ? wireFormat
             : "";
 
-        var clientPeerRef = RpcRef.NewClient(clientHostInfo, clientSerializationFormat, isBackend);
-        var serverPeerRef = RpcRef.NewServer(serverHostInfo, serializationFormat, isBackend);
+        var clientPeerRef = RpcRef.NewClient(clientHostInfo, clientWireFormat, isBackend);
+        var serverPeerRef = RpcRef.NewServer(serverHostInfo, wireFormat, isBackend);
         return CreateConnection(clientPeerRef, serverPeerRef);
     }
 

@@ -6,16 +6,16 @@ namespace ActualLab.Api;
 /// <summary>
 /// A serializable dictionary with sorted enumeration, intended for use in API contracts.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
+[DataContract, MessagePackObject]
 public sealed partial class ApiMap<TKey, TValue>
     : Dictionary<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
     where TKey : notnull
 {
     private SortedItemCache? _sortedItemCache;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public UnorderedItemEnumerable UnorderedItems => new(this);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsEmpty => Count == 0;
 
     public ApiMap() { }

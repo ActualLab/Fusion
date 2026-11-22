@@ -10,25 +10,24 @@ namespace ActualLab.Text;
 /// and Base64/hex string conversion support.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable, MessagePackFormatter(typeof(ByteStringMessagePackFormatter))]
+[DataContract, MessagePackFormatter(typeof(ByteStringMessagePackFormatter))]
 [JsonConverter(typeof(ByteStringJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(ByteStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(ByteStringTypeConverter))]
 public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<ByteString>, ISerializable
 {
     public static readonly byte[] EmptyBytes = [];
     public static ByteString Empty => new(EmptyBytes);
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public readonly ReadOnlyMemory<byte> Bytes;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public int Length {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Bytes.Length;
     }
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public ReadOnlySpan<byte> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Bytes.Span;
@@ -49,7 +48,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     public ByteString(byte[] bytes)
         => Bytes = bytes;
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ByteString(ReadOnlyMemory<byte> bytes)
         => Bytes = bytes;

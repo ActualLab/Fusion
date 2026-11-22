@@ -12,7 +12,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
     RpcHub,
     RpcClientPeer,
-    RpcSerializationFormat,
+    RpcWireFormat,
     RpcSystemCalls,
     RpcWebSocketConnection,
     IncreasingSeqCompressor,
@@ -35,7 +35,7 @@ function base64(bytes: Uint8Array): string {
 
 describe('pre-handshake wire writes', () => {
     const hubs: RpcHub[] = [];
-    const format = RpcSerializationFormat.get('json5np');
+    const wireFormat = RpcWireFormat.get('json5np');
 
     afterEach(() => {
         for (const h of hubs.splice(0)) h.close();
@@ -59,9 +59,9 @@ describe('pre-handshake wire writes', () => {
         hubs.push(clientHub);
         const [clientWs, serverWs] = createMockWsPair();
         const clientConn = new RpcWebSocketConnection(
-            clientWs, format.isBinary, format, clientHub.registry);
+            clientWs, wireFormat.isBinary, wireFormat, clientHub.registry);
         const serverConn = new RpcWebSocketConnection(
-            serverWs, format.isBinary, format, serverHub.registry);
+            serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
 
         const frames: string[] = [];
         const origSend = clientWs.send.bind(clientWs);
@@ -91,11 +91,11 @@ describe('pre-handshake wire writes', () => {
     async function handshakingServerPeer(serverHub: RpcHub, ref: string) {
         const [clientWs, serverWs] = createMockWsPair();
         const serverConn = new RpcWebSocketConnection(
-            serverWs, format.isBinary, format, serverHub.registry);
+            serverWs, wireFormat.isBinary, wireFormat, serverHub.registry);
         const clientConn = new RpcWebSocketConnection(
-            clientWs, format.isBinary, format, serverHub.registry);
+            clientWs, wireFormat.isBinary, wireFormat, serverHub.registry);
         const peer: RpcServerPeer = serverHub.getServerPeer(ref);
-        peer.serializationFormat = format;
+        peer.wireFormat = wireFormat;
         peer.accept(serverConn);
 
         const sent: string[] = [];
@@ -145,7 +145,7 @@ describe('pre-handshake wire writes', () => {
         expect(Number.isSafeInteger(callId)).toBe(true);
 
         serverHub.systemCallSender.handshake(
-            h.clientConn, format, 'client-peer', serverHub.hubId, 1);
+            h.clientConn, wireFormat, 'client-peer', serverHub.hubId, 1);
         await delay(10);
         expect(h.peer.isConnected).toBe(true);
 
@@ -164,16 +164,16 @@ describe('pre-handshake wire writes', () => {
     it('holds keep-alives while a re-accepted server peer is handshaking', async () => {
         const serverHub = newServerHub();
         const peer: RpcServerPeer = serverHub.getServerPeer('server://keepalive');
-        peer.serializationFormat = format;
+        peer.wireFormat = wireFormat;
         peer.keepAlivePeriodMs = 20;
 
         // First generation: reach Connected, which arms the keep-alive timer.
         const [firstClientWs, firstServerWs] = createMockWsPair();
         peer.accept(new RpcWebSocketConnection(
-            firstServerWs, format.isBinary, format, serverHub.registry));
+            firstServerWs, wireFormat.isBinary, wireFormat, serverHub.registry));
         serverHub.systemCallSender.handshake(
-            new RpcWebSocketConnection(firstClientWs, format.isBinary, format, serverHub.registry),
-            format, 'client-peer', serverHub.hubId, 1);
+            new RpcWebSocketConnection(firstClientWs, wireFormat.isBinary, wireFormat, serverHub.registry),
+            wireFormat, 'client-peer', serverHub.hubId, 1);
         await delay(10);
         expect(peer.isConnected).toBe(true);
 
@@ -181,7 +181,7 @@ describe('pre-handshake wire writes', () => {
         // `closed` event disarms the timer — it stays live across the handshake.
         const [, secondServerWs] = createMockWsPair();
         peer.accept(new RpcWebSocketConnection(
-            secondServerWs, format.isBinary, format, serverHub.registry));
+            secondServerWs, wireFormat.isBinary, wireFormat, serverHub.registry));
         expect(peer.isConnected).toBe(false);
 
         const sent: string[] = [];

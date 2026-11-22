@@ -1,7 +1,7 @@
 // .NET counterpart:
 //   RpcHub (141 lines) — a sealed ProcessorBase (IAsyncDisposable) that owns:
 //     DI-resolved configuration (RpcRegistryOptions, PeerOptions, InboundCallOptions,
-//     OutboundCallOptions, DiagnosticsOptions), SerializationFormats, Middlewares,
+//     OutboundCallOptions, DiagnosticsOptions), WireFormats, Middlewares,
 //     ClientPeerReconnectDelayer, Limits, SystemClock.
 //     Manages peers via ConcurrentDictionary<RpcRoute, RpcPeer> with GetPeer()
 //     that lazily creates + starts peers.  Also has GetClient<T>() / GetServer<T>()
@@ -17,7 +17,7 @@
 //     via the ServiceRegistry + DI.  TS uses addClient<T>(peer, def).
 //   - RpcRoute-keyed peer dictionary — .NET peers are keyed by RpcRoute (one
 //     route generation of a stable RpcRef, which encodes client/server, versions,
-//     serialization format).  TS uses string refs (URL for clients,
+//     wire format).  TS uses string refs (URL for clients,
 //     "server://{uuid}" for servers).
 //   - Lazy peer creation + Start() — .NET's GetPeer auto-creates and starts a
 //     peer's reconnection loop.  TS requires explicit addPeer() + run().

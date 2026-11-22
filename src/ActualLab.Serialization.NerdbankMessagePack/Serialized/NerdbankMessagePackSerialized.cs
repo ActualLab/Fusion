@@ -17,8 +17,7 @@ public static class NerdbankMessagePackSerialized
 /// <summary>
 /// A <see cref="ByteSerialized{T}"/> variant that uses <see cref="NerdbankMessagePackByteSerializer"/> for serialization.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract]
 public partial class NerdbankMessagePackSerialized<T> : ByteSerialized<T>
 {
     private static IByteSerializer<T>? _serializer;

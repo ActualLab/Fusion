@@ -3,7 +3,6 @@ using ActualLab.Fusion.Server;
 using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
-using MemoryPack;
 using MessagePack;
 using Microsoft.AspNetCore.Builder;
 using static System.Console;
@@ -98,10 +97,10 @@ public interface IChat : IComputeService
     public Task Post(Chat_Post command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Chat_Post(
-    [property: DataMember, MemoryPackOrder(0)] string Message
+    [property: DataMember] string Message
 ) : ICommand<Unit>;
 
 public class Chat : IChat

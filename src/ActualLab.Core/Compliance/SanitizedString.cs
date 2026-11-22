@@ -14,19 +14,12 @@ namespace ActualLab.Compliance;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MessagePackFormatter(typeof(SanitizedStringMessagePackFormatter<>))]
 [JsonConverter(typeof(SanitizedStringJsonConverter))]
-[Newtonsoft.Json.JsonConverter(typeof(SanitizedStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SanitizedStringTypeConverter))]
 public readonly struct SanitizedString<TSanitizer>(string? value)
     : ISanitizedString, IEquatable<SanitizedString<TSanitizer>>, IConvertibleTo<string>
     where TSanitizer : Sanitizer, new()
 {
     public static readonly SanitizedString<TSanitizer> Empty;
-
-    // Closes the open generic CoreModuleInitializer registers, for TFMs with no module initializer
-#if !NETSTANDARD2_0
-    static SanitizedString()
-        => SanitizedStringMemoryPackFormatter.Register<TSanitizer>();
-#endif
 
     [DataMember(Order = 0), Key(0)]
     public string Value {

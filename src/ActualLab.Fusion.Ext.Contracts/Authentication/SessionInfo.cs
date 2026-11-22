@@ -11,21 +11,21 @@ namespace ActualLab.Fusion.Authentication;
 /// Stores detailed information about a user session, including version, timestamps,
 /// IP address, user agent, and additional options.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>, ISanitized
 {
     public static new Requirement<SessionInfo> MustBeAuthenticated { get; set; } = Requirement.New(
         (SessionInfo? i) => i?.IsAuthenticated() ?? false,
         new("Session is not authenticated.", m => new SecurityException(m)));
 
-    [DataMember(Order = 10), MemoryPackOrder(10)] public long Version { get; init; }
-    [DataMember(Order = 11), MemoryPackOrder(11)] public Moment CreatedAt { get; init; }
-    [DataMember(Order = 12), MemoryPackOrder(12)] public Moment LastSeenAt { get; init; }
-    [DataMember(Order = 13), MemoryPackOrder(13)] public string IPAddress { get => field ?? ""; init; }
-    [DataMember(Order = 14), MemoryPackOrder(14)] public string UserAgent { get => field ?? ""; init; }
-    [DataMember(Order = 15), MemoryPackOrder(15)] public PropertyBag Options { get; init; }
+    [DataMember(Order = 10)] public long Version { get; init; }
+    [DataMember(Order = 11)] public Moment CreatedAt { get; init; }
+    [DataMember(Order = 12)] public Moment LastSeenAt { get; init; }
+    [DataMember(Order = 13)] public string IPAddress { get => field ?? ""; init; }
+    [DataMember(Order = 14)] public string UserAgent { get => field ?? ""; init; }
+    [DataMember(Order = 15)] public PropertyBag Options { get; init; }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public SessionInfo()
     {
         IPAddress = "";

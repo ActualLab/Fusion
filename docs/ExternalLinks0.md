@@ -31,7 +31,7 @@ This file contains all unique external links found in docs/Part\*\*.md files.
 - https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Commands/ServerSideCommandBase.cs
 - https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/ICommander.cs
 - https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Internal/ICommandContext.cs
-- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/OptionSet.cs
+- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core.Legacy/Collections/OptionSet.cs
 - https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/RadixHeapSet.cs
 - https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs
 - https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/CascadingAuthState.razor

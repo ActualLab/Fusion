@@ -17,11 +17,11 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 
     private readonly string _message;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), MemoryPackAllowSerialize]
     public TypeRef TypeRef { get; }
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public string Message => _message ?? "";
-    [DataMember(Order = 2), MemoryPackOrder(2)]
+    [DataMember(Order = 2), MemoryPackOrder(2), MemoryPackAllowSerialize]
     public TypeRef WrappedTypeRef { get; }
 
     [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -106,7 +106,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
         var ctor = type.GetConstructor(ExceptionCtorArgumentTypes1);
         if (ctor is null)
             return null;
-        return (Exception) type.CreateInstance(exceptionInfo.Message, wrappedException);
+        return (Exception)type.CreateInstance(exceptionInfo.Message, wrappedException);
     }
 
     private static Exception? CreateStandardException(Type type, string message)
@@ -117,7 +117,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
         var ctor = type.GetConstructor(ExceptionCtorArgumentTypes1);
         if (ctor is not null) {
             try {
-                return (Exception) type.CreateInstance(message, (Exception?) null);
+                return (Exception)type.CreateInstance(message, (Exception?)null);
             }
             catch {
                 // Intended
@@ -132,7 +132,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
         if (!string.Equals("message", parameter?.Name ?? "", StringComparison.Ordinal))
             return null;
 
-        return (Exception) type.CreateInstance(message);
+        return (Exception)type.CreateInstance(message);
     }
 
     // Equality

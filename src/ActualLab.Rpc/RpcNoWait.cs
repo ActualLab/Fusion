@@ -8,7 +8,7 @@ namespace ActualLab.Rpc;
 /// A zero-size struct used as a return type for fire-and-forget RPC calls that require no response.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
 {
     // See https://github.com/dotnet/runtime/pull/107198

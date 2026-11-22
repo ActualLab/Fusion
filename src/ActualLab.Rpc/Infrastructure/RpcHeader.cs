@@ -10,30 +10,29 @@ namespace ActualLab.Rpc.Infrastructure;
 /// in <c>RpcHeaderNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 {
     public static RpcHeader None => default;
 
     private readonly string? _value;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public RpcHeaderKey Key { get; init; }
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public string Name {
         get => Key.Name;
         init => Key = RpcHeaderKey.NewOrWellKnown(value);
     }
 
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), Key(1)]
     public string Value {
         get => _value ?? "";
         init => _value = value;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsNone
         => Key.IsNone && ReferenceEquals(_value, null);
 
@@ -43,7 +42,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
         _value = value;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public RpcHeader(string name, string? value = "")
     {
         Key = RpcHeaderKey.NewOrWellKnown(name);

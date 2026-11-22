@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">$(LatestTargetFrameworks)net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion core legacy</PackageTags>
+    <Description>ActualLab.Core.Legacy - obsolete ActualLab.Core types kept for compatibility <!--
+    -->(OptionSet, ImmutableOptionSet).</Description>
+    <RootNamespace>ActualLab</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
+  </ItemGroup>
+</Project>

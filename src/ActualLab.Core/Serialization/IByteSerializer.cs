@@ -7,8 +7,14 @@ namespace ActualLab.Serialization;
 /// </summary>
 public interface IByteSerializer
 {
-    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);
-    public void Write(IBufferWriter<byte> bufferWriter, object? value, Type type);
+    // The serializer exposed as ByteSerializer.Current while this one runs: typed serializers and wrappers
+    // expose the untyped serializer converters of nested values (e.g. UniSerialized<T>) expect
+    public IByteSerializer Root { get; }
+
+    // Read/WriteUnscoped don't activate ByteSerializer.Current: the Read/Write extension methods do,
+    // and code making a series of calls wraps them into a single new ByteSerializer.Scope(serializer.Root)
+    public object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength);
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type);
 
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
@@ -18,8 +24,11 @@ public interface IByteSerializer
 /// </summary>
 public interface IByteSerializer<T>
 {
-    public T Read(ReadOnlyMemory<byte> data, out int readLength);
-    public void Write(IBufferWriter<byte> bufferWriter, T value);
+    // See IByteSerializer.Root and Read/WriteUnscoped
+    public IByteSerializer Root { get; }
+
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength);
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value);
 }
 
 /// <summary>

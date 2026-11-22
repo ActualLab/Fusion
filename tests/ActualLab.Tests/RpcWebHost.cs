@@ -7,6 +7,7 @@ using ActualLab.Rpc.Server;
 using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Logging;
 using ActualLab.Testing.Web;
+using ActualLab.Tests.Rpc;
 
 #if NETFRAMEWORK
 using Owin;
@@ -55,6 +56,10 @@ public class RpcWebHost(
             // Since we copy all services here,
             // only web-related ones must be added to services
             var rpc = services.AddRpc();
+            // BaseServices may bring an RpcConfiguration their own container has already frozen;
+            // its formats are configured there
+            if (!rpc.WireFormats.IsFrozen)
+                rpc.AddTestFormats();
             var webSocketServer = rpc.AddWebSocketServer();
             webSocketServer.Configure(_ => {
                 var defaultOptions = RpcWebSocketServerOptions.Default;

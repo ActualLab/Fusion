@@ -1,5 +1,4 @@
-using ActualLab.Conversion;
-using ActualLab.Serialization.Internal;
+using System.Buffers;
 
 namespace ActualLab.Serialization;
 
@@ -8,12 +7,52 @@ namespace ActualLab.Serialization;
 /// </summary>
 public static class ByteSerializerExt
 {
+    // Activates serializer.Root - code using Read/WriteUnscoped calls it once for a series of calls.
+    // Disposing the result restores the previous serializer, so nested serialization
+    // (e.g. by a converter) works as expected. For IByteSerializer<T>, use serializer.Root.Activate().
+    public static ByteSerializer.Scope Activate(this IByteSerializer serializer)
+        => new(serializer.Root);
+
+    // Read and Write: they activate serializer.Root and call Read/WriteUnscoped
+
+    public static object? Read(this IByteSerializer serializer, ReadOnlyMemory<byte> data, Type type, out int readLength)
+    {
+        using var _ = new ByteSerializer.Scope(serializer.Root);
+        return serializer.ReadUnscoped(data, type, out readLength);
+    }
+
+    public static void Write(this IByteSerializer serializer, IBufferWriter<byte> bufferWriter, object? value, Type type)
+    {
+        using var _ = new ByteSerializer.Scope(serializer.Root);
+        serializer.WriteUnscoped(bufferWriter, value, type);
+    }
+
+    public static T Read<T>(this IByteSerializer<T> serializer, ReadOnlyMemory<byte> data, out int readLength)
+    {
+        using var _ = new ByteSerializer.Scope(serializer.Root);
+        return serializer.ReadUnscoped(data, out readLength);
+    }
+
+    public static void Write<T>(this IByteSerializer<T> serializer, IBufferWriter<byte> bufferWriter, T value)
+    {
+        using var _ = new ByteSerializer.Scope(serializer.Root);
+        serializer.WriteUnscoped(bufferWriter, value);
+    }
+
     // Read (and advance) - with ref data argument
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static object? Read(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
     {
         var result = serializer.Read(data, type, out var readLength);
+        data = data[readLength..];
+        return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static object? ReadUnscoped(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
+    {
+        var result = serializer.ReadUnscoped(data, type, out var readLength);
         data = data[readLength..];
         return result;
     }
@@ -58,11 +97,4 @@ public static class ByteSerializerExt
         serializer.Write(bufferWriter, value);
         return bufferWriter;
     }
-
-    // Convert
-
-    public static IByteSerializer<T> Convert<TInner, T>(
-        this IByteSerializer<TInner> serializer,
-        BiConverter<T, TInner> converter)
-        => new ConvertingByteSerializer<T, TInner>(serializer, converter);
 }

@@ -8,8 +8,7 @@ namespace ActualLab.Fusion.Authentication;
 /// Represents a user identity composed of an authentication schema and a schema-bound ID.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject(true)]
 public readonly partial record struct UserIdentity : IComparable<UserIdentity>
 {
     private static readonly ListFormat IdFormat = ListFormat.SlashSeparated;
@@ -17,7 +16,7 @@ public readonly partial record struct UserIdentity : IComparable<UserIdentity>
     public static readonly UserIdentity None;
     public static string DefaultSchema { get; set; } = "Default";
 
-    [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
+    [DataMember(Order = 0)]
     public string Id {
         get => field ?? "";
         init;
@@ -25,14 +24,14 @@ public readonly partial record struct UserIdentity : IComparable<UserIdentity>
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreMember]
     public string Schema => ParseId(Id).Schema;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreMember]
     public string SchemaBoundId => ParseId(Id).SchemaBoundId;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreMember]
     public bool IsValid => !Id.IsNullOrEmpty();
 
-    [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [method: JsonConstructor, SerializationConstructor]
     public UserIdentity(string id)
         => Id = id;
     public UserIdentity(string provider, string providerBoundId)

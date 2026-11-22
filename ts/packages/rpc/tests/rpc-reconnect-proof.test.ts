@@ -365,7 +365,7 @@ describe('reconnect proof', () => {
                 expect(q.get('c')).toBeNull();
                 expect(q.get('p')).toBeNull();
                 expect(q.get('clientId')).toBe(h.peer.clientId);
-                expect(q.get('f')).toBe(h.peer.serializationFormat.key);
+                expect(q.get('f')).toBe(h.peer.wireFormat.key);
             }
             // Reconnects still succeed — the fallback must not break the loop.
             expect(h.state.handshakeIndex).toBeGreaterThanOrEqual(3);

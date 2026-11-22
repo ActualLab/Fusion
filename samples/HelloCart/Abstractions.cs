@@ -1,22 +1,21 @@
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 using System.Transactions;
 using ActualLab.CommandR.Operations;
-using MemoryPack;
 using MessagePack;
-using Newtonsoft.Json;
 using Pastel;
 
 namespace Samples.HelloCart;
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
-[method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[DataContract, MessagePackObject(true)]
+[method: JsonConstructor, SerializationConstructor]
 public partial record Product(
     [property: DataMember] string Id,
     [property: DataMember] decimal Price
 ) : IHasId<string>;
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
-[method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[DataContract, MessagePackObject(true)]
+[method: JsonConstructor, SerializationConstructor]
 public partial record Cart(
     [property: DataMember] string Id
 ) : IHasId<string>
@@ -25,8 +24,8 @@ public partial record Cart(
     public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
-[method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[DataContract, MessagePackObject(true)]
+[method: JsonConstructor, SerializationConstructor]
 public partial record EditCommand<TItem>(
     [property: DataMember] string Id,
     [property: DataMember] TItem? Item
@@ -36,8 +35,8 @@ public partial record EditCommand<TItem>(
     public EditCommand(TItem value) : this(value.Id, value) { }
 }
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
-[method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[DataContract, MessagePackObject(true)]
+[method: JsonConstructor, SerializationConstructor]
 public partial record LogMessageCommand(
     [property: DataMember] string Uuid,
     [property: DataMember] string Message,

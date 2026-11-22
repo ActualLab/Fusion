@@ -21,11 +21,11 @@ const CalcServiceDef = defineRpcService('CalcService', {
     fail: { args: [] },
 });
 
-describe.each(FORMATS)('RPC End-to-End [%s]', (formatKey) => {
+describe.each(FORMATS)('RPC End-to-End [%s]', (wireFormatKey) => {
     let pair: TestHubPair;
 
     beforeEach(async () => {
-        pair = createTestHubPair(formatKey);
+        pair = createTestHubPair(wireFormatKey);
 
         // Register service on server
         pair.serverHub.addService(CalcServiceDef, {

@@ -5,7 +5,7 @@ namespace ActualLab.Rpc.Compression;
 
 /// <summary>
 /// Decodes the frames <see cref="RpcFrameEncoder"/> produces on the peer's side.
-/// Exists only when the serialization format compresses the inbound direction.
+/// Exists only when the wire format compresses the inbound direction.
 /// </summary>
 /// <remarks>
 /// Only the transport's reader loop calls this, so it isn't thread-safe.

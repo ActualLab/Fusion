@@ -11,7 +11,7 @@ namespace ActualLab.Rpc;
 /// in <c>RpcMethodRefNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 {
     // A wire name is "{ServiceName}.{MethodName}:{ParameterCount}", and the service name is the
@@ -19,18 +19,18 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
     // under 512 bytes. ComputeHashCode stackallocs this many bytes, hence the tight bound.
     public const int MaxUtf8NameLength = 1024;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public readonly ReadOnlyMemory<byte> Utf8Name;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public readonly RpcMethodDef? Target;
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public readonly int HashCode;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public bool HasName => !Utf8Name.IsEmpty;
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public string Name
 #if !NETSTANDARD2_0
         => Utf8Name.IsEmpty ? "" : EncodingExt.Utf8NoBom.GetString(Utf8Name.Span);
@@ -38,13 +38,13 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
         => Utf8Name.IsEmpty ? "" : EncodingExt.Utf8NoBom.GetDecoder().Convert(Utf8Name.Span);
 #endif
 
-    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [IgnoreDataMember, IgnoreMember]
     public string FullName
         => Target is not null
             ? Target.FullName
             : HasName ? Name : $"Service.Method<{(uint)HashCode:x8}>";
 
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     public RpcMethodRef(ReadOnlyMemory<byte> utf8Name)
     {
         Utf8Name = utf8Name;

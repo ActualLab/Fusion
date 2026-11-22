@@ -15,9 +15,14 @@ public sealed class TextArgumentListSerializer(ITextSerializer baseSerializer) :
     [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
     public static int Utf8BufferReplaceCapacity { get; set; } = 65536 * 2; // The base capacity is 65536
 
+    private ITextSerializer BaseSerializer { get; } = baseSerializer;
+    private ITextSerializer BaseSerializerRoot { get; } = baseSerializer.Root;
+
     public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
     {
+        // Items are serialized with Read/WriteUnscoped in a single scope per argument list
         var writer = _utf8Buffer ??= new Utf8TextWriter();
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         try {
             var itemTypes = arguments.Type.ItemTypes;
             for (var i = 0; i < itemTypes.Length; i++) {
@@ -32,11 +37,11 @@ public sealed class TextArgumentListSerializer(ITextSerializer baseSerializer) :
                     else {
                         var itemType = item.GetType();
                         TextTypeSerializer.WriteDerivedItemType(writer, type, itemType);
-                        baseSerializer.Write(writer, item, itemType);
+                        BaseSerializer.WriteUnscoped(writer, item, itemType);
                     }
                 }
                 else
-                    baseSerializer.Write(writer, item, type);
+                    BaseSerializer.WriteUnscoped(writer, item, type);
                 writer.WriteLiteral(Delimiter);
             }
 
@@ -56,6 +61,7 @@ public sealed class TextArgumentListSerializer(ITextSerializer baseSerializer) :
 
     public override void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data)
     {
+        using var _ = new ByteSerializer.Scope(BaseSerializerRoot);
         var itemTypes = arguments.Type.ItemTypes;
         for (var i = 0; i < itemTypes.Length; i++) {
             var type = itemTypes[i];
@@ -68,11 +74,11 @@ public sealed class TextArgumentListSerializer(ITextSerializer baseSerializer) :
             if (needsPolymorphism && IsPolymorphic(type)) {
                 var itemType = TextTypeSerializer.ReadDerivedItemType(ref data, type);
                 item = itemType != typeof(NullValue)
-                    ? baseSerializer.ReadDelimited(ref data, itemType, Delimiter)
+                    ? BaseSerializer.ReadDelimitedUnscoped(ref data, itemType, Delimiter)
                     : null;
             }
             else
-                item = baseSerializer.ReadDelimited(ref data, type, Delimiter);
+                item = BaseSerializer.ReadDelimitedUnscoped(ref data, type, Delimiter);
             arguments.SetUntyped(i, item);
         }
     }

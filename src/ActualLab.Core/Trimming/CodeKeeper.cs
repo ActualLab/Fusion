@@ -1,4 +1,3 @@
-using System.Buffers;
 using MessagePack;
 using ActualLab.Generators;
 using ActualLab.Serialization.Internal;
@@ -77,15 +76,6 @@ public static class CodeKeeper
 
         Keep<T>();
         Keep<UniSerialized<T>>();
-        if (SerializationFeatures.IsMemoryPackByteSerializerEnabled) {
-            Keep<MemoryPackSerialized<T>>();
-            Keep<MemoryPackByteSerializer<T>>();
-#if !NETSTANDARD2_0
-            MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty);
-            MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty);
-            MemoryPackSerializer.Serialize<T>(default);
-#endif
-        }
         if (SerializationFeatures.IsMessagePackByteSerializerEnabled) {
             Keep<MessagePackSerialized<T>>();
             Keep<MessagePackByteSerializer<T>>();

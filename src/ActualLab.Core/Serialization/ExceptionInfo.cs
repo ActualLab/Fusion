@@ -15,7 +15,7 @@ namespace ActualLab.Serialization;
 /// with the TS RPC client's expectations and the <c>ExceptionInfo_CrossCompat</c> test guard.
 /// </remarks>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 {
     private static readonly Type[] ExceptionCtorArgumentTypes1 = { typeof(string), typeof(Exception) };
@@ -28,14 +28,14 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
     public static int MaxTypeGenericArity { get; set; } = 1;
     public static string[] TypeNameSuffixes { get; set; } = ["Exception", "Error"];
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0)]
     public TypeRef TypeRef { get; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1)]
     public string Message => field ?? "";
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsNone => TypeRef.AssemblyQualifiedName.IsNullOrEmpty();
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public ExceptionInfo(TypeRef typeRef, string? message)
     {
         TypeRef = typeRef;
@@ -113,7 +113,7 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
         var ctor = type.GetConstructor(ExceptionCtorArgumentTypes1);
         if (ctor is not null) {
             try {
-                return (Exception)type.CreateInstance(message, (Exception?) null);
+                return (Exception)type.CreateInstance(message, (Exception?)null);
             }
             catch {
                 // Intended

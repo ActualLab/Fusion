@@ -29,7 +29,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
     }
 
     protected ArgumentListSerializer ArgumentListSerializer
-        => field ??= Hub.SerializationFormats.DefaultFormat.ArgumentListSerializer;
+        => field ??= Hub.WireFormats.DefaultFormat.ArgumentListSerializer;
     protected RpcMethodResolver AnyMethodResolver => field ??= Hub.ServiceRegistry.AnyMethodResolver;
     protected ILogger? DefaultLog;
 

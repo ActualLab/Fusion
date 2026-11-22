@@ -17,6 +17,9 @@ AppDomain.CurrentDomain.FirstChanceException += (_, args) => {
     Error.Flush();
 };
 
+// E.g. "msgpack6c" (the default), "msgpack6", "mempack6c", "mempack6"
+var format = args.Length > 0 ? args[0] : RpcDefaultWireFormats.MessagePackV6C.Key;
+WriteLine($"RPC wire format: {format}");
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 WriteLine($"ArgumentList.UseGenerics: {ArgumentList.UseGenerics}");
 var l0 = ArgumentList.New();
@@ -36,6 +39,10 @@ var services = new ServiceCollection()
         l.AddSanitizingLoggerFactory();
     })
     .AddFusion(fusion => {
+        fusion.Rpc.ConfigureWireFormats(f => {
+            f.AddMemoryPack();
+            f.DefaultFormat = f[format];
+        });
         fusion.Rpc.AddWebSocketClient();
         // .AddDistributedService can't be used w/ a router returning Loopback connection for it (see below)
         fusion.AddServerAndClient<ITestService, TestService>();
@@ -81,9 +88,9 @@ public interface ITestService : IComputeService
     public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
 }
 
-[MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[MessagePackObject(true), MemoryPackable]
 public sealed partial record SayHelloCommand(
-    [property: MemoryPackOrder(0)] string Name
+    string Name
 ) : ICommand<string>;
 
 public class TestService : ITestService

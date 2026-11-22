@@ -18,7 +18,7 @@ public class PluginSetInfo
     public ImmutableDictionary<TypeRef, ImmutableHashSet<TypeRef>> TypesByBaseType { get; }
     public ImmutableDictionary<TypeRef, ImmutableArray<TypeRef>> TypesByBaseTypeOrderedByDependency { get; }
 
-    [Newtonsoft.Json.JsonConstructor, JsonConstructor]
+    [JsonConstructor]
     public PluginSetInfo(
         ImmutableDictionary<TypeRef, PluginInfo> infoByType,
         ImmutableDictionary<TypeRef, ImmutableHashSet<TypeRef>> typesByBaseType,

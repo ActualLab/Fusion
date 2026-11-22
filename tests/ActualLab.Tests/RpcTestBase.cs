@@ -5,6 +5,7 @@ using ActualLab.Locking;
 using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
+using ActualLab.Tests.Rpc;
 using ActualLab.Time.Testing;
 using MartinCostello.Logging.XUnit;
 
@@ -13,7 +14,12 @@ namespace ActualLab.Tests;
 [Trait("Category", "Rpc")]
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
-    public static string DefaultSerializationFormat => "mempack6c";
+    public static string DefaultWireFormat =>
+#if NETFRAMEWORK
+        "msgpack6c"; // MemoryPack doesn't run on .NET Framework
+#else
+        "mempack6c";
+#endif
 
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
     protected static readonly RpcRef ClientPeerRef = RpcRef.Default;
@@ -24,10 +30,10 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 
     protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     protected Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
-    protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
+    protected string WireFormat { get; set; } = DefaultWireFormat;
     // The test suite runs the whole format matrix - including the Newtonsoft ones - over real
     // sockets, so test servers opt back into client-selected Newtonsoft formats
-    protected ImmutableHashSet<string> ClientDeniedFormatKeys { get; set; } = ImmutableHashSet<string>.Empty;
+    protected ImmutableHashSet<string> BackendOnlyFormatKeys { get; set; } = ImmutableHashSet<string>.Empty;
     protected bool ExposeBackend { get; init; } = false;
     protected bool RequireReconnectProof { get; init; } = false;
     protected bool UseHttpClient { get; init; } = false;
@@ -171,10 +177,17 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             RouterFactory = methodDef => args
                 => RpcRef.GetDefaultRef(ConnectionKind, methodDef.IsBackend),
         });
-        services.AddSingleton<RpcSerializationFormatResolver>(
-            _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()) {
-                ClientDeniedFormatKeys = ClientDeniedFormatKeys,
-            });
+        // Tests set WireFormat and BackendOnlyFormatKeys after InitializeAsync builds the services,
+        // so they are read when the resolver is created rather than in ConfigureWireFormats.
+        // This resolver ignores RpcConfiguration.WireFormats: tests that need other formats
+        // must register their own resolver.
+        services.AddSingleton(_ => {
+            var formats = new RpcWireFormatConfiguration();
+            formats.Add([.. RpcTestFormats.Catalog]);
+            formats.DefaultFormat = formats[WireFormat];
+            formats.BackendOnlyFormatKeys = BackendOnlyFormatKeys;
+            return new RpcWireFormatResolver(formats);
+        });
 #if NET5_0_OR_GREATER
         if (UseHttpClient)
             services.AddSingleton<RpcHttpClientOptions>(_ => new RpcHttpClientOptions() {

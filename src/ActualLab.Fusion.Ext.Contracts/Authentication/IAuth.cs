@@ -33,12 +33,12 @@ public interface IAuth : ISessionValidator, IComputeService
 /// <summary>
 /// Backend command to set session options for the specified session.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record AuthBackend_SetSessionOptions(
-    [property: DataMember, MemoryPackOrder(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1)] PropertyBag Options,
-    [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
+    [property: DataMember] Session Session,
+    [property: DataMember] PropertyBag Options,
+    [property: DataMember] long? ExpectedVersion = null
 ) : ISessionCommand<Unit>
 {
     protected virtual bool PrintMembers(StringBuilder builder)
@@ -55,24 +55,24 @@ public partial record AuthBackend_SetSessionOptions(
 /// <summary>
 /// Command to edit the current user's profile (e.g., name) within a session.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_EditUser(
-    [property: DataMember, MemoryPackOrder(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1)] string? Name
+    [property: DataMember] Session Session,
+    [property: DataMember] string? Name
 ) : ISessionCommand<Unit>;
 
 /// <summary>
 /// Command to sign out a session, optionally kicking other user sessions.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_SignOut: ISessionCommand<Unit>
 {
-    [DataMember, MemoryPackOrder(0)] public Session Session { get; init; }
-    [DataMember, MemoryPackOrder(1)] public string? KickUserSessionHash { get; init; }
-    [DataMember, MemoryPackOrder(2)] public bool KickAllUserSessions { get; init; }
-    [DataMember, MemoryPackOrder(3)] public bool Force { get; init; }
+    [DataMember] public Session Session { get; init; }
+    [DataMember] public string? KickUserSessionHash { get; init; }
+    [DataMember] public bool KickAllUserSessions { get; init; }
+    [DataMember] public bool Force { get; init; }
 
     public Auth_SignOut(Session session, bool force = false)
     {
@@ -88,7 +88,7 @@ public partial record Auth_SignOut: ISessionCommand<Unit>
     }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public Auth_SignOut(
         Session session,
         string? kickUserSessionHash,

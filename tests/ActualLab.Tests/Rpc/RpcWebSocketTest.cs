@@ -34,9 +34,9 @@ public class RpcWebSocketTest : RpcTestBase
     [Trait("Category", "Smoke")]
     [Theory]
     [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
-    public async Task BasicTest(string serializationFormat)
+    public async Task BasicTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
@@ -149,9 +149,9 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
-    public async Task PolymorphTest(string serializationFormat)
+    public async Task PolymorphTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
@@ -200,9 +200,9 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [MemberData(nameof(RpcTestFormats.NoNPWithReconnectFlag), MemberType = typeof(RpcTestFormats))]
-    public async Task StreamTest(string serializationFormat, bool allowReconnect = true)
+    public async Task StreamTest(string wireFormat, bool allowReconnect = true)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
@@ -237,9 +237,9 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
-    public async Task StreamInputTest(string serializationFormat)
+    public async Task StreamInputTest(string wireFormat)
     {
-        SerializationFormat = serializationFormat;
+        WireFormat = wireFormat;
         await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
@@ -318,20 +318,25 @@ public class RpcWebSocketTest : RpcTestBase
     public async Task UnsupportedFormatTest()
     {
         // Client requests a format key unknown to the server. The server should close
-        // with code 4001 and the client peer should terminate with RpcSerializationFormatException.
+        // with code 4001 and the client peer should terminate with RpcWireFormatException.
         await using var _ = await WebHost.Serve();
 
         // Create a fake format with a key the server doesn't know,
         // reusing json5's serializers so the client can construct its peer.
-        var bogusFormat = new RpcSerializationFormat("bogus-format",
-            () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
-            RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
+        var bogusFormat = new RpcWireFormat("bogus-format",
+            () => RpcDefaultWireFormats.SystemJsonV5.ArgumentListSerializer,
+            RpcDefaultWireFormats.SystemJsonV5.MessageSerializerFactory,
+            DataFormat.Text);
         var formats = new[] { bogusFormat };
 
         var clientServices = new ServiceCollection();
         clientServices.AddSingleton<TestServiceProviderTag>();
         ConfigureServices(clientServices, isClient: true);
-        clientServices.AddSingleton(_ => new RpcSerializationFormatResolver("bogus-format", formats));
+        var clientFormats = new RpcWireFormatConfiguration();
+        clientFormats.Clear();
+        clientFormats.Add(formats);
+        clientFormats.DefaultFormat = bogusFormat;
+        clientServices.AddSingleton(new RpcWireFormatResolver(clientFormats));
         await using var sp = clientServices.BuildServiceProvider();
 
         var peer = sp.RpcHub().GetClientPeer(ClientPeerRef);
@@ -343,11 +348,11 @@ public class RpcWebSocketTest : RpcTestBase
             while (!connectionState.IsFinal)
                 connectionState = await connectionState.WhenNext(cts.Token).ConfigureAwait(false);
         }
-        catch (RpcSerializationFormatException) {
+        catch (RpcWireFormatException) {
             // Expected — SetFinal(error) makes WhenNext throw
         }
         peer.ConnectionState.IsFinal.Should().BeTrue();
-        peer.ConnectionState.Value.Error.Should().BeOfType<RpcSerializationFormatException>();
+        peer.ConnectionState.Value.Error.Should().BeOfType<RpcWireFormatException>();
     }
 
     [Fact]
@@ -356,15 +361,20 @@ public class RpcWebSocketTest : RpcTestBase
         // Same scenario, but verifies the error surfaces through RpcPeerStateMonitor.State.LastError.
         await using var _ = await WebHost.Serve();
 
-        var bogusFormat = new RpcSerializationFormat("bogus-format",
-            () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
-            RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
+        var bogusFormat = new RpcWireFormat("bogus-format",
+            () => RpcDefaultWireFormats.SystemJsonV5.ArgumentListSerializer,
+            RpcDefaultWireFormats.SystemJsonV5.MessageSerializerFactory,
+            DataFormat.Text);
         var formats = new[] { bogusFormat };
 
         var clientServices = new ServiceCollection();
         clientServices.AddSingleton<TestServiceProviderTag>();
         ConfigureServices(clientServices, isClient: true);
-        clientServices.AddSingleton(_ => new RpcSerializationFormatResolver("bogus-format", formats));
+        var clientFormats = new RpcWireFormatConfiguration();
+        clientFormats.Clear();
+        clientFormats.Add(formats);
+        clientFormats.DefaultFormat = bogusFormat;
+        clientServices.AddSingleton(new RpcWireFormatResolver(clientFormats));
         clientServices.AddFusion(); // Required for RpcPeerStateMonitor
         await using var c = clientServices.BuildServiceProvider();
 
@@ -374,7 +384,7 @@ public class RpcWebSocketTest : RpcTestBase
 
         // The monitor should eventually report the terminal error
         await state.Computed
-            .When(x => x.LastError is RpcSerializationFormatException)
+            .When(x => x.LastError is RpcWireFormatException)
             .WaitAsync(TimeSpan.FromSeconds(10));
         state.Value.IsConnected.Should().BeFalse();
     }

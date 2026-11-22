@@ -101,7 +101,14 @@ value are only known as `ICommand` and `object` when they're read back:
   round-tripping.
 - The text default is `NewtonsoftJsonSerializer.Default`, which carries the type itself via
   `TypeNameHandling.Auto`. Newtonsoft is the text choice because it's forgiving with missing and
-  extra properties during schema evolution.
+  extra properties during schema evolution. Since v16 Newtonsoft.Json support lives in the
+  `ActualLab.Serialization.NewtonsoftJson` package; `ActualLab.Fusion.EntityFramework` references
+  it, so the operation log keeps writing and reading the same JSON as before.
+
+If you build your own `JsonSerializerSettings` for it, set
+`ContractResolver = new NewtonsoftJsonContractResolver()` (or a subclass of it). ActualLab types
+no longer carry Newtonsoft.Json attributes or `[JsonConverter]`s; this resolver reads their
+System.Text.Json and `[DataContract]` attributes instead and supplies their converters.
 
 
 ## Invalidation Serialization
@@ -157,6 +164,8 @@ services.AddSingleton(_ => DbLogEntrySerializer.Default with {
         TypeNameHandling = TypeNameHandling.Auto,
         NullValueHandling = NullValueHandling.Ignore,
         DateParseHandling = DateParseHandling.None,
+        // Required: ActualLab types carry no Newtonsoft.Json attributes since v16
+        ContractResolver = new NewtonsoftJsonContractResolver(),
         // Add custom converters if needed
         Converters = { new MyCustomConverter() },
     }),
@@ -195,10 +204,10 @@ that reads it:
 <!-- snippet: PartOSerialization_CommandRecord -->
 ```cs
 // Command types must be serializable
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MessagePackObject]
 public sealed partial record CreateTodoCommand(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] string Title,
-    [property: DataMember, MemoryPackOrder(1), Key(1)] string? Description
+    [property: DataMember(Order = 0), Key(0)] string Title,
+    [property: DataMember(Order = 1), Key(1)] string? Description
 ) : ICommand<Todo>;
 ```
 <!-- endSnippet -->
@@ -210,15 +219,12 @@ with all serialization attributes:
 
 <!-- snippet: PartOSerialization_FullyAnnotatedCommand -->
 ```cs
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject]
+[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor]
 public sealed partial record MyCommand(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Id,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] string Data
-) : ICommand<string>
-{
-    [System.Text.Json.Serialization.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public MyCommand() : this("", "") { }
-}
+    [property: DataMember(Order = 0), Key(0)] string Id,
+    [property: DataMember(Order = 1), Key(1)] string Data
+) : ICommand<string>;
 ```
 <!-- endSnippet -->
 

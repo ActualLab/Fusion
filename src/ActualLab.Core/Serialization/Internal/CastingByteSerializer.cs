@@ -12,11 +12,12 @@ public sealed class CastingByteSerializer<T>(
 {
     public IByteSerializer UntypedSerializer { get; } = untypedSerializer;
     public Type SerializedType { get; } = serializedType;
+    public IByteSerializer Root { get; } = untypedSerializer.Root;
 
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
-        => (T) UntypedSerializer.Read(data, SerializedType, out readLength)!;
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength)
+        => (T)UntypedSerializer.ReadUnscoped(data, SerializedType, out readLength)!;
 
-    public void Write(IBufferWriter<byte> bufferWriter, T value)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
-        => UntypedSerializer.Write(bufferWriter, value, SerializedType);
+        => UntypedSerializer.WriteUnscoped(bufferWriter, value, SerializedType);
 }

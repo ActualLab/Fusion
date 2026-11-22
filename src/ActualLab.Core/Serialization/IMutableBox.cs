@@ -14,16 +14,15 @@ public interface IMutableBox : IBox
 /// <summary>
 /// A serializable mutable box that wraps a single value of type <typeparamref name="T"/>.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract]
 [MessagePackFormatter(typeof(MutableBoxMessagePackFormatter<>))]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+[method: JsonConstructor, SerializationConstructor]
 public sealed partial class MutableBox<T>(T value) : IMutableBox
 {
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0)]
     public T Value { get; set; } = value!;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public object? UntypedValue {
         get => Value;
         set => Value = (T?)value!;

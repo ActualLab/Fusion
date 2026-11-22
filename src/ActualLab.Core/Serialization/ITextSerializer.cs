@@ -6,12 +6,14 @@ namespace ActualLab.Serialization;
 /// </summary>
 public interface ITextSerializer : IByteSerializer
 {
+    public new ITextSerializer Root { get; }
     public bool PreferStringApi { get; }
 
-    public object? Read(string data, Type type);
-    public object? Read(ReadOnlyMemory<char> data, Type type);
-    public string Write(object? value, Type type);
-    public void Write(TextWriter textWriter, object? value, Type type);
+    // See IByteSerializer.ReadUnscoped
+    public object? ReadUnscoped(string data, Type type);
+    public object? ReadUnscoped(ReadOnlyMemory<char> data, Type type);
+    public string WriteUnscoped(object? value, Type type);
+    public void WriteUnscoped(TextWriter textWriter, object? value, Type type);
 
     public new ITextSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
@@ -22,9 +24,11 @@ public interface ITextSerializer : IByteSerializer
 public interface ITextSerializer<T> : IByteSerializer<T>
 {
     public bool PreferStringApi { get; }
+    public new ITextSerializer Root { get; }
 
-    public T Read(string data);
-    public T Read(ReadOnlyMemory<char> data);
-    public string Write(T value);
-    public void Write(TextWriter textWriter, T value);
+    // See IByteSerializer.ReadUnscoped
+    public T ReadUnscoped(string data);
+    public T ReadUnscoped(ReadOnlyMemory<char> data);
+    public string WriteUnscoped(T value);
+    public void WriteUnscoped(TextWriter textWriter, T value);
 }

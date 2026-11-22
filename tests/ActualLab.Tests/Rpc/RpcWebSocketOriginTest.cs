@@ -125,7 +125,7 @@ public class RpcWebSocketOriginTest(ITestOutputHelper @out) : TestBase(@out)
         if (origin == OwnOrigin)
             origin = $"http://{serverUri.Authority}";
         var uri = new Uri($"ws://{serverUri.Authority}/rpc/ws"
-            + $"?clientId={Guid.NewGuid():N}&f={RpcTestBase.DefaultSerializationFormat}");
+            + $"?clientId={Guid.NewGuid():N}&f={RpcTestBase.DefaultWireFormat}");
 
         HttpStatusCode? statusCode = null;
         using (var client = new ClientWebSocket()) {

@@ -17,8 +17,11 @@ internal static class FusionModuleInitializer
 {
     static FusionModuleInitializer()
     {
-        if (CodeKeeper.AlwaysFalse)
+        if (CodeKeeper.AlwaysFalse) {
             ProxyCodeKeeper.Extension = new FusionProxyCodeKeeperExtension();
+            // Created reflectively via [MessagePackFormatter(typeof(...))], so NativeAOT would trim it otherwise
+            CodeKeeper.Keep<SessionMessagePackFormatter>();
+        }
 
         _ = RpcComputeCallType.Value;
         _ = RpcInvalidateCallType.Value;

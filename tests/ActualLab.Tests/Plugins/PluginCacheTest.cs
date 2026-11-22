@@ -1,6 +1,7 @@
 using ActualLab.Caching;
 using ActualLab.IO;
 using ActualLab.Plugins;
+using ActualLab.Plugins.Caching;
 using ActualLab.Plugins.Metadata;
 using ActualLab.Reflection;
 using ActualLab.Testing.Logging;

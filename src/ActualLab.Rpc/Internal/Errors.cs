@@ -49,8 +49,8 @@ public static class Errors
 
     public static Exception Http2ConnectionRequired(Version actualVersion)
         => new RpcException($"RpcHttpClient requires an HTTP/2 (or higher) connection, but the server responded with HTTP/{actualVersion}.");
-    public static Exception UnsupportedSerializationFormat(string? message = null)
-        => new RpcSerializationFormatException(message);
+    public static Exception UnsupportedWireFormat(string? message = null)
+        => new RpcWireFormatException(message);
     public static Exception HandshakeFailed()
         => new RpcException("Handshake failed.");
     public static Exception HandshakeFailed(string reason)

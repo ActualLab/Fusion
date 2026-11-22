@@ -6,10 +6,10 @@ namespace ActualLab.Api;
 /// <summary>
 /// A serializable list intended for use in API contracts.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
+[DataContract, MessagePackObject]
 public sealed partial class ApiList<T> : List<T>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsEmpty => Count == 0;
 
     public ApiList() { }

@@ -163,7 +163,7 @@ public abstract partial record ArgumentList
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList1 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 1;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -761,7 +761,7 @@ public sealed record ArgumentListS1 : ArgumentList1
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList2 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 2;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -1494,7 +1494,7 @@ public sealed record ArgumentListS2 : ArgumentList2
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList3 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 3;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -2360,7 +2360,7 @@ public sealed record ArgumentListS3 : ArgumentList3
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList4 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 4;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -3359,7 +3359,7 @@ public sealed record ArgumentListS4 : ArgumentList4
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList5 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 5;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -4493,7 +4493,7 @@ public sealed record ArgumentListS5 : ArgumentList5
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList6 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 6;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -5757,7 +5757,7 @@ public sealed record ArgumentListS6 : ArgumentList6
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList7 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 7;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -7151,7 +7151,7 @@ public sealed record ArgumentListS7 : ArgumentList7
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList8 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 8;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -8675,7 +8675,7 @@ public sealed record ArgumentListS8 : ArgumentList8
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList9 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 9;
 
     protected static Type?[] CreateNonDefaultItemTypes()
@@ -10329,7 +10329,7 @@ public sealed record ArgumentListS9 : ArgumentList9
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList10 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public override int Length => 10;
 
     protected static Type?[] CreateNonDefaultItemTypes()

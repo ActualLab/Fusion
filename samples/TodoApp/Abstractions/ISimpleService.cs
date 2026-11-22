@@ -1,6 +1,5 @@
 using System.Runtime.Serialization;
 using ActualLab.Rpc;
-using MemoryPack;
 using MessagePack;
 
 namespace Samples.TodoApp.Abstractions;
@@ -13,12 +12,12 @@ public interface ISimpleService : IRpcService
     public Task<RpcNoWait> Ping(string message);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public sealed partial record Table<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Title,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<Row<T>> Rows);
+    [property: DataMember(Order = 0)] string Title,
+    [property: DataMember(Order = 1)] RpcStream<Row<T>> Rows);
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 public sealed partial record Row<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Index,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<T> Items);
+    [property: DataMember(Order = 0)] int Index,
+    [property: DataMember(Order = 1)] RpcStream<T> Items);

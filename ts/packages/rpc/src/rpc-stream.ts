@@ -243,7 +243,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         this._whenSent = sender.writeFrom(source);
 
         // Cache and return ref in the format appropriate for the peer's serialization
-        this._toRefValue = peer.serializationFormat.isBinary
+        this._toRefValue = peer.wireFormat.isBinary
             ? {
                 SerializedId: [sender.id.hostId, sender.id.localId],
                 AckPeriod: sender.ackPeriod,
@@ -524,7 +524,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             const hostId = mustReset ? this.id.hostId : RpcStream._emptyGuid;
             this.peer.hub.systemCallSender.ack(
                 conn,
-                this.peer.serializationFormat,
+                this.peer.wireFormat,
                 this.id.localId,
                 nextIndex,
                 hostId
@@ -539,7 +539,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (conn) {
             this.peer.hub.systemCallSender.ackEnd(
                 conn,
-                this.peer.serializationFormat,
+                this.peer.wireFormat,
                 this.id.localId,
                 this.id.hostId
             );

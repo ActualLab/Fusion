@@ -4,7 +4,7 @@ namespace ActualLab.Rpc.Compression;
 
 /// <summary>
 /// A named frame compression codec pair plus the policy its compressor follows.
-/// An <see cref="RpcSerializationFormat"/> names one of these, and its
+/// An <see cref="RpcWireFormat"/> names one of these, and its
 /// <see cref="RpcCompressionMode"/> says which directions actually use it.
 /// </summary>
 public sealed class RpcCompressionFormat(

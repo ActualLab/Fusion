@@ -282,5 +282,5 @@ Once the code is in your project, you can simplify it further:
   to `User` and `DbUser`
 - **Change auth flow**: Replace popup-based auth with redirect-based, or add custom
   flows like magic links or API keys
-- **Simplify serialization**: Remove `MessagePack` or `MemoryPack` attributes if you only
-  use one serialization format
+- **Simplify serialization**: Remove `MemoryPack` attributes if you don't use the MemoryPack
+  formats (Fusion's default RPC formats are MessagePack and System.Text.Json)

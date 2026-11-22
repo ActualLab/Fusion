@@ -17,8 +17,7 @@ namespace ActualLab.CommandR.Operations;
 /// with per-argument type info only where a declared type is polymorphic.
 /// <see cref="ArgumentList"/> itself is deliberately not serializable.
 /// </remarks>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public sealed partial record ServiceCall
 {
     // Both the writer and the reader must agree on these
@@ -27,22 +26,22 @@ public sealed partial record ServiceCall
     public static ArgumentListSerializer TextArgumentListSerializer { get; set; }
         = new TextArgumentListSerializer(SystemJsonSerializer.Default);
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public TypeRef ServiceType { get; init; }
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), Key(1)]
     public string MethodName { get; init; } = "";
 
 
     // MessagePack and MemoryPack. Get-only: the payload is a projection of Arguments rather than
     // a second copy of them, so there is no state here that can disagree with Arguments.
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, DataMember(Order = 2), MemoryPackOrder(2), Key(2)]
+    [JsonIgnore, DataMember(Order = 2), Key(2)]
     public byte[] ArgumentData
         => ByteArgumentListSerializer.Serialize(Arguments, needsPolymorphism: true);
 
     // STJ and Newtonsoft.JSON
     // No IgnoreDataMember here: Newtonsoft honours it too, and that is what would hide this
-    // property from it. MemoryPack and MessagePack are excluded by their own attributes.
-    [JsonInclude, MemoryPackIgnore, IgnoreMember]
+    // property from it. MessagePack skips it via IgnoreMember, and the MemoryPack formatter never writes it.
+    [JsonInclude, IgnoreMember]
     public string ArgumentText
         => EncodingExt.Utf8NoBom.GetString(TextArgumentListSerializer.Serialize(Arguments, needsPolymorphism: true));
 
@@ -51,7 +50,7 @@ public sealed partial record ServiceCall
     // reader that actually needs the arguments should see why they couldn't be decoded.
     private readonly Result<ArgumentList> _arguments = ArgumentList.Empty;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public ArgumentList Arguments {
         get => _arguments.Value;
         init => _arguments = value;
@@ -62,7 +61,7 @@ public sealed partial record ServiceCall
     // The two deserialization constructors take the payload together with the method identity that
     // decodes it, so the arguments are materialized here rather than on first use: a record always
     // holds its Arguments, whatever produced it, and never a second encoded copy of them.
-    [MemoryPackConstructor, SerializationConstructor]
+    [SerializationConstructor]
     public ServiceCall(TypeRef serviceType, string methodName, byte[] argumentData)
     {
         ServiceType = serviceType;
@@ -70,7 +69,7 @@ public sealed partial record ServiceCall
         _arguments = DeserializeArguments(serviceType, methodName, argumentData, DataFormat.Bytes);
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor]
+    [JsonConstructor]
     public ServiceCall(TypeRef serviceType, string methodName, string argumentText)
     {
         ServiceType = serviceType;

@@ -16,23 +16,22 @@ public enum DataFormat
 /// A discriminated union of text or binary data, backed by a single byte buffer.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: MemoryPackConstructor, SerializationConstructor]
+[DataContract, MessagePackObject]
+[method: SerializationConstructor]
 public readonly partial record struct TextOrBytes(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [property: DataMember(Order = 0), Key(0)]
     DataFormat Format,
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [property: JsonIgnore, DataMember(Order = 1), Key(1)]
     ReadOnlyMemory<byte> Data
 ) {
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
     public static readonly TextOrBytes EmptyText = new(DataFormat.Text, default!);
 
     // Computed properties
-    [MemoryPackIgnore, IgnoreMember]
+    [IgnoreMember]
     public byte[] Bytes => field ?? Data.TryGetUnderlyingArray() ?? Data.ToArray();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsEmpty => Data.Length == 0;
 
     public TextOrBytes(string text)
@@ -45,7 +44,7 @@ public readonly partial record struct TextOrBytes(
     public TextOrBytes(ReadOnlyMemory<byte> bytes)
         : this(DataFormat.Bytes, bytes) { }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor]
+    [JsonConstructor]
     public TextOrBytes(DataFormat format, byte[] bytes)
         : this(format, bytes.AsMemory()) { }
 

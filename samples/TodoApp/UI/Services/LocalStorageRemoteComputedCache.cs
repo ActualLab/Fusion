@@ -2,7 +2,6 @@ using ActualLab.Fusion.Client.Caching;
 using ActualLab.IO;
 using ActualLab.Rpc.Caching;
 using Blazored.LocalStorage;
-using MemoryPack;
 
 namespace Samples.TodoApp.UI.Services;
 
@@ -34,14 +33,14 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
             return default;
 
         var bytes  = Convert.FromBase64String(sValue);
-        var value = MemoryPackSerializer.Deserialize<RpcCacheValue>(bytes);
+        var value = (RpcCacheValue?)ByteSerializer.Default.Read(bytes, typeof(RpcCacheValue), out _);
         return new ValueTask<RpcCacheValue?>(value);
     }
 
     public override void Set(RpcCacheKey key, RpcCacheValue value)
     {
         var buffer = ArrayPoolBuffer<byte>.NewOrRenew(ref _writeBuffer, 4096, 65536, false);
-        MemoryPackSerializer.Serialize(buffer, value);
+        ByteSerializer.Default.Write(buffer, value, typeof(RpcCacheValue));
         var sValue = Convert.ToBase64String(buffer.WrittenSpan);
         _storage.SetItemAsString(GetStringKey(key), sValue);
     }
@@ -59,7 +58,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
     {
 #if false // The simplest impl., which doesn't produce "readable" keys
         var buffer = ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, 4096, 65536, false);
-        MemoryPackSerializer.Serialize(buffer, key);
+        ByteSerializer.Default.Write(buffer, key, typeof(RpcCacheKey));
         return Convert.ToBase64String(buffer.WrittenSpan);
 #else
         // And that's one of ways to produce a readable one

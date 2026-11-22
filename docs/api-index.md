@@ -27,7 +27,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Collections — [PartCore-PropertyBag.md](PartCore-PropertyBag.md)
 - `PropertyBag` (struct) — immutable typed property bag
 - `MutablePropertyBag` — thread-safe mutable property bag with change notifications
-- `OptionSet` — **obsolete**, use `MutablePropertyBag`
+- `OptionSet`, `ImmutableOptionSet` — **obsolete**, use `MutablePropertyBag` (in `ActualLab.Core.Legacy` since v16)
 - `RingBuffer<T>` (struct) — fixed-capacity circular buffer (power-of-2 capacity)
 - `ArrayBuffer<T>` (struct) — `ArrayPool`-backed list-like buffer (zero alloc)
 - `ArrayOwner<T>` — pooled array as `IMemoryOwner<T>`
@@ -63,18 +63,25 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RetryPolicy` (record) — retry with try count, per-try timeout, delay sequence
 - `ChaosMaker` (record) — chaos engineering fault injection
 
-### Serialization
+### Serialization — [PartS.md](PartS.md)
 - `IByteSerializer<T>` / `ITextSerializer<T>` — core serialization interfaces
+- `ByteSerializer.Default` (MessagePack) / `TextSerializer.Default` (System.Text.Json) — default serializers
+- `SerializerKind` (enum) — serializer selector; `MemoryPack` / `NewtonsoftJson` resolve only once their package registers them
 - `ByteSerialized<T>`, `TextSerialized<T>` — auto-serializing wrappers
 - `TypeDecoratingSerializer` (byte & text) — prefixes data with type info for polymorphism
 - `ExceptionInfo` — serializable exception snapshot
 
 ### Specific serializers
 - `MessagePackByteSerializer` — MessagePack binary serializer
-- `MemoryPackByteSerializer` — MemoryPack binary serializer
-- `NerdbankMessagePackByteSerializer` — Nerdbank.MessagePack binary serializer (in `ActualLab.Serialization.NerdbankMessagePack`)
 - `SystemJsonSerializer` — `System.Text.Json` implementation
-- `NewtonsoftJsonSerializer` — JSON.NET implementation
+- `MemoryPackByteSerializer` — MemoryPack binary serializer (in `ActualLab.Serialization.MemoryPack`)
+- `NewtonsoftJsonSerializer` — JSON.NET implementation (in `ActualLab.Serialization.NewtonsoftJson`)
+- `NerdbankMessagePackByteSerializer` — Nerdbank.MessagePack binary serializer (in `ActualLab.Serialization.NerdbankMessagePack`)
+
+### Serialization packages — [PartS.md](PartS.md#upgrading-to-v16)
+- `ActualLab.Serialization.MemoryPack` — `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`, formatters for ActualLab types; `MemoryPackSerialization.Register()` / `Register<T>()`; `RpcMemoryPackWireFormats`, `AddMemoryPack()`
+- `ActualLab.Serialization.NewtonsoftJson` — `NewtonsoftJsonSerializer`, `NewtonsoftJsonContractResolver`, `NewtonsoftJsonSerialized<T>`; `NewtonsoftJsonSerialization.Register()`; `RpcNewtonsoftJsonWireFormats`, `AddNewtonsoftJson()`
+- `ActualLab.Serialization.NerdbankMessagePack` — `NerdbankMessagePackByteSerializer`; `RpcNerdbankWireFormats`, `AddNerdbankMessagePack()`
 
 ### DI Helpers
 - `ServiceResolver` — encapsulates service type + optional custom resolver
@@ -133,6 +140,9 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcLimits` (record) — timeout/periodic limits for connections and keep-alive, plus the per-peer `CallCountLimit` / `ObjectCountLimit` backstops
 - `RpcCallTimeouts` (record) — connect/run/delay timeouts and the cache fallback delay for outbound calls
 - `RpcServiceMode` (enum) — local, server, client, or distributed
+- `RpcWireFormat` — named argument + message serializer pair (`msgpack6`, `json5`, ...); `WithLZ4()` makes a compressed variant; `RpcDefaultWireFormats.All` is the built-in catalog and `RpcDefaultWireFormats.DefaultFormat` the default one — [PartR-Serialization.md](PartR-Serialization.md)
+- `RpcWireFormatConfiguration` — per-container format set, default format and backend-only formats (`RpcConfiguration.WireFormats`); configure it via `RpcBuilder.ConfigureWireFormats(...)`
+- `RpcWireFormatResolver` — the format registry a container uses, built from `RpcConfiguration.WireFormats`
 
 ### Transports
 - `RpcFrameBasedTransport` — batches outbound RPC messages into frames; owns `DefaultMaxFrameSize` / `DefaultMaxPreHandshakeFrameSize`
@@ -301,7 +311,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ### Contracts
 - `IAuth` — primary auth service (sign-out, edit user, presence, session/user queries)
-- `IAuthBackend` — backend auth (sign-in, session setup, options management)
+- `IAuthBackend` — backend auth (sign-in, session setup, options management); in `ActualLab.Fusion.Ext.Backend.Contracts`
 - `User` (record) — authenticated/guest user with claims, identities, version
 - `SessionInfo` (record) — session details (version, timestamps, IP, user agent)
 - `SessionAuthInfo` (record) — auth info for session (identity, user ID, forced sign-out)

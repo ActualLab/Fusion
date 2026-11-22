@@ -5,7 +5,6 @@ using ActualLab.Serialization.Internal;
 using Nerdbank.MessagePack;
 using PolyType;
 using PolyType.ReflectionProvider;
-using Errors = ActualLab.Serialization.Internal.Errors;
 using NerdbankSerializer = Nerdbank.MessagePack.MessagePackSerializer;
 
 namespace ActualLab.Serialization;
@@ -17,8 +16,7 @@ namespace ActualLab.Serialization;
 [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume serializable types are fully preserved")]
-public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, ITypeShapeProvider typeShapeProvider)
-    : IByteSerializer
+public class NerdbankMessagePackByteSerializer : IByteSerializer
 {
     // Nerdbank.MessagePack 1.0.x has no SecuritySettings.MaxCollectionPreallocation, so converters
     // reading a wire-supplied collection header cap the initial buffer here and grow it as the items
@@ -97,29 +95,38 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
         }
     }
 
+    static NerdbankMessagePackByteSerializer()
+        => NerdbankMessagePackSerialization.Register();
+
     // Instance members
 
-    public NerdbankSerializer Serializer { get; } = serializer;
-    public ITypeShapeProvider TypeShapeProvider { get; } = typeShapeProvider;
+    public NerdbankSerializer Serializer { get; }
+    public ITypeShapeProvider TypeShapeProvider { get; }
+    // The serializer typed serializers expose as ByteSerializer.Current:
+    // their untyped (root) serializer, since only it can (de)serialize any type
+    public IByteSerializer Root { get; protected set; }
 
     public NerdbankMessagePackByteSerializer()
         : this(DefaultSerializer, DefaultTypeShapeProvider)
     { }
 
+    public NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, ITypeShapeProvider typeShapeProvider)
+    {
+        Serializer = serializer;
+        TypeShapeProvider = typeShapeProvider;
+        Root = this;
+    }
+
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null)
         => (IByteSerializer<T>)GetTypedSerializer(serializedType ?? typeof(T));
 
-    public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
-    {
-        var serializer = GetTypedSerializer(type);
-        return serializer.Read(data, type, out readLength);
-    }
+    // Unscoped API
 
-    public virtual void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
-    {
-        var serializer = GetTypedSerializer(type);
-        serializer.Write(bufferWriter, value, type);
-    }
+    public virtual object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
+        => GetTypedSerializer(type).ReadUnscoped(data, type, out readLength);
+
+    public virtual void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
+        => GetTypedSerializer(type).WriteUnscoped(bufferWriter, value, type);
 
     // Private methods
 
@@ -127,7 +134,7 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
         => _typedSerializerCache.GetOrAdd(serializedType,
             static (type1, self) => (NerdbankMessagePackByteSerializer)typeof(NerdbankMessagePackByteSerializer<>)
                 .MakeGenericType(type1)
-                .CreateInstance(self.Serializer, self.TypeShapeProvider, type1),
+                .CreateInstance(self.Serializer, self.TypeShapeProvider, type1, self.Root),
             this);
 
     private static NerdbankSerializer CreateDefaultSerializer()
@@ -145,7 +152,6 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 new ByteStringNerdbankConverter(),
                 new MessagePackDataNerdbankConverter(),
                 new SessionNerdbankConverter(),
-                new ImmutableOptionSetNerdbankConverter(),
                 new RpcHandshakeNerdbankConverter(),
                 new VersionSetNerdbankConverter(),
                 new RpcObjectIdNerdbankConverter(),
@@ -155,6 +161,7 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 new RpcCacheKeyNerdbankConverter(),
                 new RpcCacheValueNerdbankConverter(),
             ],
+            ConverterFactories = [new NewtonsoftJsonSerializedNerdbankConverterFactory()],
             ConverterTypes = [
                 typeof(OptionNerdbankConverter<>),
                 typeof(ResultNerdbankConverter<>),
@@ -164,10 +171,10 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(ApiArrayNerdbankConverter<>),
                 typeof(ApiMapNerdbankConverter<,>),
                 typeof(RpcStreamNerdbankConverter<>),
+                typeof(UniSerializedNerdbankConverter<>),
                 typeof(TypeDecoratingUniSerializedNerdbankConverter<,>),
                 typeof(PropertyBagNerdbankConverter<>),
                 typeof(PropertyBagItemNerdbankConverter<>),
-                typeof(NewtonsoftJsonSerializedNerdbankConverter<>),
                 typeof(SanitizedStringNerdbankConverter<>),
             ],
         };
@@ -185,34 +192,42 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
 [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume serializable types are fully preserved")]
-public class NerdbankMessagePackByteSerializer<T>(
-    NerdbankSerializer serializer,
-    ITypeShapeProvider typeShapeProvider,
-    Type serializedType
-) : NerdbankMessagePackByteSerializer(serializer, typeShapeProvider), IByteSerializer<T>
+public class NerdbankMessagePackByteSerializer<T> : NerdbankMessagePackByteSerializer, IByteSerializer<T>
 {
-    private readonly ITypeShape<T> _shape = (ITypeShape<T>)typeShapeProvider.GetTypeShape(serializedType)!;
+    private readonly ITypeShape<T> _shape;
 
-    public Type SerializedType { get; } = serializedType;
+    public Type SerializedType { get; }
 
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public NerdbankMessagePackByteSerializer(
+        NerdbankSerializer serializer,
+        ITypeShapeProvider typeShapeProvider,
+        Type serializedType,
+        IByteSerializer? root = null)
+        : base(serializer, typeShapeProvider)
     {
-        if (type != SerializedType)
-            throw Errors.SerializedTypeMismatch(SerializedType, type);
+        SerializedType = serializedType;
+        _shape = (ITypeShape<T>)typeShapeProvider.GetTypeShape(serializedType)!;
+        if (root is not null)
+            Root = root;
+    }
 
+    // Unscoped API
+
+    public override object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
-        return Read(data, out readLength);
-    }
+        => type == SerializedType
+            ? ReadUnscoped(data, out readLength)
+            : base.ReadUnscoped(data, type, out readLength);
 
-    public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
+    public override void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
-        if (type != SerializedType)
-            throw Errors.SerializedTypeMismatch(SerializedType, type);
-
-        Write(bufferWriter, (T)value!);
+        if (type == SerializedType)
+            WriteUnscoped(bufferWriter, (T)value!);
+        else
+            base.WriteUnscoped(bufferWriter, value, type);
     }
 
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
+    public T ReadUnscoped(ReadOnlyMemory<byte> data, out int readLength)
     {
         var sequence = new ReadOnlySequence<byte>(data);
         var reader = new MessagePackReader(sequence);
@@ -221,6 +236,6 @@ public class NerdbankMessagePackByteSerializer<T>(
         return result!;
     }
 
-    public void Write(IBufferWriter<byte> bufferWriter, T value)
+    public void WriteUnscoped(IBufferWriter<byte> bufferWriter, T value)
         => Serializer.Serialize(bufferWriter, value, _shape);
 }

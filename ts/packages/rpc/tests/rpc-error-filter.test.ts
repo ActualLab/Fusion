@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     RpcSystemCallSender,
-    RpcSerializationFormat,
+    RpcWireFormat,
     REMOTE_EXCEPTION_TYPE_REF,
     deserializeMessage,
     genericErrorFilter,
@@ -21,7 +21,7 @@ function captureConn(): { conn: RpcConnection; sent: () => string } {
 
 function sendError(sender: RpcSystemCallSender, error: unknown): RpcExceptionInfo {
     const { conn, sent } = captureConn();
-    sender.error(conn, RpcSerializationFormat.get('json5np'), 7, error);
+    sender.error(conn, RpcWireFormat.get('json5np'), 7, error);
     return deserializeMessage(sent()).args[0] as RpcExceptionInfo;
 }
 

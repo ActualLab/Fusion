@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- EF10+ on both: this package is provider-agnostic, so the app decides between EF 10 and 11 -->
@@ -55,6 +54,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+    <ProjectReference Include="..\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
   </ItemGroup>
 
 </Project>

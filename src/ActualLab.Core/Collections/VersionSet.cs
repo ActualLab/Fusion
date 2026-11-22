@@ -15,25 +15,24 @@ namespace ActualLab.Collections;
 /// in <c>VersionSetNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
 /// </remarks>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MessagePackObject]
 public sealed partial record VersionSet(
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [property: JsonIgnore, IgnoreDataMember, IgnoreMember]
     IReadOnlyDictionary<string, Version> Items
 ) {
     public static readonly Version ZeroVersion = new();
     public static readonly ListFormat ListFormat = ListFormat.CommaSeparated;
     public static readonly VersionSet Empty = new();
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), Key(0)]
     public string Value => field ??= Format();
 
     // Computed properties
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public bool IsEmpty => Items.Count == 0;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public int Count => Items.Count;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    [JsonIgnore, IgnoreDataMember, IgnoreMember]
     public int HashCode {
         get {
             if (field == 0) {
@@ -78,7 +77,7 @@ public sealed partial record VersionSet(
         : this(versions.ToDictionary(kv => kv.Scope, kv => VersionExt.Parse(kv.Version), StringComparer.Ordinal))
     { }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [JsonConstructor, SerializationConstructor]
     public VersionSet(string? value)
         : this(Parse(value).Items)
     { }

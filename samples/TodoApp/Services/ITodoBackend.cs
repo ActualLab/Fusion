@@ -1,5 +1,4 @@
 using System.Runtime.Serialization;
-using MemoryPack;
 using MessagePack;
 using Samples.TodoApp.Abstractions;
 
@@ -22,14 +21,14 @@ public interface ITodoBackend : IComputeService
     public Task<TodoSummary> GetSummary(string folder, CancellationToken cancellationToken = default);
 }
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record TodoBackend_AddOrUpdate(
     [property: DataMember] string Folder,
     [property: DataMember] TodoItem Item
 ) : IBackendCommand<TodoItem>;
 
-[DataContract, MemoryPackable, MessagePackObject(true)]
+[DataContract, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record TodoBackend_Remove(
     [property: DataMember] string Folder,
