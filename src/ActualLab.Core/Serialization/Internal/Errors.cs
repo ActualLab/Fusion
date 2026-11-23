@@ -23,6 +23,10 @@ public static class Errors
     public static Exception WrongTypeDecoratorFormat()
         => new SerializationException("Wrong type decorator format.");
 
+    public static Exception UnsupportedMessagePackVersion(string missingMember)
+        => new NotSupportedException(
+            $"Keyed MessagePack needs MessagePack's internal '{missingMember}', which this MessagePack version lacks.");
+
     public static Exception RemoteException(ExceptionInfo exceptionInfo)
         => new RemoteException(exceptionInfo, exceptionInfo.Message.NullIfEmpty() ?? "Unknown error.");
 }

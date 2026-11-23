@@ -42,6 +42,18 @@ public static class RpcDefaultWireFormats
         peer => new RpcByteMessageSerializerV5Compact(peer),
         DataFormat.Bytes);
 
+    // "msgpack6k" / "msgpack6ck" - keyed MessagePack: the [MessagePackObject] / [DataContract] types of your app
+    // are string-keyed maps, so e.g. a TypeScript client reads them by member name rather than [Key(N)].
+    // Not in the default set (add them with f.AddKeyedMessagePack()); they don't work under NativeAOT.
+    public static readonly RpcWireFormat MessagePackV6K = new("msgpack6k",
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.DefaultKeyed),
+        peer => new RpcByteMessageSerializerV5(peer),
+        DataFormat.Bytes);
+    public static readonly RpcWireFormat MessagePackV6CK = new("msgpack6ck",
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.DefaultKeyed),
+        peer => new RpcByteMessageSerializerV5Compact(peer),
+        DataFormat.Bytes);
+
     // The default format of every container unless rpc.ConfigureWireFormats(...) changes it
     public static RpcWireFormat DefaultFormat => MessagePackV6;
 

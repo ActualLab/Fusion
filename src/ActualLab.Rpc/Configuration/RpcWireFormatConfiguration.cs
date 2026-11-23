@@ -139,6 +139,10 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
         Add(variants);
     }
 
+    // Adds "msgpack6k" and "msgpack6ck" (keyed MessagePack, see RpcDefaultWireFormats.MessagePackV6K)
+    public void AddKeyedMessagePack()
+        => AddNew(RpcDefaultWireFormats.MessagePackV6K, RpcDefaultWireFormats.MessagePackV6CK);
+
     public void Remove(params ReadOnlySpan<string> keys)
     {
         AssertNotFrozen();
@@ -164,6 +168,15 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
     }
 
     // Private methods
+
+    // Like Add, but fails (adding nothing) if a key is already taken
+    private void AddNew(params ReadOnlySpan<RpcWireFormat> formats)
+    {
+        foreach (var format in formats)
+            if (_formats.ContainsKey(format.Key))
+                throw new InvalidOperationException($"Format '{format.Key}' is already added.");
+        Add(formats);
+    }
 
     private void AssertNotFrozen()
     {

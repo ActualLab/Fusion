@@ -45,6 +45,25 @@ These are static members of `RpcDefaultWireFormats`, and its `All` lists them:
 every container starts with this set. Their LZ4 variants (`msgpack6-lz4`, `msgpack6c-lz4`,
 `msgpack6-lz4f`, `msgpack6c-lz4f`, ...) aren't static members; add them with `f.AddLZ4Variants("lz4")`.
 
+### Keyed MessagePack
+
+| Format           | Key | Description           |
+|------------------|-----|-----------------------|
+| `MessagePackV6K`  | `msgpack6k` | `msgpack6` with string-keyed maps for your types |
+| `MessagePackV6CK` | `msgpack6ck` | Compact variant of V6K |
+
+The keyed formats serialize the `[MessagePackObject]` / `[DataContract]` types of your app as
+string-keyed maps (`{"Name": ..., "Count": ...}`), ignoring their `[Key(N)]` indexes, so a peer &ndash;
+e.g. a TypeScript client &ndash; reads them by member name and doesn't need to know their layout.
+ActualLab's own types keep their layout: RPC system calls carry them, and every peer reads them the
+same way. Types with a formatter of their own (`[MessagePackFormatter]`, built-in ones) keep it too.
+
+They aren't in the default set; add them with `f.AddKeyedMessagePack()`, and their LZ4 variants
+with `f.AddLZ4Variants("lz4")` called after it. `MessagePackByteSerializer.DefaultKeyed` is the
+serializer they use. Keyed MessagePack builds its formatters with MessagePack's dynamic code
+generation, so it doesn't work under NativeAOT; `StringKeyMessagePackResolver.TypeFilter` decides
+which types are keyed.
+
 ### Binary Formats (MemoryPack)
 
 These formats require the `ActualLab.Serialization.MemoryPack` package (.NET Core 3.1+ /
@@ -313,6 +332,7 @@ so it can't change after that.
 | `BackendOnlyFormatKeys` | The formats clients can't select |
 | `AddMemoryPack()` | `mempack5`, `mempack5c`, `mempack6`, `mempack6c` (`ActualLab.Serialization.MemoryPack`) |
 | `AddNewtonsoftJson()` | `njson5`, `njson5np` (`ActualLab.Serialization.NewtonsoftJson`) |
+| `AddKeyedMessagePack()` | `msgpack6k`, `msgpack6ck` (keyed MessagePack); fails if they're already added |
 | `AddNerdbankMessagePack()` | `nmsgpack6`, `nmsgpack6c` (`ActualLab.Serialization.NerdbankMessagePack`) |
 
 ### Enabling Package-Provided Formats

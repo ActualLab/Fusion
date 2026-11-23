@@ -24,6 +24,11 @@
     <DefineConstants Condition="$(UseDynamicMethods)">$(DefineConstants);USE_DYNAMIC_METHODS</DefineConstants>
   </PropertyGroup>
 
+  <!-- Marks ActualLab's own assemblies, e.g. keyed MessagePack keeps the [Key(N)] layout of their types -->
+  <ItemGroup>
+    <AssemblyMetadata Include="ActualLab.Framework" Value="true" />
+  </ItemGroup>
+
   <!-- ActualLab.Generators' NativeAOT serialization roots: every library with serializable types or RPC contracts -->
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);ACTUALLAB_SERIALIZATION_ROOTS</DefineConstants>

@@ -13,7 +13,7 @@ public static class RpcTestFormats
     private static readonly bool UseFullMatrix = TestRunnerInfo.IsFullRun() || TestRunnerInfo.IsBuildAgent();
     private static readonly string[] FullMatrix = [
         "json5", "njson5", "json5np", "njson5np",
-        "msgpack5", "msgpack5c", "msgpack6", "msgpack6c",
+        "msgpack5", "msgpack5c", "msgpack6", "msgpack6c", "msgpack6k", "msgpack6ck",
 #if !NETFRAMEWORK // MemoryPack doesn't run on .NET Framework
         "mempack5", "mempack5c", "mempack6", "mempack6c",
 #endif
@@ -23,7 +23,7 @@ public static class RpcTestFormats
 #endif
     ];
     private static readonly string[] CoreMatrix = [
-        "json5", "njson5", "json5np", "msgpack6c",
+        "json5", "njson5", "json5np", "msgpack6c", "msgpack6ck",
 #if !NETFRAMEWORK
         "mempack6c",
 #endif
@@ -53,6 +53,7 @@ public static class RpcTestFormats
     private static ImmutableList<RpcWireFormat> NewCatalog()
     {
         var formats = RpcDefaultWireFormats.All.ToList();
+        formats.AddRange([RpcDefaultWireFormats.MessagePackV6K, RpcDefaultWireFormats.MessagePackV6CK]);
 #if !NETFRAMEWORK
         formats.AddRange(RpcMemoryPackWireFormats.All);
 #endif

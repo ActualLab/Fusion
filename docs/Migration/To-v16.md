@@ -46,6 +46,9 @@ apps only need [Step 1](#step-1-reference-the-packages-you-use) and
   `f.AddLZ4Variants(suffix, dictionary, mode)` adds the LZ4 variants of the binary formats
   (see [LZ4 Dictionaries](../PartR-Serialization.md#lz4-dictionaries) and
   [Step 9](#step-9-lz4-variants-take-a-suffix)).
+- **Keyed MessagePack.** `f.AddKeyedMessagePack()` adds `msgpack6k` / `msgpack6ck`, which serialize
+  your types as string-keyed maps instead of `[Key(N)]` arrays, so e.g. a TypeScript client reads
+  them by member name (see [Keyed MessagePack](../PartR-Serialization.md#keyed-messagepack)).
 
 ### NativeAOT and Trimming
 

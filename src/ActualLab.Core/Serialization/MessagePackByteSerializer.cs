@@ -19,6 +19,7 @@ public class MessagePackByteSerializer : IByteSerializer
     private static MessagePackSerializerOptions? _defaultOptions;
     private static MessagePackByteSerializer? _default;
     private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
+    private static MessagePackByteSerializer? _defaultKeyed;
 
     private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
@@ -79,6 +80,27 @@ public class MessagePackByteSerializer : IByteSerializer
         set {
             lock (StaticLock)
                 Volatile.Write(ref _defaultTypeDecorating, value);
+        }
+    }
+
+    // Keyed MessagePack: string-keyed maps instead of [Key(N)] arrays for the types of your app
+    // (see KeyedMessagePackResolver). It relies on dynamic code, so it doesn't work under NativeAOT.
+    public static MessagePackByteSerializer DefaultKeyed {
+        get {
+            if (_defaultKeyed is { } value)
+                return value;
+            lock (StaticLock) {
+                if (_defaultKeyed is { } newValue)
+                    return newValue;
+
+                newValue = new(DefaultOptions.WithResolver(KeyedMessagePackResolver.Instance));
+                Volatile.Write(ref _defaultKeyed, newValue);
+                return newValue;
+            }
+        }
+        set {
+            lock (StaticLock)
+                Volatile.Write(ref _defaultKeyed, value);
         }
     }
 
