@@ -112,7 +112,6 @@
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Bullseye" Version="6.2.0" />
     <PackageVersion Include="CliWrap" Version="3.10.5" />
-    <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
     <PackageVersion Include="K4os.Compression.LZ4" Version="1.3.8" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
@@ -146,6 +145,7 @@
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="$(EntityFrameworkCoreMySqlVersion)" />
     <PackageVersion Include="RestEase" Version="$(RestEaseVersion)" />
     <PackageVersion Include="StackExchange.Redis" Version="$(RedisVersion)" />
+    <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
     <PackageVersion Include="System.CommandLine.DragonFruit" Version="0.4.0-alpha.22272.1" />
     <PackageVersion Include="System.IO.Abstractions" Version="19.2.87" />
@@ -158,6 +158,7 @@
     <PackageVersion Include="ZString" Version="2.6.0" />
     <!-- Microsoft.Extensions.* -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
@@ -170,7 +171,6 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Primitives" Version="$(MicrosoftExtensionsVersion)" />
     <!-- Looks like MS internally updates these packages together w/ extensions -->
     <PackageVersion Include="System.Collections.Immutable" Version="$(MicrosoftExtensionsVersion)" />
@@ -179,6 +179,7 @@
     <PackageVersion Include="System.IO.Pipelines" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Net.Http.Json" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Runtime.Numerics" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Text.Json" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Threading.Channels" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Diagnostics.Common" Version="$(MicrosoftExtensionsVersion)" />
