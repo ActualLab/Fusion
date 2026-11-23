@@ -138,24 +138,26 @@ internal unsafe partial class LL64: LL
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static uint LZ4_hashPosition(void* p, tableType_t tableType)
+	protected static uint LZ4_hashPosition(void* p, tableType_t tableType, int hashLog)
 	{
 		#if !BIT32
 		if (tableType != tableType_t.byU16)
-			return LZ4_hash5(Mem.PeekW(p), tableType);
+			return LZ4_hash5(Mem.PeekW(p), tableType, hashLog);
 		#endif
-		return LZ4_hash4(Mem.Peek4(p), tableType);
+		return LZ4_hash4(Mem.Peek4(p), tableType, hashLog);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	protected static void LZ4_putPosition(
-		byte* p, void* tableBase, tableType_t tableType, byte* srcBase) =>
-		LZ4_putPositionOnHash(p, LZ4_hashPosition(p, tableType), tableBase, tableType, srcBase);
+		byte* p, void* tableBase, tableType_t tableType, byte* srcBase, int hashLog) =>
+		LZ4_putPositionOnHash(
+			p, LZ4_hashPosition(p, tableType, hashLog), tableBase, tableType, srcBase);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	protected static byte* LZ4_getPosition(
-		byte* p, void* tableBase, tableType_t tableType, byte* srcBase) =>
-		LZ4_getPositionOnHash(LZ4_hashPosition(p, tableType), tableBase, tableType, srcBase);
+		byte* p, void* tableBase, tableType_t tableType, byte* srcBase, int hashLog) =>
+		LZ4_getPositionOnHash(
+			LZ4_hashPosition(p, tableType, hashLog), tableBase, tableType, srcBase);
 
 	#region dictionary
 
@@ -166,10 +168,12 @@ internal unsafe partial class LL64: LL
 
 		var delta = LZ4_dict->currentOffset - 64 * KB;
 		var dictEnd = LZ4_dict->dictionary + LZ4_dict->dictSize;
-		for (var i = 0; i < LZ4_HASH_SIZE_U32; i++)
+		var hashTable = LZ4_dict->hashTable;
+		var hashSize = 1 << LZ4_dict->hashLog;
+		for (var i = 0; i < hashSize; i++)
 		{
-			if (LZ4_dict->hashTable[i] < delta) LZ4_dict->hashTable[i] = 0;
-			else LZ4_dict->hashTable[i] -= delta;
+			if (hashTable[i] < delta) hashTable[i] = 0;
+			else hashTable[i] -= delta;
 		}
 
 		LZ4_dict->currentOffset = 64 * KB;
@@ -201,9 +205,11 @@ internal unsafe partial class LL64: LL
 		dict->dictSize = (uint)(dictEnd - p);
 		dict->tableType = tableType;
 
+		var hashTable = dict->hashTable;
+		var hashLog = dict->hashLog;
 		while (p <= dictEnd - HASH_UNIT)
 		{
-			LZ4_putPosition(p, dict->hashTable, tableType, @base);
+			LZ4_putPosition(p, hashTable, tableType, @base, hashLog);
 			p += 3;
 		}
 

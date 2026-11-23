@@ -86,7 +86,12 @@ internal unsafe partial class LL64
 
 		uint offset = 0;
 		uint forwardH;
-		
+
+		uint* hashTable = cctx->hashTable;
+		int hashLog = cctx->hashLog;
+		if (dictDirective == dict_directive.usingDictCtx)
+			Assert(dictCtx->hashLog == hashLog);
+
 		if (outputDirective == limitedOutput_directive.fillOutput && maxOutputSize < 1)
 		{
 			return 0;
@@ -122,9 +127,9 @@ internal unsafe partial class LL64
 		if (inputSize < LZ4_minLength) goto _last_literals;
 
 		/* First Byte */
-		LZ4_putPosition(ip, cctx->hashTable, tableType, @base);
+		LZ4_putPosition(ip, hashTable, tableType, @base, hashLog);
 		ip++;
-		forwardH = LZ4_hashPosition(ip, tableType);
+		forwardH = LZ4_hashPosition(ip, tableType, hashLog);
 
 		/* Main Loop */
 		for (;;)
@@ -150,9 +155,9 @@ internal unsafe partial class LL64
 
 					Assert(ip < mflimitPlusOne);
 
-					match = LZ4_getPositionOnHash(h, cctx->hashTable, tableType, @base);
-					forwardH = LZ4_hashPosition(forwardIp, tableType);
-					LZ4_putPositionOnHash(ip, h, cctx->hashTable, tableType, @base);
+					match = LZ4_getPositionOnHash(h, hashTable, tableType, @base);
+					forwardH = LZ4_hashPosition(forwardIp, tableType, hashLog);
+					LZ4_putPositionOnHash(ip, h, hashTable, tableType, @base);
 				}
 				while ((match + LZ4_DISTANCE_MAX < ip) || (Mem.Peek4(match) != Mem.Peek4(ip)));
 			}
@@ -167,7 +172,7 @@ internal unsafe partial class LL64
 				{
 					uint h = forwardH;
 					uint current = (uint) (forwardIp - @base);
-					uint matchIndex = LZ4_getIndexOnHash(h, cctx->hashTable, tableType);
+					uint matchIndex = LZ4_getIndexOnHash(h, hashTable, tableType);
 					Assert(matchIndex <= current);
 					Assert(forwardIp - @base < (2 * GB - 1));
 					ip = forwardIp;
@@ -214,8 +219,8 @@ internal unsafe partial class LL64
 						match = @base + matchIndex;
 					}
 
-					forwardH = LZ4_hashPosition(forwardIp, tableType);
-					LZ4_putIndexOnHash(current, h, cctx->hashTable, tableType);
+					forwardH = LZ4_hashPosition(forwardIp, tableType, hashLog);
+					LZ4_putIndexOnHash(current, h, hashTable, tableType);
 
 					if ((dictIssue == dictIssue_directive.dictSmall)
 						&& (matchIndex < prefixIdxLimit)) { continue; }
@@ -355,8 +360,8 @@ internal unsafe partial class LL64
 							byte* ptr;
 							for (ptr = ip; ptr <= filledIp; ++ptr)
 							{
-								uint h = LZ4_hashPosition(ptr, tableType);
-								LZ4_clearHash(h, cctx->hashTable, tableType);
+								uint h = LZ4_hashPosition(ptr, tableType, hashLog);
+								LZ4_clearHash(h, hashTable, tableType);
 							}
 						}
 					}
@@ -396,13 +401,13 @@ internal unsafe partial class LL64
 			if (ip >= mflimitPlusOne) break;
 
 			/* Fill table */
-			LZ4_putPosition(ip - 2, cctx->hashTable, tableType, @base);
+			LZ4_putPosition(ip - 2, hashTable, tableType, @base, hashLog);
 
 			/* Test next position */
 			if (tableType == tableType_t.byPtr)
 			{
-				match = LZ4_getPosition(ip, cctx->hashTable, tableType, @base);
-				LZ4_putPosition(ip, cctx->hashTable, tableType, @base);
+				match = LZ4_getPosition(ip, hashTable, tableType, @base, hashLog);
+				LZ4_putPosition(ip, hashTable, tableType, @base, hashLog);
 				if ((match + LZ4_DISTANCE_MAX >= ip) && (Mem.Peek4(match) == Mem.Peek4(ip)))
 				{
 					token = op++;
@@ -414,9 +419,9 @@ internal unsafe partial class LL64
 			{
 				/* byU32, byU16 */
 
-				uint h = LZ4_hashPosition(ip, tableType);
+				uint h = LZ4_hashPosition(ip, tableType, hashLog);
 				uint current = (uint) (ip - @base);
-				uint matchIndex = LZ4_getIndexOnHash(h, cctx->hashTable, tableType);
+				uint matchIndex = LZ4_getIndexOnHash(h, hashTable, tableType);
 				Assert(matchIndex < current);
 				if (dictDirective == dict_directive.usingDictCtx)
 				{
@@ -452,7 +457,7 @@ internal unsafe partial class LL64
 					match = @base + matchIndex;
 				}
 
-				LZ4_putIndexOnHash(current, h, cctx->hashTable, tableType);
+				LZ4_putIndexOnHash(current, h, hashTable, tableType);
 				Assert(matchIndex < current);
 				if (((dictIssue != dictIssue_directive.dictSmall)
 						|| (matchIndex >= prefixIdxLimit))
@@ -468,7 +473,7 @@ internal unsafe partial class LL64
 				}
 			}
 
-			forwardH = LZ4_hashPosition(++ip, tableType);
+			forwardH = LZ4_hashPosition(++ip, tableType, hashLog);
 		}
 
 		_last_literals:
@@ -576,6 +581,9 @@ internal unsafe partial class LL64
 		byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
 	{
 		LZ4_stream_t ctx;
+		uint* hashTable = stackalloc uint[LZ4_HASH_SIZE_U32];
+		ctx.hashTable = hashTable;
+		ctx.hashLog = LZ4_HASHLOG;
 		return LZ4_compress_fast_extState(
 			&ctx, source, dest, inputSize, maxOutputSize, acceleration);
 	}
@@ -642,7 +650,7 @@ internal unsafe partial class LL64
 			if (streamPtr->dictCtx != null)
 			{
 				if (inputSize > 4 * KB) {
-					Mem.Copy((byte*)streamPtr, (byte*)streamPtr->dictCtx, sizeof(LZ4_stream_t));
+					LZ4_copyStream(streamPtr, streamPtr->dictCtx);
 					result = LZ4_compress_generic(
 						streamPtr, source, dest, inputSize, null, maxOutputSize, limitedOutput_directive.limitedOutput,
 						tableType, dict_directive.usingExtDict, dictIssue_directive.noDictIssue, acceleration);

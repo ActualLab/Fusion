@@ -24,16 +24,20 @@ namespace ActualLab.Compression.Internal.LZ4.Engine
 		protected const int LZ4_DISTANCE_MAX = 65535;
 		protected const int LZ4_DISTANCE_ABSOLUTE_MAX = 65535;
 
-		protected const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
-		protected const int LZ4_HASHTABLESIZE = 1 << LZ4_MEMORY_USAGE;
+		internal const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
+		internal const int LZ4_HASHLOG_MIN = 10;
+		internal const int LZ4_HASHLOG_MAX = 16;
 		protected const int LZ4_HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
 
 		protected const int ACCELERATION_DEFAULT = 1;
 
+		// hashTable points to (1 << hashLog) uint entries (or twice as many ushort ones);
+		// LZ4_initStream(void*, int) places it right after the struct
 		[StructLayout(LayoutKind.Sequential)]
 		internal struct LZ4_stream_t
 		{
-			public fixed uint hashTable[LZ4_HASH_SIZE_U32];
+			public uint* hashTable;
+			public int hashLog;
 			public uint currentOffset;
 			public bool dirty;
 			public tableType_t tableType;

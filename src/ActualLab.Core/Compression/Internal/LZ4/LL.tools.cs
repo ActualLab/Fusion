@@ -48,16 +48,16 @@ namespace ActualLab.Compression.Internal.LZ4.Engine
 			65536 + 14 + isize;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected static uint LZ4_hash4(uint sequence, tableType_t tableType)
+		protected static uint LZ4_hash4(uint sequence, tableType_t tableType, int hashLog)
 		{
-			var hashLog = tableType == tableType_t.byU16 ? LZ4_HASHLOG + 1 : LZ4_HASHLOG;
+			if (tableType == tableType_t.byU16) hashLog++;
 			return unchecked((sequence * 2654435761u) >> (MINMATCH * 8 - hashLog));
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected static uint LZ4_hash5(ulong sequence, tableType_t tableType)
+		protected static uint LZ4_hash5(ulong sequence, tableType_t tableType, int hashLog)
 		{
-			var hashLog = tableType == tableType_t.byU16 ? LZ4_HASHLOG + 1 : LZ4_HASHLOG;
+			if (tableType == tableType_t.byU16) hashLog++;
 			return unchecked((uint) (((sequence << 24) * 889523592379ul) >> (64 - hashLog)));
 		}
 
@@ -124,14 +124,11 @@ namespace ActualLab.Compression.Internal.LZ4.Engine
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		protected static uint LZ4_getIndexOnHash(uint h, void* tableBase, tableType_t tableType)
 		{
-			Assert(LZ4_MEMORY_USAGE > 2);
 			switch (tableType)
 			{
 				case tableType_t.byU32:
-					Assert(h < (1U << (LZ4_MEMORY_USAGE - 2)));
 					return ((uint*) tableBase)[h];
 				case tableType_t.byU16:
-					Assert(h < (1U << (LZ4_MEMORY_USAGE - 1)));
 					return ((ushort*) tableBase)[h];
 				default:
 					Assert(false);
@@ -236,10 +233,47 @@ namespace ActualLab.Compression.Internal.LZ4.Engine
 		}
 		*/
 
-		public static LZ4_stream_t* LZ4_initStream(LZ4_stream_t* buffer)
+		internal static void LZ4_validateHashLog(int hashLog, string paramName)
 		{
-			Mem.Zero((byte*) buffer, sizeof(LZ4_stream_t));
-			return buffer;
+			if (hashLog < LZ4_HASHLOG_MIN || hashLog > LZ4_HASHLOG_MAX)
+				throw new ArgumentOutOfRangeException(
+					paramName, hashLog,
+					$"Hash log must be between {LZ4_HASHLOG_MIN} and {LZ4_HASHLOG_MAX}");
+		}
+
+		public static int LZ4_hashTableSize(int hashLog) => sizeof(uint) << hashLog;
+
+		public static int LZ4_sizeofState(int hashLog) =>
+			sizeof(LZ4_stream_t) + LZ4_hashTableSize(hashLog);
+
+		public static LZ4_stream_t* LZ4_initStream(void* buffer, int hashLog)
+		{
+			var stream = (LZ4_stream_t*) buffer;
+			stream->hashTable = (uint*) (stream + 1);
+			stream->hashLog = hashLog;
+			return LZ4_initStream(stream);
+		}
+
+		public static LZ4_stream_t* LZ4_initStream(LZ4_stream_t* stream)
+		{
+			var hashTable = stream->hashTable;
+			var hashLog = stream->hashLog;
+			*stream = default;
+			stream->hashTable = hashTable;
+			stream->hashLog = hashLog;
+			Mem.Zero((byte*) hashTable, LZ4_hashTableSize(hashLog));
+			return stream;
+		}
+
+		public static void LZ4_copyStream(LZ4_stream_t* target, LZ4_stream_t* source)
+		{
+			Assert(target->hashLog == source->hashLog);
+			var hashTable = target->hashTable;
+			*target = *source;
+			target->hashTable = hashTable;
+			Mem.Copy(
+				(byte*) hashTable, (byte*) source->hashTable,
+				LZ4_hashTableSize(source->hashLog));
 		}
 
 		public static void LZ4_setStreamDecode(

@@ -15,33 +15,60 @@ using LZ4Context = LL.LZ4_stream_t;
 /// </summary>
 internal unsafe class LZ4FastChainEncoder: LZ4EncoderBase
 {
+	/// <summary>Default hash log (4096 hash table entries, 16KB).</summary>
+	public const int DefaultHashLog = LL.LZ4_HASHLOG;
+
+	/// <summary>Minimum supported hash log.</summary>
+	public const int MinHashLog = LL.LZ4_HASHLOG_MIN;
+
+	/// <summary>Maximum supported hash log.</summary>
+	public const int MaxHashLog = LL.LZ4_HASHLOG_MAX;
+
 	private PinnedMemory _contextPin;
 	private LZ4FastDictionary _dictionary;
+	private readonly int _hashLog;
 
 	private LZ4Context* Context => _contextPin.Reference<LZ4Context>();
 
 	/// <summary>Creates new instance of <see cref="LZ4FastChainEncoder"/></summary>
 	/// <param name="blockSize">Block size.</param>
 	/// <param name="extraBlocks">Number of extra blocks.</param>
-	public LZ4FastChainEncoder(int blockSize, int extraBlocks = 0):
+	/// <param name="hashLog">Log2 of the number of hash table entries
+	/// (<see cref="MinHashLog"/>..<see cref="MaxHashLog"/>); the table takes <c>4 &lt;&lt; hashLog</c>
+	/// bytes. A larger table finds more matches in larger blocks, but costs more to reset.</param>
+	public LZ4FastChainEncoder(int blockSize, int extraBlocks = 0, int hashLog = DefaultHashLog):
 		base(true, blockSize, extraBlocks)
 	{
-		PinnedMemory.Alloc<LZ4Context>(out _contextPin);
+		LL.LZ4_validateHashLog(hashLog, nameof(hashLog));
+		_hashLog = hashLog;
+		PinnedMemory.Alloc(out _contextPin, LL.LZ4_sizeofState(hashLog), false);
+		LL.LZ4_initStream(_contextPin.Pointer, hashLog);
 	}
 
 	/// <summary>Creates new instance of encoder starting with preset dictionary.</summary>
 	/// <param name="blockSize">Block size.</param>
-	/// <param name="extraBlocks">Number of extra blocks.</param>
-	/// <param name="dictionary">Preset dictionary (loaded once, never modified by the encoder).</param>
-	public LZ4FastChainEncoder(int blockSize, int extraBlocks, LZ4FastDictionary dictionary):
-		this(blockSize, extraBlocks)
+	/// <param name="extraBlocks">Number of extra blocks. With a preset dictionary the 64KB history
+	/// window is full from the first block, so with 0 extra blocks every block moves 64KB of history
+	/// to the start of the buffer; a few extra blocks (e.g. 4) amortize that copy.</param>
+	/// <param name="dictionary">Preset dictionary (loaded once, never modified by the encoder).
+	/// It has to be created with the same <paramref name="hashLog"/>.</param>
+	/// <param name="hashLog">Log2 of the number of hash table entries
+	/// (<see cref="MinHashLog"/>..<see cref="MaxHashLog"/>).</param>
+	public LZ4FastChainEncoder(
+		int blockSize, int extraBlocks, LZ4FastDictionary dictionary,
+		int hashLog = DefaultHashLog):
+		this(blockSize, extraBlocks, hashLog)
 	{
+		ValidateDictionary(dictionary, nameof(dictionary));
 		_dictionary = dictionary;
 		Reset();
 	}
 
 	/// <summary>Preset dictionary (<c>null</c> if there is none).</summary>
 	public LZ4FastDictionary Dictionary => _dictionary;
+
+	/// <summary>Log2 of the number of hash table entries.</summary>
+	public int HashLog => _hashLog;
 
 	/// <summary>
 	/// Resets encoder to its initial state: discards buffered input and history,
@@ -53,10 +80,12 @@ internal unsafe class LZ4FastChainEncoder: LZ4EncoderBase
 	/// Resets encoder to its initial state, starting from given preset dictionary from now on
 	/// (also for subsequent <see cref="Reset()"/> calls).
 	/// </summary>
-	/// <param name="dictionary">Preset dictionary (<c>null</c> for none).</param>
+	/// <param name="dictionary">Preset dictionary (<c>null</c> for none). It has to be created
+	/// with the same hash log as this encoder.</param>
 	public void Reset(LZ4FastDictionary dictionary)
 	{
 		ThrowIfDisposed();
+		ValidateDictionary(dictionary, nameof(dictionary));
 		_dictionary = dictionary;
 		if (_dictionary is null)
 		{
@@ -68,6 +97,14 @@ internal unsafe class LZ4FastChainEncoder: LZ4EncoderBase
 			_dictionary.ApplyTo(Context, InputBuffer);
 			ResetInput(_dictionary.Length);
 		}
+	}
+
+	private void ValidateDictionary(LZ4FastDictionary dictionary, string paramName)
+	{
+		if (dictionary is not null && dictionary.HashLog != _hashLog)
+			throw new ArgumentException(
+				$"Dictionary hash log ({dictionary.HashLog}) does not match encoder hash log ({_hashLog})",
+				paramName);
 	}
 
 	/// <inheritdoc />

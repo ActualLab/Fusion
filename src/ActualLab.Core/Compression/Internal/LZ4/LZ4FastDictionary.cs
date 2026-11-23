@@ -24,23 +24,34 @@ internal unsafe class LZ4FastDictionary: UnmanagedResources
 	private PinnedMemory _contextPin;
 
 	private readonly int _length;
+	private readonly int _hashLog;
 
 	/// <summary>Creates new dictionary.</summary>
 	/// <param name="dictionary">Dictionary bytes (only the last 64KB are used).</param>
-	public LZ4FastDictionary(ReadOnlySpan<byte> dictionary)
+	/// <param name="hashLog">Log2 of the number of hash table entries; the dictionary can be used
+	/// only by encoders with the same hash log
+	/// (see <see cref="LZ4FastChainEncoder.HashLog"/>).</param>
+	public LZ4FastDictionary(
+		ReadOnlySpan<byte> dictionary, int hashLog = LZ4FastChainEncoder.DefaultHashLog)
 	{
+		LL.LZ4_validateHashLog(hashLog, nameof(hashLog));
 		if (dictionary.Length > Mem.K64)
 			dictionary = dictionary.Slice(dictionary.Length - Mem.K64);
 
 		_length = dictionary.Length;
+		_hashLog = hashLog;
 		PinnedMemory.Alloc(out _dataPin, Math.Max(_length, 1), false);
 		dictionary.CopyTo(new Span<byte>(_dataPin.Pointer, _length));
-		PinnedMemory.Alloc<LZ4Context>(out _contextPin);
+		PinnedMemory.Alloc(out _contextPin, LL.LZ4_sizeofState(hashLog), false);
+		LL.LZ4_initStream(_contextPin.Pointer, hashLog);
 		LLxx.LZ4_loadDict(Context, Data, _length);
 	}
 
 	/// <summary>Dictionary length (at most 64KB).</summary>
 	public int Length => _length;
+
+	/// <summary>Log2 of the number of hash table entries.</summary>
+	public int HashLog => _hashLog;
 
 	/// <summary>Dictionary bytes.</summary>
 	public ReadOnlySpan<byte> Span
@@ -72,7 +83,7 @@ internal unsafe class LZ4FastDictionary: UnmanagedResources
 	{
 		ThrowIfDisposed();
 		Mem.Move(buffer, Data, _length);
-		*context = *Context;
+		LL.LZ4_copyStream(context, Context);
 		// the loaded state is position independent (hash table holds offsets, not pointers),
 		// only the pointer to dictionary itself needs to be adjusted
 		var dictEnd = buffer + _length;

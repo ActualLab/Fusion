@@ -25,6 +25,7 @@ public sealed class LZ4ByteEncoder : ByteEncoder
 
     private readonly int _maxBlockOutputSize;
     private readonly LZ4FastChainEncoder _encoder;
+    private bool _isReset = true;
 
     public LZ4ByteCodec Codec { get; }
     // The encoder's own block size, which is what every bound here is sized for - see the ctor
@@ -34,7 +35,7 @@ public sealed class LZ4ByteEncoder : ByteEncoder
     public LZ4ByteEncoder(LZ4ByteCodec? codec = null)
     {
         Codec = codec ??= LZ4ByteCodec.Default;
-        _encoder = new LZ4FastChainEncoder(codec.BlockSize, codec.ExtraBlocks, codec.Dictionary);
+        _encoder = new LZ4FastChainEncoder(codec.BlockSize, codec.ExtraBlocks, codec.Dictionary, codec.HashLog);
         // K4os rounds the requested block size up to a 1 KiB multiple, so the block it actually
         // fills is not necessarily the one we asked for - and it's the real one the length prefix
         // has to hold. Reading it back is what keeps the two in step.
@@ -49,6 +50,8 @@ public sealed class LZ4ByteEncoder : ByteEncoder
 
     public override void Encode(ReadOnlySpan<byte> source, IBufferWriter<byte> target)
     {
+        if (!source.IsEmpty)
+            _isReset = false;
         while (source.Length > 0) {
             // allowCopy: false plus a maximum-output-size target means the encoder always encodes,
             // so the decoder never has to Inject a stored block to keep its window in sync.
@@ -80,8 +83,16 @@ public sealed class LZ4ByteEncoder : ByteEncoder
         return maxLength >= int.MaxValue ? int.MaxValue : (int)maxLength;
     }
 
+    // A reset clears or copies the whole hash table (256 KB with HashLog = 16), so it's skipped
+    // when nothing was encoded since the last one - e.g. in a SelectingByteCodec that rarely picks LZ4
     public override void Reset()
-        => _encoder.Reset();
+    {
+        if (_isReset)
+            return;
+
+        _encoder.Reset();
+        _isReset = true;
+    }
 
     // Internal methods
 

@@ -16,6 +16,9 @@ in `ActualLab.Compression`.
   [#122](https://github.com/MiloszKrajewski/K4os.Compression.LZ4/pull/122),
   branch `feature/fast-dictionary` of `ActualLab/K4os.Compression.LZ4` at `c768e61`.
   Once it's merged (or changed in review), re-sync from upstream.
+- Plus the configurable hash log of the fast encoder (`hashLog` of `LZ4FastChainEncoder` and
+  `LZ4FastDictionary`, 10..16): branch `feature/hash-log` of `ActualLab/K4os.Compression.LZ4`
+  at `ed360b8`, on top of the branch above; not proposed upstream yet.
 
 ## Changes made while copying
 
