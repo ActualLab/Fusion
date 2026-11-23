@@ -1,6 +1,5 @@
 using System.Runtime.Serialization;
 using ActualLab.Compliance;
-using MemoryPack;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using static System.Console;
@@ -11,20 +10,18 @@ using static System.Console;
 namespace Docs.PartSan;
 
 #region PartSan_Declare
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record ApiCredentials(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string UserId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
-    [property: MemoryPackAllowSerialize] // MemoryPack-only: its formatter is registered at runtime
-    SanitizedString<Sanitizers.PrefixAndLengthHint> ApiKey
+    [property: DataMember(Order = 0), Key(0)] string UserId,
+    [property: DataMember(Order = 1), Key(1)] SanitizedString<Sanitizers.PrefixAndLengthHint> ApiKey
 );
 #endregion
 
 #region PartSan_DeclareBefore
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record PlainCredentials(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string UserId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] string ApiKey
+    [property: DataMember(Order = 0), Key(0)] string UserId,
+    [property: DataMember(Order = 1), Key(1)] string ApiKey
 );
 #endregion
 
@@ -100,7 +97,7 @@ public class PartSan : DocPart
         StartSnippetOutput("Wire compatibility");
         #region PartSan_WireCompatible
         var plain = new PlainCredentials("alice", ApiKey);
-        foreach (var serializer in (IByteSerializer[])[MemoryPackByteSerializer.Default, MessagePackByteSerializer.Default]) {
+        foreach (var serializer in (IByteSerializer[])[MessagePackByteSerializer.Default, SystemJsonSerializer.Default]) {
             using var plainBytes = serializer.Write(plain);
             using var sanitizedBytes = serializer.Write(credentials);
             var isSame = plainBytes.WrittenSpan.SequenceEqual(sanitizedBytes.WrittenSpan);
@@ -115,7 +112,7 @@ public class PartSan : DocPart
         WriteLine(Sanitizer.Sanitize<Sanitizers.PrefixAndLengthHint>(ApiKey));
         WriteLine(Sanitizer.Sanitize<Sanitizers.Fingerprint>(ApiKey));
         WriteLine(Sanitizer.Sanitize<Sanitizers.SessionString>("Ab3fSomeLongSessionId"));
-        WriteLine(Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId&p=Zm9vYmFy&f=mempack6"));
+        WriteLine(Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId&p=Zm9vYmFy&f=msgpack6"));
         #endregion
 
         StartSnippetOutput("Fingerprint correlates");
@@ -162,7 +159,7 @@ public class PartSan : DocPart
 
         StartSnippetOutput("MaybeSanitize");
         #region PartSan_MaybeSanitize_Use
-        var request = new ConnectRequest("/rpc/ws", "?s=Ab3fSomeLongSessionId&f=mempack6");
+        var request = new ConnectRequest("/rpc/ws", "?s=Ab3fSomeLongSessionId&f=msgpack6");
         WriteLine(request.LogTitle);
         using (Sanitization.Begin())
             WriteLine(request.LogTitle); // MaybeSanitize honors the scope, Sanitize wouldn't

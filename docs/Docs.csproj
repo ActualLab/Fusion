@@ -14,7 +14,6 @@
     <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Npgsql\ActualLab.Fusion.EntityFramework.Npgsql.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Redis\ActualLab.Fusion.EntityFramework.Redis.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
-    <ProjectReference Include="..\src\ActualLab.Serialization.MemoryPack\ActualLab.Serialization.MemoryPack.csproj" />
     <ProjectReference Include="..\src\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
     <ProjectReference Include="..\src\ActualLab.Serialization.NerdbankMessagePack\ActualLab.Serialization.NerdbankMessagePack.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
@@ -23,7 +22,6 @@
   <!-- Roslyn generators/analyzers -->
   <ItemGroup>
     <ProjectReference Include="..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

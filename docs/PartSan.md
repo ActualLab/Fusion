@@ -23,12 +23,10 @@ opens around every log call:
 
 <!-- snippet: PartSan_Declare -->
 ```cs
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record ApiCredentials(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string UserId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
-    [property: MemoryPackAllowSerialize] // MemoryPack-only: its formatter is registered at runtime
-    SanitizedString<Sanitizers.PrefixAndLengthHint> ApiKey
+    [property: DataMember(Order = 0), Key(0)] string UserId,
+    [property: DataMember(Order = 1), Key(1)] SanitizedString<Sanitizers.PrefixAndLengthHint> ApiKey
 );
 ```
 <!-- endSnippet -->
@@ -108,10 +106,10 @@ plain `string`:
 
 <!-- snippet: PartSan_DeclareBefore -->
 ```cs
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MessagePackObject]
 public sealed partial record PlainCredentials(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string UserId,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] string ApiKey
+    [property: DataMember(Order = 0), Key(0)] string UserId,
+    [property: DataMember(Order = 1), Key(1)] string ApiKey
 );
 ```
 <!-- endSnippet -->
@@ -119,7 +117,7 @@ public sealed partial record PlainCredentials(
 <!-- snippet: PartSan_WireCompatible -->
 ```cs
 var plain = new PlainCredentials("alice", ApiKey);
-foreach (var serializer in (IByteSerializer[])[MemoryPackByteSerializer.Default, MessagePackByteSerializer.Default]) {
+foreach (var serializer in (IByteSerializer[])[MessagePackByteSerializer.Default, SystemJsonSerializer.Default]) {
     using var plainBytes = serializer.Write(plain);
     using var sanitizedBytes = serializer.Write(credentials);
     var isSame = plainBytes.WrittenSpan.SequenceEqual(sanitizedBytes.WrittenSpan);
@@ -129,8 +127,8 @@ foreach (var serializer in (IByteSerializer[])[MemoryPackByteSerializer.Default,
 <!-- endSnippet -->
 
 ```
-MemoryPackByteSerializer: True
 MessagePackByteSerializer: True
+SystemJsonSerializer: True
 ```
 
 ::: warning This protects logs, not sinks that serialize
@@ -140,10 +138,9 @@ database column, a JSON audit trail, an outbound webhook all receive the raw val
 design; if a value must not reach a particular sink, don't send it there.
 :::
 
-The one place the substitution isn't free is MemoryPack: its source generator only accepts member
-types it can see a `[MemoryPackable]` annotation on, and `SanitizedString<T>`'s formatter is
-registered at runtime instead. Add `[MemoryPackAllowSerialize]` to the member (as in the snippet
-above) and MemoryPack defers to the registered formatter. Nothing about the payload changes.
+With MemoryPack (`ActualLab.Serialization.MemoryPack`), also add `[MemoryPackAllowSerialize]`
+to the member: `SanitizedString<T>`'s formatter is registered at runtime, and MemoryPack's source
+generator rejects member types it can't see a `[MemoryPackable]` annotation on.
 
 ## The Sanitizers
 
@@ -167,7 +164,7 @@ WriteLine(Sanitizer.Sanitize<Sanitizers.LengthHint>(ApiKey));
 WriteLine(Sanitizer.Sanitize<Sanitizers.PrefixAndLengthHint>(ApiKey));
 WriteLine(Sanitizer.Sanitize<Sanitizers.Fingerprint>(ApiKey));
 WriteLine(Sanitizer.Sanitize<Sanitizers.SessionString>("Ab3fSomeLongSessionId"));
-WriteLine(Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId&p=Zm9vYmFy&f=mempack6"));
+WriteLine(Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId&p=Zm9vYmFy&f=msgpack6"));
 ```
 <!-- endSnippet -->
 
@@ -177,7 +174,7 @@ WriteLine(Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSession
 <<sk* [16-31]>>
 <<2e513fef>>
 Ab3f:297ccba4
-?s=Ab3f:297ccba4&p=<<Zm* [8-15]>>&f=mempack6
+?s=Ab3f:297ccba4&p=<<Zm* [8-15]>>&f=msgpack6
 ```
 
 `PrefixAndLengthHint` falls back to `LengthHint` for values of 3 characters or fewer — a 2-character
@@ -386,7 +383,7 @@ public sealed class ConnectRequest(string path, string query)
 
 <!-- snippet: PartSan_MaybeSanitize_Use -->
 ```cs
-var request = new ConnectRequest("/rpc/ws", "?s=Ab3fSomeLongSessionId&f=mempack6");
+var request = new ConnectRequest("/rpc/ws", "?s=Ab3fSomeLongSessionId&f=msgpack6");
 WriteLine(request.LogTitle);
 using (Sanitization.Begin())
     WriteLine(request.LogTitle); // MaybeSanitize honors the scope, Sanitize wouldn't
@@ -394,8 +391,8 @@ using (Sanitization.Begin())
 <!-- endSnippet -->
 
 ```
-/rpc/ws?s=Ab3fSomeLongSessionId&f=mempack6
-/rpc/ws?s=Ab3f:297ccba4&f=mempack6
+/rpc/ws?s=Ab3fSomeLongSessionId&f=msgpack6
+/rpc/ws?s=Ab3f:297ccba4&f=msgpack6
 ```
 
 ### Don't do this in a serialized member

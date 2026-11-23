@@ -130,11 +130,9 @@ public static class ConfiguringFormats
     {
         #region PartRSerialization_AddFormats
         services.AddRpc().ConfigureWireFormats(f => {
-            f.AddMemoryPack();          // mempack5, mempack5c, mempack6, mempack6c
-            f.AddNewtonsoftJson();      // njson5, njson5np
             f.AddNerdbankMessagePack(); // nmsgpack6, nmsgpack6c
             f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full); // "-lz4" and "-lz4f"
-            f.DefaultFormat = f["mempack6c-lz4"];
+            f.DefaultFormat = f["msgpack6c-lz4"];
         });
         #endregion
     }
@@ -227,8 +225,7 @@ public class PartRSerialization : DocPart
         var msgpack6cLz4 = msgpack6c.WithLZ4(); // LZ4 variants come from f.AddLZ4Variants()
 
         // Package-provided formats
-        _ = RpcMemoryPackWireFormats.MemoryPackV6C;
-        _ = RpcNewtonsoftJsonWireFormats.NewtonsoftJsonV5;
+        _ = RpcNerdbankWireFormats.NerdbankMessagePackV6C;
         if (RpcDefaultWireFormats.DefaultFormat.Key != "msgpack6")
             throw new InvalidOperationException("Unexpected default format.");
 

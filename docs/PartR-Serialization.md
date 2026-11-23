@@ -280,11 +280,9 @@ so it can't change after that.
 <!-- snippet: PartRSerialization_AddFormats -->
 ```cs
 services.AddRpc().ConfigureWireFormats(f => {
-    f.AddMemoryPack();          // mempack5, mempack5c, mempack6, mempack6c
-    f.AddNewtonsoftJson();      // njson5, njson5np
     f.AddNerdbankMessagePack(); // nmsgpack6, nmsgpack6c
     f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full); // "-lz4" and "-lz4f"
-    f.DefaultFormat = f["mempack6c-lz4"];
+    f.DefaultFormat = f["msgpack6c-lz4"];
 });
 ```
 <!-- endSnippet -->
