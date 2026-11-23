@@ -20,9 +20,12 @@ public class MessagePackNilTest(ITestOutputHelper @out) : TestBase(@out)
         AssertNilReadsAsDefault<Moment>();
         AssertNilReadsAsDefault<CpuTimestamp>();
         AssertNilReadsAsDefault<Option<int>>();
-        AssertNilReadsAsDefault<ApiOption<int>>();
-        AssertNilReadsAsDefault<ApiNullable<int>>();
-        AssertNilReadsAsDefault<ApiNullable8<int>>();
+#if !NETFRAMEWORK
+        // ActualLab.Serialization.MemoryPack types: Nerdbank has no converters for them
+        AssertNilReadsAsDefault<ApiOption<int>>(MessagePackByteSerializer.Default);
+        AssertNilReadsAsDefault<ApiNullable<int>>(MessagePackByteSerializer.Default);
+        AssertNilReadsAsDefault<ApiNullable8<int>>(MessagePackByteSerializer.Default);
+#endif
         AssertNilReadsAsDefault<ApiArray<int>>();
         AssertNilReadsAsDefault<Result<int>>();
         AssertNilReadsAsDefault<PropertyBag>();

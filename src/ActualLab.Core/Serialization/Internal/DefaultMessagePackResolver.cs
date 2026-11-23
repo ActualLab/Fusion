@@ -20,9 +20,6 @@ public class DefaultMessagePackResolver : IFormatterResolver
     public static readonly Dictionary<Type, Type> Formatters = new() {
         { typeof(Unit), typeof(UnitMessagePackFormatter) },
         { typeof(Option<>), typeof(OptionMessagePackFormatter<>) },
-        { typeof(ApiOption<>), typeof(ApiOptionMessagePackFormatter<>) },
-        { typeof(ApiNullable<>), typeof(ApiNullableMessagePackFormatter<>) },
-        { typeof(ApiNullable8<>), typeof(ApiNullable8MessagePackFormatter<>) },
         { typeof(ApiArray<>), typeof(ApiArrayMessagePackFormatter<>) },
         { typeof(Box<>), typeof(BoxMessagePackFormatter<>) },
         { typeof(MutableBox<>), typeof(MutableBoxMessagePackFormatter<>) },

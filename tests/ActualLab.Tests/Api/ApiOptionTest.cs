@@ -1,3 +1,4 @@
+#if !NETFRAMEWORK // These types live in ActualLab.Serialization.MemoryPack
 namespace ActualLab.Tests.Api;
 
 public class ApiOptionTest(ITestOutputHelper @out) : TestBase(@out)
@@ -32,3 +33,5 @@ public class ApiOptionTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 }
+
+#endif

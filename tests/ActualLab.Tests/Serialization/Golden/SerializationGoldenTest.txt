@@ -920,14 +920,13 @@ Dictionary<string,Option<int>> | NewtonsoftJson.TypeDecorating | /* @type . */ {
 Dictionary<string,Option<int>> | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiOption<int>.None | MemoryPack | 0000000000
 ApiOption<int>.None | MemoryPack:RoundTrip | ok
-ApiOption<int>.None | MemoryPack.TypeDecorating | 0159aeffffff5100000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72650000000000
+ApiOption<int>.None | MemoryPack.TypeDecorating | 016d9affffff6500000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b0000000000
 ApiOption<int>.None | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiOption<int>.None | MessagePack | 90
 ApiOption<int>.None | MessagePack:RoundTrip | ok
-ApiOption<int>.None | MessagePack.TypeDecorating | d95141637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726590
+ApiOption<int>.None | MessagePack.TypeDecorating | d96541637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b90
 ApiOption<int>.None | MessagePack.TypeDecorating:RoundTrip | ok
-ApiOption<int>.None | Nerdbank | 90
-ApiOption<int>.None | Nerdbank:RoundTrip | ok
+ApiOption<int>.None | Nerdbank | !skipped
 ApiOption<int>.None | SystemJson | {"hasValue":false,"valueOrDefault":0}
 ApiOption<int>.None | SystemJson:RoundTrip | ok
 ApiOption<int>.None | SystemJson.TypeDecorating | /* @type . */ {"hasValue":false,"valueOrDefault":0}
@@ -938,14 +937,13 @@ ApiOption<int>.None | NewtonsoftJson.TypeDecorating | /* @type . */ {"HasValue":
 ApiOption<int>.None | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiOption<int>.Some | MemoryPack | 0105000000
 ApiOption<int>.Some | MemoryPack:RoundTrip | ok
-ApiOption<int>.Some | MemoryPack.TypeDecorating | 0159aeffffff5100000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72650105000000
+ApiOption<int>.Some | MemoryPack.TypeDecorating | 016d9affffff6500000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b0105000000
 ApiOption<int>.Some | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiOption<int>.Some | MessagePack | 9105
 ApiOption<int>.Some | MessagePack:RoundTrip | ok
-ApiOption<int>.Some | MessagePack.TypeDecorating | d95141637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72659105
+ApiOption<int>.Some | MessagePack.TypeDecorating | d96541637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b9105
 ApiOption<int>.Some | MessagePack.TypeDecorating:RoundTrip | ok
-ApiOption<int>.Some | Nerdbank | 9105
-ApiOption<int>.Some | Nerdbank:RoundTrip | ok
+ApiOption<int>.Some | Nerdbank | !skipped
 ApiOption<int>.Some | SystemJson | {"hasValue":true,"valueOrDefault":5}
 ApiOption<int>.Some | SystemJson:RoundTrip | ok
 ApiOption<int>.Some | SystemJson.TypeDecorating | /* @type . */ {"hasValue":true,"valueOrDefault":5}
@@ -956,14 +954,13 @@ ApiOption<int>.Some | NewtonsoftJson.TypeDecorating | /* @type . */ {"HasValue":
 ApiOption<int>.Some | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiOption<string>.None | MemoryPack | 02010400ffffffff
 ApiOption<string>.None | MemoryPack:RoundTrip | ok
-ApiOption<string>.None | MemoryPack.TypeDecorating | 015aadffffff5200000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726502010400ffffffff
+ApiOption<string>.None | MemoryPack.TypeDecorating | 016e99ffffff6600000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b02010400ffffffff
 ApiOption<string>.None | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiOption<string>.None | MessagePack | 90
 ApiOption<string>.None | MessagePack:RoundTrip | ok
-ApiOption<string>.None | MessagePack.TypeDecorating | d95241637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726590
+ApiOption<string>.None | MessagePack.TypeDecorating | d96641637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b90
 ApiOption<string>.None | MessagePack.TypeDecorating:RoundTrip | ok
-ApiOption<string>.None | Nerdbank | 90
-ApiOption<string>.None | Nerdbank:RoundTrip | ok
+ApiOption<string>.None | Nerdbank | !skipped
 ApiOption<string>.None | SystemJson | {"hasValue":false,"valueOrDefault":null}
 ApiOption<string>.None | SystemJson:RoundTrip | ok
 ApiOption<string>.None | SystemJson.TypeDecorating | /* @type . */ {"hasValue":false,"valueOrDefault":null}
@@ -974,14 +971,13 @@ ApiOption<string>.None | NewtonsoftJson.TypeDecorating | /* @type . */ {"HasValu
 ApiOption<string>.None | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiOption<string>.Some | MemoryPack | 02010b01fcffffff03000000616263
 ApiOption<string>.Some | MemoryPack:RoundTrip | ok
-ApiOption<string>.Some | MemoryPack.TypeDecorating | 015aadffffff5200000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726502010b01fcffffff03000000616263
+ApiOption<string>.Some | MemoryPack.TypeDecorating | 016e99ffffff6600000041637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b02010b01fcffffff03000000616263
 ApiOption<string>.Some | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiOption<string>.Some | MessagePack | 91a3616263
 ApiOption<string>.Some | MessagePack:RoundTrip | ok
-ApiOption<string>.Some | MessagePack.TypeDecorating | d95241637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726591a3616263
+ApiOption<string>.Some | MessagePack.TypeDecorating | d96641637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b91a3616263
 ApiOption<string>.Some | MessagePack.TypeDecorating:RoundTrip | ok
-ApiOption<string>.Some | Nerdbank | 91a3616263
-ApiOption<string>.Some | Nerdbank:RoundTrip | ok
+ApiOption<string>.Some | Nerdbank | !skipped
 ApiOption<string>.Some | SystemJson | {"hasValue":true,"valueOrDefault":"abc"}
 ApiOption<string>.Some | SystemJson:RoundTrip | ok
 ApiOption<string>.Some | SystemJson.TypeDecorating | /* @type . */ {"hasValue":true,"valueOrDefault":"abc"}
@@ -992,14 +988,13 @@ ApiOption<string>.Some | NewtonsoftJson.TypeDecorating | /* @type . */ {"HasValu
 ApiOption<string>.Some | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Result<ApiOption<int>>.Some | MemoryPack | 0208010201040105000000ff
 Result<ApiOption<int>>.Some | MemoryPack:RoundTrip | ok
-Result<ApiOption<int>>.Some | MemoryPack.TypeDecorating | 017f88ffffff7700000041637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e436f72650208010201040105000000ff
+Result<ApiOption<int>>.Some | MemoryPack.TypeDecorating | 0184930074ffffff8b00000041637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e436f72650208010201040105000000ff
 Result<ApiOption<int>>.Some | MemoryPack.TypeDecorating:RoundTrip | ok
 Result<ApiOption<int>>.Some | MessagePack | 929105c0
 Result<ApiOption<int>>.Some | MessagePack:RoundTrip | ok
-Result<ApiOption<int>>.Some | MessagePack.TypeDecorating | d97741637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e436f7265929105c0
+Result<ApiOption<int>>.Some | MessagePack.TypeDecorating | d98b41637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e436f7265929105c0
 Result<ApiOption<int>>.Some | MessagePack.TypeDecorating:RoundTrip | ok
-Result<ApiOption<int>>.Some | Nerdbank | 929105c0
-Result<ApiOption<int>>.Some | Nerdbank:RoundTrip | ok
+Result<ApiOption<int>>.Some | Nerdbank | !skipped
 Result<ApiOption<int>>.Some | SystemJson | {"valueOrDefault":{"hasValue":true,"valueOrDefault":5},"exceptionInfo":null}
 Result<ApiOption<int>>.Some | SystemJson:RoundTrip | ok
 Result<ApiOption<int>>.Some | SystemJson.TypeDecorating | /* @type . */ {"valueOrDefault":{"hasValue":true,"valueOrDefault":5},"exceptionInfo":null}
@@ -1010,14 +1005,13 @@ Result<ApiOption<int>>.Some | NewtonsoftJson.TypeDecorating | /* @type . */ {"Va
 Result<ApiOption<int>>.Some | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Tuple<ApiOption<int>,string>.Some | MemoryPack | 0201040105000000feffffff0100000078
 Tuple<ApiOption<int>,string>.Some | MemoryPack:RoundTrip | ok
-Tuple<ApiOption<int>,string>.Some | MemoryPack.TypeDecorating | 0184b00057ffffffa800000053797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69620201040105000000feffffff0100000078
+Tuple<ApiOption<int>,string>.Some | MemoryPack.TypeDecorating | 0184c40043ffffffbc00000053797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69620201040105000000feffffff0100000078
 Tuple<ApiOption<int>,string>.Some | MemoryPack.TypeDecorating:RoundTrip | ok
 Tuple<ApiOption<int>,string>.Some | MessagePack | 929105a178
 Tuple<ApiOption<int>,string>.Some | MessagePack:RoundTrip | ok
-Tuple<ApiOption<int>,string>.Some | MessagePack.TypeDecorating | d9a853797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c6962929105a178
+Tuple<ApiOption<int>,string>.Some | MessagePack.TypeDecorating | d9bc53797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c6962929105a178
 Tuple<ApiOption<int>,string>.Some | MessagePack.TypeDecorating:RoundTrip | ok
-Tuple<ApiOption<int>,string>.Some | Nerdbank | 929105a178
-Tuple<ApiOption<int>,string>.Some | Nerdbank:RoundTrip | ok
+Tuple<ApiOption<int>,string>.Some | Nerdbank | !skipped
 Tuple<ApiOption<int>,string>.Some | SystemJson | {}
 Tuple<ApiOption<int>,string>.Some | SystemJson:RoundTrip | ok
 Tuple<ApiOption<int>,string>.Some | SystemJson.TypeDecorating | /* @type . */ {}
@@ -1028,14 +1022,13 @@ Tuple<ApiOption<int>,string>.Some | NewtonsoftJson.TypeDecorating | /* @type . *
 Tuple<ApiOption<int>,string>.Some | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Dictionary<string,ApiOption<int>> | MemoryPack | 02000000feffffff01000000610201040105000000feffffff01000000620201040000000000
 Dictionary<string,ApiOption<int>> | MemoryPack:RoundTrip | ok
-Dictionary<string,ApiOption<int>> | MemoryPack.TypeDecorating | 0184c40043ffffffbc00000053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2053797374656d2e507269766174652e436f72654c696202000000feffffff01000000610201040105000000feffffff01000000620201040000000000
+Dictionary<string,ApiOption<int>> | MemoryPack.TypeDecorating | 0184d8002fffffffd000000053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2053797374656d2e507269766174652e436f72654c696202000000feffffff01000000610201040105000000feffffff01000000620201040000000000
 Dictionary<string,ApiOption<int>> | MemoryPack.TypeDecorating:RoundTrip | ok
 Dictionary<string,ApiOption<int>> | MessagePack | 82a1619105a16290
 Dictionary<string,ApiOption<int>> | MessagePack:RoundTrip | ok
-Dictionary<string,ApiOption<int>> | MessagePack.TypeDecorating | d9bc53797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2053797374656d2e507269766174652e436f72654c696282a1619105a16290
+Dictionary<string,ApiOption<int>> | MessagePack.TypeDecorating | d9d053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2053797374656d2e507269766174652e436f72654c696282a1619105a16290
 Dictionary<string,ApiOption<int>> | MessagePack.TypeDecorating:RoundTrip | ok
-Dictionary<string,ApiOption<int>> | Nerdbank | 82a1619105a16290
-Dictionary<string,ApiOption<int>> | Nerdbank:RoundTrip | ok
+Dictionary<string,ApiOption<int>> | Nerdbank | !skipped
 Dictionary<string,ApiOption<int>> | SystemJson | {"a":{"hasValue":true,"valueOrDefault":5},"b":{"hasValue":false,"valueOrDefault":0}}
 Dictionary<string,ApiOption<int>> | SystemJson:RoundTrip | ok
 Dictionary<string,ApiOption<int>> | SystemJson.TypeDecorating | /* @type . */ {"a":{"hasValue":true,"valueOrDefault":5},"b":{"hasValue":false,"valueOrDefault":0}}
@@ -1046,14 +1039,13 @@ Dictionary<string,ApiOption<int>> | NewtonsoftJson.TypeDecorating | /* @type . *
 Dictionary<string,ApiOption<int>> | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiNullable<int>.Null | MemoryPack | 0000000000
 ApiNullable<int>.Null | MemoryPack:RoundTrip | ok
-ApiNullable<int>.Null | MemoryPack.TypeDecorating | 015bacffffff5300000041637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72650000000000
+ApiNullable<int>.Null | MemoryPack.TypeDecorating | 016f98ffffff6700000041637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b0000000000
 ApiNullable<int>.Null | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiNullable<int>.Null | MessagePack | c0
 ApiNullable<int>.Null | MessagePack:RoundTrip | ok
-ApiNullable<int>.Null | MessagePack.TypeDecorating | d95341637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f7265c0
+ApiNullable<int>.Null | MessagePack.TypeDecorating | d96741637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636bc0
 ApiNullable<int>.Null | MessagePack.TypeDecorating:RoundTrip | ok
-ApiNullable<int>.Null | Nerdbank | c0
-ApiNullable<int>.Null | Nerdbank:RoundTrip | ok
+ApiNullable<int>.Null | Nerdbank | !skipped
 ApiNullable<int>.Null | SystemJson | {"value":null}
 ApiNullable<int>.Null | SystemJson:RoundTrip | ok
 ApiNullable<int>.Null | SystemJson.TypeDecorating | /* @type . */ {"value":null}
@@ -1064,14 +1056,13 @@ ApiNullable<int>.Null | NewtonsoftJson.TypeDecorating | /* @type . */ {}
 ApiNullable<int>.Null | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiNullable<int>.Value | MemoryPack | 0105000000
 ApiNullable<int>.Value | MemoryPack:RoundTrip | ok
-ApiNullable<int>.Value | MemoryPack.TypeDecorating | 015bacffffff5300000041637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72650105000000
+ApiNullable<int>.Value | MemoryPack.TypeDecorating | 016f98ffffff6700000041637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b0105000000
 ApiNullable<int>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiNullable<int>.Value | MessagePack | 05
 ApiNullable<int>.Value | MessagePack:RoundTrip | ok
-ApiNullable<int>.Value | MessagePack.TypeDecorating | d95341637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726505
+ApiNullable<int>.Value | MessagePack.TypeDecorating | d96741637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b05
 ApiNullable<int>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-ApiNullable<int>.Value | Nerdbank | 05
-ApiNullable<int>.Value | Nerdbank:RoundTrip | ok
+ApiNullable<int>.Value | Nerdbank | !skipped
 ApiNullable<int>.Value | SystemJson | {"value":5}
 ApiNullable<int>.Value | SystemJson:RoundTrip | ok
 ApiNullable<int>.Value | SystemJson.TypeDecorating | /* @type . */ {"value":5}
@@ -1082,14 +1073,13 @@ ApiNullable<int>.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Value":
 ApiNullable<int>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiNullable<long>.Value | MemoryPack | 01cb04fb711f010000
 ApiNullable<long>.Value | MemoryPack:RoundTrip | ok
-ApiNullable<long>.Value | MemoryPack.TypeDecorating | 015bacffffff5300000041637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726501cb04fb711f010000
+ApiNullable<long>.Value | MemoryPack.TypeDecorating | 016f98ffffff6700000041637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b01cb04fb711f010000
 ApiNullable<long>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiNullable<long>.Value | MessagePack | cf0000011f71fb04cb
 ApiNullable<long>.Value | MessagePack:RoundTrip | ok
-ApiNullable<long>.Value | MessagePack.TypeDecorating | d95341637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f7265cf0000011f71fb04cb
+ApiNullable<long>.Value | MessagePack.TypeDecorating | d96741637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636bcf0000011f71fb04cb
 ApiNullable<long>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-ApiNullable<long>.Value | Nerdbank | cf0000011f71fb04cb
-ApiNullable<long>.Value | Nerdbank:RoundTrip | ok
+ApiNullable<long>.Value | Nerdbank | !skipped
 ApiNullable<long>.Value | SystemJson | {"value":1234567890123}
 ApiNullable<long>.Value | SystemJson:RoundTrip | ok
 ApiNullable<long>.Value | SystemJson.TypeDecorating | /* @type . */ {"value":1234567890123}
@@ -1100,14 +1090,13 @@ ApiNullable<long>.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Value"
 ApiNullable<long>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Result<ApiNullable<int>>.Value | MemoryPack | 0208010201040105000000ff
 Result<ApiNullable<int>>.Value | MemoryPack:RoundTrip | ok
-Result<ApiNullable<int>>.Value | MemoryPack.TypeDecorating | 0184810086ffffff7900000041637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e436f72650208010201040105000000ff
+Result<ApiNullable<int>>.Value | MemoryPack.TypeDecorating | 0184950072ffffff8d00000041637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e436f72650208010201040105000000ff
 Result<ApiNullable<int>>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 Result<ApiNullable<int>>.Value | MessagePack | 9205c0
 Result<ApiNullable<int>>.Value | MessagePack:RoundTrip | ok
-Result<ApiNullable<int>>.Value | MessagePack.TypeDecorating | d97941637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e436f72659205c0
+Result<ApiNullable<int>>.Value | MessagePack.TypeDecorating | d98d41637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e436f72659205c0
 Result<ApiNullable<int>>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-Result<ApiNullable<int>>.Value | Nerdbank | 9205c0
-Result<ApiNullable<int>>.Value | Nerdbank:RoundTrip | ok
+Result<ApiNullable<int>>.Value | Nerdbank | !skipped
 Result<ApiNullable<int>>.Value | SystemJson | {"valueOrDefault":{"value":5},"exceptionInfo":null}
 Result<ApiNullable<int>>.Value | SystemJson:RoundTrip | ok
 Result<ApiNullable<int>>.Value | SystemJson.TypeDecorating | /* @type . */ {"valueOrDefault":{"value":5},"exceptionInfo":null}
@@ -1118,14 +1107,13 @@ Result<ApiNullable<int>>.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {
 Result<ApiNullable<int>>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Tuple<ApiNullable<int>,string>.Value | MemoryPack | 0201040105000000feffffff0100000078
 Tuple<ApiNullable<int>,string>.Value | MemoryPack:RoundTrip | ok
-Tuple<ApiNullable<int>,string>.Value | MemoryPack.TypeDecorating | 0184b20055ffffffaa00000053797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69620201040105000000feffffff0100000078
+Tuple<ApiNullable<int>,string>.Value | MemoryPack.TypeDecorating | 0184c60041ffffffbe00000053797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69620201040105000000feffffff0100000078
 Tuple<ApiNullable<int>,string>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 Tuple<ApiNullable<int>,string>.Value | MessagePack | 9205a178
 Tuple<ApiNullable<int>,string>.Value | MessagePack:RoundTrip | ok
-Tuple<ApiNullable<int>,string>.Value | MessagePack.TypeDecorating | d9aa53797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69629205a178
+Tuple<ApiNullable<int>,string>.Value | MessagePack.TypeDecorating | d9be53797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69629205a178
 Tuple<ApiNullable<int>,string>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-Tuple<ApiNullable<int>,string>.Value | Nerdbank | 9205a178
-Tuple<ApiNullable<int>,string>.Value | Nerdbank:RoundTrip | ok
+Tuple<ApiNullable<int>,string>.Value | Nerdbank | !skipped
 Tuple<ApiNullable<int>,string>.Value | SystemJson | {}
 Tuple<ApiNullable<int>,string>.Value | SystemJson:RoundTrip | ok
 Tuple<ApiNullable<int>,string>.Value | SystemJson.TypeDecorating | /* @type . */ {}
@@ -1136,14 +1124,13 @@ Tuple<ApiNullable<int>,string>.Value | NewtonsoftJson.TypeDecorating | /* @type 
 Tuple<ApiNullable<int>,string>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Dictionary<string,ApiNullable<int>> | MemoryPack | 02000000feffffff01000000610201040105000000feffffff01000000620201040000000000
 Dictionary<string,ApiNullable<int>> | MemoryPack:RoundTrip | ok
-Dictionary<string,ApiNullable<int>> | MemoryPack.TypeDecorating | 0184c60041ffffffbe00000053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2053797374656d2e507269766174652e436f72654c696202000000feffffff01000000610201040105000000feffffff01000000620201040000000000
+Dictionary<string,ApiNullable<int>> | MemoryPack.TypeDecorating | 0184da002dffffffd200000053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2053797374656d2e507269766174652e436f72654c696202000000feffffff01000000610201040105000000feffffff01000000620201040000000000
 Dictionary<string,ApiNullable<int>> | MemoryPack.TypeDecorating:RoundTrip | ok
 Dictionary<string,ApiNullable<int>> | MessagePack | 82a16105a162c0
 Dictionary<string,ApiNullable<int>> | MessagePack:RoundTrip | ok
-Dictionary<string,ApiNullable<int>> | MessagePack.TypeDecorating | d9be53797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2053797374656d2e507269766174652e436f72654c696282a16105a162c0
+Dictionary<string,ApiNullable<int>> | MessagePack.TypeDecorating | d9d253797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2053797374656d2e507269766174652e436f72654c696282a16105a162c0
 Dictionary<string,ApiNullable<int>> | MessagePack.TypeDecorating:RoundTrip | ok
-Dictionary<string,ApiNullable<int>> | Nerdbank | 82a16105a162c0
-Dictionary<string,ApiNullable<int>> | Nerdbank:RoundTrip | ok
+Dictionary<string,ApiNullable<int>> | Nerdbank | !skipped
 Dictionary<string,ApiNullable<int>> | SystemJson | {"a":{"value":5},"b":{"value":null}}
 Dictionary<string,ApiNullable<int>> | SystemJson:RoundTrip | ok
 Dictionary<string,ApiNullable<int>> | SystemJson.TypeDecorating | /* @type . */ {"a":{"value":5},"b":{"value":null}}
@@ -1154,14 +1141,13 @@ Dictionary<string,ApiNullable<int>> | NewtonsoftJson.TypeDecorating | /* @type .
 Dictionary<string,ApiNullable<int>> | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiNullable8<int>.Null | MemoryPack | 00000000000000000000000000000000
 ApiNullable8<int>.Null | MemoryPack:RoundTrip | ok
-ApiNullable8<int>.Null | MemoryPack.TypeDecorating | 015cabffffff5400000041637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726500000000000000000000000000000000
+ApiNullable8<int>.Null | MemoryPack.TypeDecorating | 017097ffffff6800000041637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b00000000000000000000000000000000
 ApiNullable8<int>.Null | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiNullable8<int>.Null | MessagePack | c0
 ApiNullable8<int>.Null | MessagePack:RoundTrip | ok
-ApiNullable8<int>.Null | MessagePack.TypeDecorating | d95441637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f7265c0
+ApiNullable8<int>.Null | MessagePack.TypeDecorating | d96841637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636bc0
 ApiNullable8<int>.Null | MessagePack.TypeDecorating:RoundTrip | ok
-ApiNullable8<int>.Null | Nerdbank | c0
-ApiNullable8<int>.Null | Nerdbank:RoundTrip | ok
+ApiNullable8<int>.Null | Nerdbank | !skipped
 ApiNullable8<int>.Null | SystemJson | {"value":null}
 ApiNullable8<int>.Null | SystemJson:RoundTrip | ok
 ApiNullable8<int>.Null | SystemJson.TypeDecorating | /* @type . */ {"value":null}
@@ -1172,14 +1158,13 @@ ApiNullable8<int>.Null | NewtonsoftJson.TypeDecorating | /* @type . */ {}
 ApiNullable8<int>.Null | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiNullable8<int>.Value | MemoryPack | 01000000000000000500000000000000
 ApiNullable8<int>.Value | MemoryPack:RoundTrip | ok
-ApiNullable8<int>.Value | MemoryPack.TypeDecorating | 015cabffffff5400000041637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726501000000000000000500000000000000
+ApiNullable8<int>.Value | MemoryPack.TypeDecorating | 017097ffffff6800000041637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b01000000000000000500000000000000
 ApiNullable8<int>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiNullable8<int>.Value | MessagePack | 05
 ApiNullable8<int>.Value | MessagePack:RoundTrip | ok
-ApiNullable8<int>.Value | MessagePack.TypeDecorating | d95441637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f726505
+ApiNullable8<int>.Value | MessagePack.TypeDecorating | d96841637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b05
 ApiNullable8<int>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-ApiNullable8<int>.Value | Nerdbank | 05
-ApiNullable8<int>.Value | Nerdbank:RoundTrip | ok
+ApiNullable8<int>.Value | Nerdbank | !skipped
 ApiNullable8<int>.Value | SystemJson | {"value":5}
 ApiNullable8<int>.Value | SystemJson:RoundTrip | ok
 ApiNullable8<int>.Value | SystemJson.TypeDecorating | /* @type . */ {"value":5}
@@ -1190,14 +1175,13 @@ ApiNullable8<int>.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Value"
 ApiNullable8<int>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 ApiNullable8<long>.Value | MemoryPack | 0100000000000000cb04fb711f010000
 ApiNullable8<long>.Value | MemoryPack:RoundTrip | ok
-ApiNullable8<long>.Value | MemoryPack.TypeDecorating | 015cabffffff5400000041637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72650100000000000000cb04fb711f010000
+ApiNullable8<long>.Value | MemoryPack.TypeDecorating | 017097ffffff6800000041637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b0100000000000000cb04fb711f010000
 ApiNullable8<long>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 ApiNullable8<long>.Value | MessagePack | cf0000011f71fb04cb
 ApiNullable8<long>.Value | MessagePack:RoundTrip | ok
-ApiNullable8<long>.Value | MessagePack.TypeDecorating | d95441637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f7265cf0000011f71fb04cb
+ApiNullable8<long>.Value | MessagePack.TypeDecorating | d96841637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7436342c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636bcf0000011f71fb04cb
 ApiNullable8<long>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-ApiNullable8<long>.Value | Nerdbank | cf0000011f71fb04cb
-ApiNullable8<long>.Value | Nerdbank:RoundTrip | ok
+ApiNullable8<long>.Value | Nerdbank | !skipped
 ApiNullable8<long>.Value | SystemJson | {"value":1234567890123}
 ApiNullable8<long>.Value | SystemJson:RoundTrip | ok
 ApiNullable8<long>.Value | SystemJson.TypeDecorating | /* @type . */ {"value":1234567890123}
@@ -1208,14 +1192,13 @@ ApiNullable8<long>.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Value
 ApiNullable8<long>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Result<ApiNullable8<int>>.Value | MemoryPack | 020f01020804010000000000000005000000ff
 Result<ApiNullable8<int>>.Value | MemoryPack:RoundTrip | ok
-Result<ApiNullable8<int>>.Value | MemoryPack.TypeDecorating | 0184820085ffffff7a00000041637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e436f7265020f01020804010000000000000005000000ff
+Result<ApiNullable8<int>>.Value | MemoryPack.TypeDecorating | 0184960071ffffff8e00000041637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e436f7265020f01020804010000000000000005000000ff
 Result<ApiNullable8<int>>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 Result<ApiNullable8<int>>.Value | MessagePack | 9205c0
 Result<ApiNullable8<int>>.Value | MessagePack:RoundTrip | ok
-Result<ApiNullable8<int>>.Value | MessagePack.TypeDecorating | d97a41637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e436f72659205c0
+Result<ApiNullable8<int>>.Value | MessagePack.TypeDecorating | d98e41637475616c4c61622e526573756c7460315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e436f72659205c0
 Result<ApiNullable8<int>>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-Result<ApiNullable8<int>>.Value | Nerdbank | 9205c0
-Result<ApiNullable8<int>>.Value | Nerdbank:RoundTrip | ok
+Result<ApiNullable8<int>>.Value | Nerdbank | !skipped
 Result<ApiNullable8<int>>.Value | SystemJson | {"valueOrDefault":{"value":5},"exceptionInfo":null}
 Result<ApiNullable8<int>>.Value | SystemJson:RoundTrip | ok
 Result<ApiNullable8<int>>.Value | SystemJson.TypeDecorating | /* @type . */ {"valueOrDefault":{"value":5},"exceptionInfo":null}
@@ -1226,14 +1209,13 @@ Result<ApiNullable8<int>>.Value | NewtonsoftJson.TypeDecorating | /* @type . */ 
 Result<ApiNullable8<int>>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Tuple<ApiNullable8<int>,string>.Value | MemoryPack | 020804010000000000000005000000feffffff0100000078
 Tuple<ApiNullable8<int>,string>.Value | MemoryPack:RoundTrip | ok
-Tuple<ApiNullable8<int>,string>.Value | MemoryPack.TypeDecorating | 0184b30054ffffffab00000053797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c6962020804010000000000000005000000feffffff0100000078
+Tuple<ApiNullable8<int>,string>.Value | MemoryPack.TypeDecorating | 0184c70040ffffffbf00000053797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c6962020804010000000000000005000000feffffff0100000078
 Tuple<ApiNullable8<int>,string>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 Tuple<ApiNullable8<int>,string>.Value | MessagePack | 9205a178
 Tuple<ApiNullable8<int>,string>.Value | MessagePack:RoundTrip | ok
-Tuple<ApiNullable8<int>,string>.Value | MessagePack.TypeDecorating | d9ab53797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69629205a178
+Tuple<ApiNullable8<int>,string>.Value | MessagePack.TypeDecorating | d9bf53797374656d2e56616c75655475706c6560325b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d2c5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d5d2c2053797374656d2e507269766174652e436f72654c69629205a178
 Tuple<ApiNullable8<int>,string>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-Tuple<ApiNullable8<int>,string>.Value | Nerdbank | 9205a178
-Tuple<ApiNullable8<int>,string>.Value | Nerdbank:RoundTrip | ok
+Tuple<ApiNullable8<int>,string>.Value | Nerdbank | !skipped
 Tuple<ApiNullable8<int>,string>.Value | SystemJson | {}
 Tuple<ApiNullable8<int>,string>.Value | SystemJson:RoundTrip | ok
 Tuple<ApiNullable8<int>,string>.Value | SystemJson.TypeDecorating | /* @type . */ {}
@@ -1244,14 +1226,13 @@ Tuple<ApiNullable8<int>,string>.Value | NewtonsoftJson.TypeDecorating | /* @type
 Tuple<ApiNullable8<int>,string>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 Dictionary<string,ApiNullable8<int>> | MemoryPack | 02000000feffffff0100000061020804010000000000000005000000feffffff0100000062020804000000000000000000000000
 Dictionary<string,ApiNullable8<int>> | MemoryPack:RoundTrip | ok
-Dictionary<string,ApiNullable8<int>> | MemoryPack.TypeDecorating | 0184c70040ffffffbf00000053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2053797374656d2e507269766174652e436f72654c696202000000feffffff0100000061020804010000000000000005000000feffffff0100000062020804000000000000000000000000
+Dictionary<string,ApiNullable8<int>> | MemoryPack.TypeDecorating | 0184db002cffffffd300000053797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2053797374656d2e507269766174652e436f72654c696202000000feffffff0100000061020804010000000000000005000000feffffff0100000062020804000000000000000000000000
 Dictionary<string,ApiNullable8<int>> | MemoryPack.TypeDecorating:RoundTrip | ok
 Dictionary<string,ApiNullable8<int>> | MessagePack | 82a16105a162c0
 Dictionary<string,ApiNullable8<int>> | MessagePack:RoundTrip | ok
-Dictionary<string,ApiNullable8<int>> | MessagePack.TypeDecorating | d9bf53797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2053797374656d2e507269766174652e436f72654c696282a16105a162c0
+Dictionary<string,ApiNullable8<int>> | MessagePack.TypeDecorating | d9d353797374656d2e436f6c6c656374696f6e732e47656e657269632e44696374696f6e61727960325b5b53797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c69625d2c5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2053797374656d2e507269766174652e436f72654c696282a16105a162c0
 Dictionary<string,ApiNullable8<int>> | MessagePack.TypeDecorating:RoundTrip | ok
-Dictionary<string,ApiNullable8<int>> | Nerdbank | 82a16105a162c0
-Dictionary<string,ApiNullable8<int>> | Nerdbank:RoundTrip | ok
+Dictionary<string,ApiNullable8<int>> | Nerdbank | !skipped
 Dictionary<string,ApiNullable8<int>> | SystemJson | {"a":{"value":5},"b":{"value":null}}
 Dictionary<string,ApiNullable8<int>> | SystemJson:RoundTrip | ok
 Dictionary<string,ApiNullable8<int>> | SystemJson.TypeDecorating | /* @type . */ {"a":{"value":5},"b":{"value":null}}
@@ -2192,15 +2173,15 @@ OperationCompletion.Command | NewtonsoftJson | {"SerializedCommand":{"Newtonsoft
 OperationCompletion.Command | NewtonsoftJson:RoundTrip | ok
 OperationCompletion.Command | NewtonsoftJson.TypeDecorating | /* @type . */ {"SerializedCommand":{"NewtonsoftJson":"/* @type ActualLab.Tests.Serialization.GoldenCommand, ActualLab.Tests */ {\"Id\":\"cmd-1\"}"},"InvalidationCalls":[{"ArgumentText":"\"ab\"","ServiceType":"ActualLab.Tests.Serialization.IGoldenService, ActualLab.Tests","MethodName":"Get:2"}]}
 OperationCompletion.Command | NewtonsoftJson.TypeDecorating:RoundTrip | ok
-GoldenDto.Default | MemoryPack | 12060808050510060608050606010d0804010c010400000000000000000000000002010400ffffffff0000000000000000000000000000000000000000000000000000010400000000010400000000000000000000000001000000000104000000000104ffffffffff0206040104000000000000000002040100000000ffffffffffff0201040000000000ffffffff
+GoldenDto.Default | MemoryPack | 12060008050510060608050606010d0804010c01040000000002010400ffffffff0000000000000000000000000000000000000000000000000000010400000000010400000000000000000000000001000000000104000000000104ffffffffff0206040104000000000000000002040100000000ffffffffffff0201040000000000ffffffff
 GoldenDto.Default | MemoryPack:RoundTrip | ok
-GoldenDto.Default | MemoryPack.TypeDecorating | 0140c7ffffff3800000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e44746f2c2041637475616c4c61622e546573747312060808050510060608050606010d0804010c010400000000000000000000000002010400ffffffff0000000000000000000000000000000000000000000000000000010400000000010400000000000000000000000001000000000104000000000104ffffffffff0206040104000000000000000002040100000000ffffffffffff0201040000000000ffffffff
+GoldenDto.Default | MemoryPack.TypeDecorating | 0140c7ffffff3800000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e44746f2c2041637475616c4c61622e546573747312060008050510060608050606010d0804010c01040000000002010400ffffffff0000000000000000000000000000000000000000000000000000010400000000010400000000000000000000000001000000000104000000000104ffffffffff0206040104000000000000000002040100000000ffffffffffff0201040000000000ffffffff
 GoldenDto.Default | MemoryPack.TypeDecorating:RoundTrip | ok
 GoldenDto.Default | MessagePack | dc0012a0909090c0c090a0d30000000000000000c400a091c0c082a754797065526566a0a74d657373616765a09200c0c0c09290c0
 GoldenDto.Default | MessagePack:RoundTrip | ok
 GoldenDto.Default | MessagePack.TypeDecorating | d93841637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e44746f2c2041637475616c4c61622e5465737473dc0012a0909090c0c090a0d30000000000000000c400a091c0c082a754797065526566a0a74d657373616765a09200c0c0c09290c0
 GoldenDto.Default | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenDto.Default | Nerdbank | de0012a653796d626f6ca0a9496e744f7074696f6e90ac537472696e674f7074696f6e90ac417069496e744f7074696f6e90ab4170694e756c6c61626c65c0ac4170694e756c6c61626c6538c0a54974656d7390a754797065526566a0a64d6f6d656e74d30000000000000000a54279746573c400a846696c6550617468a0a342616791c0aa56657273696f6e536574c0a54572726f7282a754797065526566a0a74d657373616765a0a6526573756c749200c0a34d6170c0a6486f73744964c0a55475706c659290c0
+GoldenDto.Default | Nerdbank | de0012a653796d626f6ca0a9496e744f7074696f6e90ac537472696e674f7074696f6e90ac417069496e744f7074696f6e82a848617356616c7565c2ae56616c75654f7244656661756c7400ab4170694e756c6c61626c6582a848617356616c7565c2ae56616c75654f7244656661756c7400ac4170694e756c6c61626c653882ab52617748617356616c756500ae56616c75654f7244656661756c7400a54974656d7390a754797065526566a0a64d6f6d656e74d30000000000000000a54279746573c400a846696c6550617468a0a342616791c0aa56657273696f6e536574c0a54572726f7282a754797065526566a0a74d657373616765a0a6526573756c749200c0a34d6170c0a6486f73744964c0a55475706c659290c0
 GoldenDto.Default | Nerdbank:RoundTrip | ok
 GoldenDto.Default | SystemJson | {"symbol":"","intOption":{"hasValue":false,"valueOrDefault":0},"stringOption":{"hasValue":false,"valueOrDefault":null},"apiIntOption":{"hasValue":false,"valueOrDefault":0},"apiNullable":{"value":null},"apiNullable8":{"value":null},"items":[],"typeRef":"","moment":"1970-01-01T00:00:00.0000000Z","bytes":"","filePath":"","bag":{"rawItems":null},"versionSet":null,"error":{"typeRef":"","message":""},"result":{"valueOrDefault":0,"exceptionInfo":null},"map":null,"hostId":null,"tuple":{}}
 GoldenDto.Default | SystemJson:RoundTrip | ok
@@ -2210,15 +2191,15 @@ GoldenDto.Default | NewtonsoftJson | {"Symbol":"","IntOption":{"HasValue":false,
 GoldenDto.Default | NewtonsoftJson:RoundTrip | ok
 GoldenDto.Default | NewtonsoftJson.TypeDecorating | /* @type . */ {"Symbol":"","IntOption":{"HasValue":false,"ValueOrDefault":0},"StringOption":{"HasValue":false},"ApiIntOption":{"HasValue":false,"ValueOrDefault":0},"ApiNullable":{},"ApiNullable8":{},"Items":[],"TypeRef":"","Moment":"1970-01-01T00:00:00.0000000Z","Bytes":"","FilePath":"","Bag":{},"Error":{"TypeRef":"","Message":""},"Result":{"ValueOrDefault":0},"Tuple":{"Item1":{"HasValue":false,"ValueOrDefault":0}}}
 GoldenDto.Default | NewtonsoftJson.TypeDecorating:RoundTrip | ok
-GoldenDto.Value | MemoryPack | 120d080f050510182e0807164c0f5208111411010bfcffffff0300000073796d010000000500000002010b01fcffffff030000006162630106000000010700000001000000000000000800000000000000011602000000feffffff0100000061feffffff0100000062012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696280400a83498b3c00010200000001020114f3ffffff0c0000006469722f66696c652e747874014a01000000020b38fcffffff03000000496e74013632000000012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696201000000010dfaffffff05000000613d312e3002420d0140c7ffffff3800000053797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962faffffff050000004661696c2102040109000000ff01000000feffffff01000000610100000001f4ffffff0b000000676f6c64656e2d686f7374020104010a000000feffffff0100000078
+GoldenDto.Value | MemoryPack | 120d000f050510182e0807164c0f5208111411010bfcffffff0300000073796d02010b01fcffffff030000006162630106000000010700000001000000000000000800000000000000011602000000feffffff0100000061feffffff0100000062012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696280400a83498b3c00010200000001020114f3ffffff0c0000006469722f66696c652e747874014a01000000020b38fcffffff03000000496e74013632000000012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696201000000010dfaffffff05000000613d312e3002420d0140c7ffffff3800000053797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962faffffff050000004661696c2102040109000000ff01000000feffffff01000000610100000001f4ffffff0b000000676f6c64656e2d686f7374020104010a000000feffffff0100000078
 GoldenDto.Value | MemoryPack:RoundTrip | ok
-GoldenDto.Value | MemoryPack.TypeDecorating | 0140c7ffffff3800000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e44746f2c2041637475616c4c61622e5465737473120d080f050510182e0807164c0f5208111411010bfcffffff0300000073796d010000000500000002010b01fcffffff030000006162630106000000010700000001000000000000000800000000000000011602000000feffffff0100000061feffffff0100000062012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696280400a83498b3c00010200000001020114f3ffffff0c0000006469722f66696c652e747874014a01000000020b38fcffffff03000000496e74013632000000012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696201000000010dfaffffff05000000613d312e3002420d0140c7ffffff3800000053797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962faffffff050000004661696c2102040109000000ff01000000feffffff01000000610100000001f4ffffff0b000000676f6c64656e2d686f7374020104010a000000feffffff0100000078
+GoldenDto.Value | MemoryPack.TypeDecorating | 0140c7ffffff3800000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e44746f2c2041637475616c4c61622e5465737473120d000f050510182e0807164c0f5208111411010bfcffffff0300000073796d02010b01fcffffff030000006162630106000000010700000001000000000000000800000000000000011602000000feffffff0100000061feffffff0100000062012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696280400a83498b3c00010200000001020114f3ffffff0c0000006469722f66696c652e747874014a01000000020b38fcffffff03000000496e74013632000000012cdbffffff2400000053797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696201000000010dfaffffff05000000613d312e3002420d0140c7ffffff3800000053797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962faffffff050000004661696c2102040109000000ff01000000feffffff01000000610100000001f4ffffff0b000000676f6c64656e2d686f7374020104010a000000feffffff0100000078
 GoldenDto.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 GoldenDto.Value | MessagePack | dc0012a373796d910591a36162639106070892a161a162d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c6962d3003c8b49830a4080c4020102ac6469722f66696c652e747874919192a3496e7491c427d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69620191a5613d312e3082a754797065526566d93853797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962a74d657373616765a54661696c219209c081a16101ab676f6c64656e2d686f737492910aa178
 GoldenDto.Value | MessagePack:RoundTrip | ok
 GoldenDto.Value | MessagePack.TypeDecorating | d93841637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e44746f2c2041637475616c4c61622e5465737473dc0012a373796d910591a36162639106070892a161a162d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c6962d3003c8b49830a4080c4020102ac6469722f66696c652e747874919192a3496e7491c427d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69620191a5613d312e3082a754797065526566d93853797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962a74d657373616765a54661696c219209c081a16101ab676f6c64656e2d686f737492910aa178
 GoldenDto.Value | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenDto.Value | Nerdbank | de0012a653796d626f6ca373796da9496e744f7074696f6e9105ac537472696e674f7074696f6e91a3616263ac417069496e744f7074696f6e9106ab4170694e756c6c61626c6507ac4170694e756c6c61626c653808a54974656d7392a161a162a754797065526566d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c6962a64d6f6d656e74d3003c8b49830a4080a54279746573c4020102a846696c6550617468ac6469722f66696c652e747874a3426167919192a3496e7491c427d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696201aa56657273696f6e53657491a5613d312e30a54572726f7282a754797065526566d93853797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962a74d657373616765a54661696c21a6526573756c749209c0a34d617081a16101a6486f73744964ab676f6c64656e2d686f7374a55475706c6592910aa178
+GoldenDto.Value | Nerdbank | de0012a653796d626f6ca373796da9496e744f7074696f6e9105ac537472696e674f7074696f6e91a3616263ac417069496e744f7074696f6e82a848617356616c7565c3ae56616c75654f7244656661756c7406ab4170694e756c6c61626c6582a848617356616c7565c3ae56616c75654f7244656661756c7407ac4170694e756c6c61626c653882ab52617748617356616c756501ae56616c75654f7244656661756c7408a54974656d7392a161a162a754797065526566d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c6962a64d6f6d656e74d3003c8b49830a4080a54279746573c4020102a846696c6550617468ac6469722f66696c652e747874a3426167919192a3496e7491c427d92453797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c696201aa56657273696f6e53657491a5613d312e30a54572726f7282a754797065526566d93853797374656d2e496e76616c69644f7065726174696f6e457863657074696f6e2c2053797374656d2e507269766174652e436f72654c6962a74d657373616765a54661696c21a6526573756c749209c0a34d617081a16101a6486f73744964ab676f6c64656e2d686f7374a55475706c6592910aa178
 GoldenDto.Value | Nerdbank:RoundTrip | ok
 GoldenDto.Value | SystemJson | {"symbol":"sym","intOption":{"hasValue":true,"valueOrDefault":5},"stringOption":{"hasValue":true,"valueOrDefault":"abc"},"apiIntOption":{"hasValue":true,"valueOrDefault":6},"apiNullable":{"value":7},"apiNullable8":{"value":8},"items":["a","b"],"typeRef":"System.Int32, System.Private.CoreLib","moment":"2024-01-02T03:04:05.0000000Z","bytes":"AQI=","filePath":"dir/file.txt","bag":{"rawItems":[{"key":"Int","serialized":{"json":"/* @type System.Int32, System.Private.CoreLib */ 1"}}]},"versionSet":{"value":"a=1.0"},"error":{"typeRef":"System.InvalidOperationException, System.Private.CoreLib","message":"Fail!"},"result":{"valueOrDefault":9,"exceptionInfo":null},"map":{"a":1},"hostId":{"id":"golden-host"},"tuple":{}}
 GoldenDto.Value | SystemJson:RoundTrip | ok
@@ -2236,7 +2217,7 @@ GoldenCompactDto.Default | MessagePack | 95a09090c0c0
 GoldenCompactDto.Default | MessagePack:RoundTrip | ok
 GoldenCompactDto.Default | MessagePack.TypeDecorating | d93f41637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e436f6d7061637444746f2c2041637475616c4c61622e546573747395a09090c0c0
 GoldenCompactDto.Default | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenCompactDto.Default | Nerdbank | 85a653796d626f6ca0a9496e744f7074696f6e90ac417069496e744f7074696f6e90ab4170694e756c6c61626c65c0ac4170694e756c6c61626c6538c0
+GoldenCompactDto.Default | Nerdbank | 85a653796d626f6ca0a9496e744f7074696f6e90ac417069496e744f7074696f6e82a848617356616c7565c2ae56616c75654f7244656661756c7400ab4170694e756c6c61626c6582a848617356616c7565c2ae56616c75654f7244656661756c7400ac4170694e756c6c61626c653882ab52617748617356616c756500ae56616c75654f7244656661756c7400
 GoldenCompactDto.Default | Nerdbank:RoundTrip | ok
 GoldenCompactDto.Default | SystemJson | {"symbol":"","intOption":{"hasValue":false,"valueOrDefault":0},"apiIntOption":{"hasValue":false,"valueOrDefault":0},"apiNullable":{"value":null},"apiNullable8":{"value":null}}
 GoldenCompactDto.Default | SystemJson:RoundTrip | ok
@@ -2254,7 +2235,7 @@ GoldenCompactDto.Value | MessagePack | 95a373796d910591060708
 GoldenCompactDto.Value | MessagePack:RoundTrip | ok
 GoldenCompactDto.Value | MessagePack.TypeDecorating | d93f41637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e436f6d7061637444746f2c2041637475616c4c61622e546573747395a373796d910591060708
 GoldenCompactDto.Value | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenCompactDto.Value | Nerdbank | 85a653796d626f6ca373796da9496e744f7074696f6e9105ac417069496e744f7074696f6e9106ab4170694e756c6c61626c6507ac4170694e756c6c61626c653808
+GoldenCompactDto.Value | Nerdbank | 85a653796d626f6ca373796da9496e744f7074696f6e9105ac417069496e744f7074696f6e82a848617356616c7565c3ae56616c75654f7244656661756c7406ab4170694e756c6c61626c6582a848617356616c7565c3ae56616c75654f7244656661756c7407ac4170694e756c6c61626c653882ab52617748617356616c756501ae56616c75654f7244656661756c7408
 GoldenCompactDto.Value | Nerdbank:RoundTrip | ok
 GoldenCompactDto.Value | SystemJson | {"symbol":"sym","intOption":{"hasValue":true,"valueOrDefault":5},"apiIntOption":{"hasValue":true,"valueOrDefault":6},"apiNullable":{"value":7},"apiNullable8":{"value":8}}
 GoldenCompactDto.Value | SystemJson:RoundTrip | ok
@@ -2302,14 +2283,13 @@ GoldenGenericDto<Option<int>>.None | NewtonsoftJson.TypeDecorating | /* @type . 
 GoldenGenericDto<Option<int>>.None | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 GoldenGenericDto<ApiOption<int>>.Some | MemoryPack | 01080201040105000000
 GoldenGenericDto<ApiOption<int>>.Some | MemoryPack:RoundTrip | ok
-GoldenGenericDto<ApiOption<int>>.Some | MemoryPack.TypeDecorating | 01849e0069ffffff9600000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e546573747301080201040105000000
+GoldenGenericDto<ApiOption<int>>.Some | MemoryPack.TypeDecorating | 0184b20055ffffffaa00000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e546573747301080201040105000000
 GoldenGenericDto<ApiOption<int>>.Some | MemoryPack.TypeDecorating:RoundTrip | ok
 GoldenGenericDto<ApiOption<int>>.Some | MessagePack | 919105
 GoldenGenericDto<ApiOption<int>>.Some | MessagePack:RoundTrip | ok
-GoldenGenericDto<ApiOption<int>>.Some | MessagePack.TypeDecorating | d99641637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e5465737473919105
+GoldenGenericDto<ApiOption<int>>.Some | MessagePack.TypeDecorating | d9aa41637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694f7074696f6e60315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e5465737473919105
 GoldenGenericDto<ApiOption<int>>.Some | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenGenericDto<ApiOption<int>>.Some | Nerdbank | 81a556616c75659105
-GoldenGenericDto<ApiOption<int>>.Some | Nerdbank:RoundTrip | ok
+GoldenGenericDto<ApiOption<int>>.Some | Nerdbank | !skipped
 GoldenGenericDto<ApiOption<int>>.Some | SystemJson | {"value":{"hasValue":true,"valueOrDefault":5}}
 GoldenGenericDto<ApiOption<int>>.Some | SystemJson:RoundTrip | ok
 GoldenGenericDto<ApiOption<int>>.Some | SystemJson.TypeDecorating | /* @type . */ {"value":{"hasValue":true,"valueOrDefault":5}}
@@ -2320,14 +2300,13 @@ GoldenGenericDto<ApiOption<int>>.Some | NewtonsoftJson.TypeDecorating | /* @type
 GoldenGenericDto<ApiOption<int>>.Some | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 GoldenGenericDto<ApiNullable<int>>.Value | MemoryPack | 01080201040105000000
 GoldenGenericDto<ApiNullable<int>>.Value | MemoryPack:RoundTrip | ok
-GoldenGenericDto<ApiNullable<int>>.Value | MemoryPack.TypeDecorating | 0184a00067ffffff9800000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e546573747301080201040105000000
+GoldenGenericDto<ApiNullable<int>>.Value | MemoryPack.TypeDecorating | 0184b40053ffffffac00000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e546573747301080201040105000000
 GoldenGenericDto<ApiNullable<int>>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 GoldenGenericDto<ApiNullable<int>>.Value | MessagePack | 9105
 GoldenGenericDto<ApiNullable<int>>.Value | MessagePack:RoundTrip | ok
-GoldenGenericDto<ApiNullable<int>>.Value | MessagePack.TypeDecorating | d99841637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e54657374739105
+GoldenGenericDto<ApiNullable<int>>.Value | MessagePack.TypeDecorating | d9ac41637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c6560315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e54657374739105
 GoldenGenericDto<ApiNullable<int>>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenGenericDto<ApiNullable<int>>.Value | Nerdbank | 81a556616c756505
-GoldenGenericDto<ApiNullable<int>>.Value | Nerdbank:RoundTrip | ok
+GoldenGenericDto<ApiNullable<int>>.Value | Nerdbank | !skipped
 GoldenGenericDto<ApiNullable<int>>.Value | SystemJson | {"value":{"value":5}}
 GoldenGenericDto<ApiNullable<int>>.Value | SystemJson:RoundTrip | ok
 GoldenGenericDto<ApiNullable<int>>.Value | SystemJson.TypeDecorating | /* @type . */ {"value":{"value":5}}
@@ -2338,14 +2317,13 @@ GoldenGenericDto<ApiNullable<int>>.Value | NewtonsoftJson.TypeDecorating | /* @t
 GoldenGenericDto<ApiNullable<int>>.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 GoldenGenericDto<ApiNullable8<int>>.Value | MemoryPack | 010f020804010000000000000005000000
 GoldenGenericDto<ApiNullable8<int>>.Value | MemoryPack:RoundTrip | ok
-GoldenGenericDto<ApiNullable8<int>>.Value | MemoryPack.TypeDecorating | 0184a10066ffffff9900000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e5465737473010f020804010000000000000005000000
+GoldenGenericDto<ApiNullable8<int>>.Value | MemoryPack.TypeDecorating | 0184b50052ffffffad00000041637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e5465737473010f020804010000000000000005000000
 GoldenGenericDto<ApiNullable8<int>>.Value | MemoryPack.TypeDecorating:RoundTrip | ok
 GoldenGenericDto<ApiNullable8<int>>.Value | MessagePack | 9105
 GoldenGenericDto<ApiNullable8<int>>.Value | MessagePack:RoundTrip | ok
-GoldenGenericDto<ApiNullable8<int>>.Value | MessagePack.TypeDecorating | d99941637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e436f72655d5d2c2041637475616c4c61622e54657374739105
+GoldenGenericDto<ApiNullable8<int>>.Value | MessagePack.TypeDecorating | d9ad41637475616c4c61622e54657374732e53657269616c697a6174696f6e2e476f6c64656e47656e6572696344746f60315b5b41637475616c4c61622e4170692e4170694e756c6c61626c653860315b5b53797374656d2e496e7433322c2053797374656d2e507269766174652e436f72654c69625d5d2c2041637475616c4c61622e53657269616c697a6174696f6e2e4d656d6f72795061636b5d5d2c2041637475616c4c61622e54657374739105
 GoldenGenericDto<ApiNullable8<int>>.Value | MessagePack.TypeDecorating:RoundTrip | ok
-GoldenGenericDto<ApiNullable8<int>>.Value | Nerdbank | 81a556616c756505
-GoldenGenericDto<ApiNullable8<int>>.Value | Nerdbank:RoundTrip | ok
+GoldenGenericDto<ApiNullable8<int>>.Value | Nerdbank | !skipped
 GoldenGenericDto<ApiNullable8<int>>.Value | SystemJson | {"value":{"value":5}}
 GoldenGenericDto<ApiNullable8<int>>.Value | SystemJson:RoundTrip | ok
 GoldenGenericDto<ApiNullable8<int>>.Value | SystemJson.TypeDecorating | /* @type . */ {"value":{"value":5}}

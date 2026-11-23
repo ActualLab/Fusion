@@ -74,6 +74,9 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
             ["ActualLab.Serialization.TypeDecoratingNewtonsoftJsonSerialized`2"] = "ActualLab.Serialization.NewtonsoftJson",
             ["ActualLab.Serialization.MemoryPackSerialized`1"] = "ActualLab.Serialization.MemoryPack",
             ["ActualLab.Serialization.TypeDecoratingMemoryPackSerialized`2"] = "ActualLab.Serialization.MemoryPack",
+            ["ActualLab.Api.ApiOption`1"] = "ActualLab.Serialization.MemoryPack",
+            ["ActualLab.Api.ApiNullable`1"] = "ActualLab.Serialization.MemoryPack",
+            ["ActualLab.Api.ApiNullable8`1"] = "ActualLab.Serialization.MemoryPack",
             ["ActualLab.Collections.OptionSet"] = "ActualLab.Core.Legacy",
             ["ActualLab.Collections.ImmutableOptionSet"] = "ActualLab.Core.Legacy",
         });

@@ -3,9 +3,13 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Api.Internal;
 
+// Excluded from the generated resolver: it would build this formatter with MakeGenericType, which
+// can't be analyzed for trimming because of the struct constraint. [MessagePackFormatter] still finds it.
+
 /// <summary>
 /// MessagePack formatter for <see cref="ApiNullable8{T}"/>.
 /// </summary>
+[ExcludeFormatterFromSourceGeneratedResolver]
 public sealed class ApiNullable8MessagePackFormatter<T> : IMessagePackFormatter<ApiNullable8<T>>
     where T : struct
 {

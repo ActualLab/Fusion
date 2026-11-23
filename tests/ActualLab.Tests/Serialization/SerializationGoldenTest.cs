@@ -109,36 +109,36 @@ public class SerializationGoldenTest(ITestOutputHelper @out) : GoldenSerializati
             ["b"] = Option.None<int>(),
         });
 
-        yield return Case("ApiOption<int>.None", ApiOption.None<int>());
-        yield return Case("ApiOption<int>.Some", ApiOption.Some(5));
-        yield return Case("ApiOption<string>.None", ApiOption.None<string>());
-        yield return Case("ApiOption<string>.Some", ApiOption.Some("abc"));
-        yield return Case("Result<ApiOption<int>>.Some", Result.New(ApiOption.Some(5)));
-        yield return Case("Tuple<ApiOption<int>,string>.Some", (ApiOption.Some(5), "x"));
+        yield return Case("ApiOption<int>.None", ApiOption.None<int>(), "Nerdbank");
+        yield return Case("ApiOption<int>.Some", ApiOption.Some(5), "Nerdbank");
+        yield return Case("ApiOption<string>.None", ApiOption.None<string>(), "Nerdbank");
+        yield return Case("ApiOption<string>.Some", ApiOption.Some("abc"), "Nerdbank");
+        yield return Case("Result<ApiOption<int>>.Some", Result.New(ApiOption.Some(5)), "Nerdbank");
+        yield return Case("Tuple<ApiOption<int>,string>.Some", (ApiOption.Some(5), "x"), "Nerdbank");
         yield return Case("Dictionary<string,ApiOption<int>>", new Dictionary<string, ApiOption<int>> {
             ["a"] = ApiOption.Some(5),
             ["b"] = ApiOption.None<int>(),
-        });
+        }, "Nerdbank");
 
-        yield return Case("ApiNullable<int>.Null", ApiNullable.Null<int>());
-        yield return Case("ApiNullable<int>.Value", ApiNullable.Value(5));
-        yield return Case("ApiNullable<long>.Value", ApiNullable.Value(1234567890123L));
-        yield return Case("Result<ApiNullable<int>>.Value", Result.New(ApiNullable.Value(5)));
-        yield return Case("Tuple<ApiNullable<int>,string>.Value", (ApiNullable.Value(5), "x"));
+        yield return Case("ApiNullable<int>.Null", ApiNullable.Null<int>(), "Nerdbank");
+        yield return Case("ApiNullable<int>.Value", ApiNullable.Value(5), "Nerdbank");
+        yield return Case("ApiNullable<long>.Value", ApiNullable.Value(1234567890123L), "Nerdbank");
+        yield return Case("Result<ApiNullable<int>>.Value", Result.New(ApiNullable.Value(5)), "Nerdbank");
+        yield return Case("Tuple<ApiNullable<int>,string>.Value", (ApiNullable.Value(5), "x"), "Nerdbank");
         yield return Case("Dictionary<string,ApiNullable<int>>", new Dictionary<string, ApiNullable<int>> {
             ["a"] = ApiNullable.Value(5),
             ["b"] = ApiNullable.Null<int>(),
-        });
+        }, "Nerdbank");
 
-        yield return Case("ApiNullable8<int>.Null", ApiNullable8.Null<int>());
-        yield return Case("ApiNullable8<int>.Value", ApiNullable8.Value(5));
-        yield return Case("ApiNullable8<long>.Value", ApiNullable8.Value(1234567890123L));
-        yield return Case("Result<ApiNullable8<int>>.Value", Result.New(ApiNullable8.Value(5)));
-        yield return Case("Tuple<ApiNullable8<int>,string>.Value", (ApiNullable8.Value(5), "x"));
+        yield return Case("ApiNullable8<int>.Null", ApiNullable8.Null<int>(), "Nerdbank");
+        yield return Case("ApiNullable8<int>.Value", ApiNullable8.Value(5), "Nerdbank");
+        yield return Case("ApiNullable8<long>.Value", ApiNullable8.Value(1234567890123L), "Nerdbank");
+        yield return Case("Result<ApiNullable8<int>>.Value", Result.New(ApiNullable8.Value(5)), "Nerdbank");
+        yield return Case("Tuple<ApiNullable8<int>,string>.Value", (ApiNullable8.Value(5), "x"), "Nerdbank");
         yield return Case("Dictionary<string,ApiNullable8<int>>", new Dictionary<string, ApiNullable8<int>> {
             ["a"] = ApiNullable8.Value(5),
             ["b"] = ApiNullable8.Null<int>(),
-        });
+        }, "Nerdbank");
 
         yield return Case("Result<int>.Default", default(Result<int>));
         yield return Case("Result<int>.Value", Result.New(5));
@@ -225,7 +225,7 @@ public class SerializationGoldenTest(ITestOutputHelper @out) : GoldenSerializati
             StringOption = Option.Some("abc"),
             ApiIntOption = ApiOption.Some(6),
             ApiNullable = ApiNullable.Value(7),
-            ApiNullable8 = ApiNullable8.Value(8),
+            ApiNullable8 = ApiNullable8.Value(8L),
             Items = ApiArray.New("a", "b"),
             TypeRef = IntTypeRef,
             Moment = FixedMoment,
@@ -242,15 +242,15 @@ public class SerializationGoldenTest(ITestOutputHelper @out) : GoldenSerializati
         yield return Case("GoldenCompactDto.Default",
             new GoldenCompactDto(default, default, default, default, default));
         yield return Case("GoldenCompactDto.Value", new GoldenCompactDto(
-            new Symbol("sym"), Option.Some(5), ApiOption.Some(6), ApiNullable.Value(7), ApiNullable8.Value(8)));
+            new Symbol("sym"), Option.Some(5), ApiOption.Some(6), ApiNullable.Value(7), ApiNullable8.Value(8L)));
         yield return Case("GoldenGenericDto<Option<int>>.Some", new GoldenGenericDto<Option<int>>(Option.Some(5)));
         yield return Case("GoldenGenericDto<Option<int>>.None", new GoldenGenericDto<Option<int>>(default));
         yield return Case("GoldenGenericDto<ApiOption<int>>.Some",
-            new GoldenGenericDto<ApiOption<int>>(ApiOption.Some(5)));
+            new GoldenGenericDto<ApiOption<int>>(ApiOption.Some(5)), "Nerdbank");
         yield return Case("GoldenGenericDto<ApiNullable<int>>.Value",
-            new GoldenGenericDto<ApiNullable<int>>(ApiNullable.Value(5)));
+            new GoldenGenericDto<ApiNullable<int>>(ApiNullable.Value(5)), "Nerdbank");
         yield return Case("GoldenGenericDto<ApiNullable8<int>>.Value",
-            new GoldenGenericDto<ApiNullable8<int>>(ApiNullable8.Value(5)));
+            new GoldenGenericDto<ApiNullable8<int>>(ApiNullable8.Value(5)), "Nerdbank");
         yield return Case("GoldenGenericDto<Symbol>", new GoldenGenericDto<Symbol>(new Symbol("sym")));
     }
 
@@ -283,11 +283,13 @@ public sealed partial record GoldenCommand(
 public sealed partial record GoldenDto
 {
     [DataMember(Order = 0), MemoryPackOrder(0), MemoryPackAllowSerialize, Key(0)] public Symbol Symbol { get; init; }
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)] public Option<int> IntOption { get; init; }
+    // Ignored by MemoryPack: it copies an unmanaged Option<T> as raw memory, padding included,
+    // so the output isn't deterministic - ApiIntOption is what MemoryPack contracts should use
+    [DataMember(Order = 1), MemoryPackIgnore, Key(1)] public Option<int> IntOption { get; init; }
     [DataMember(Order = 2), MemoryPackOrder(2), MemoryPackAllowSerialize, Key(2)] public Option<string> StringOption { get; init; }
     [DataMember(Order = 3), MemoryPackOrder(3), Key(3)] public ApiOption<int> ApiIntOption { get; init; }
     [DataMember(Order = 4), MemoryPackOrder(4), Key(4)] public ApiNullable<int> ApiNullable { get; init; }
-    [DataMember(Order = 5), MemoryPackOrder(5), Key(5)] public ApiNullable8<int> ApiNullable8 { get; init; }
+    [DataMember(Order = 5), MemoryPackOrder(5), Key(5)] public ApiNullable8<long> ApiNullable8 { get; init; }
     [DataMember(Order = 6), MemoryPackOrder(6), Key(6)] public ApiArray<string> Items { get; init; }
     [DataMember(Order = 7), MemoryPackOrder(7), MemoryPackAllowSerialize, Key(7)] public TypeRef TypeRef { get; init; }
     [DataMember(Order = 8), MemoryPackOrder(8), Key(8)] public Moment Moment { get; init; }
@@ -308,7 +310,7 @@ public sealed partial record GoldenCompactDto(
     [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] Option<int> IntOption,
     [property: DataMember(Order = 2), MemoryPackOrder(2), Key(2)] ApiOption<int> ApiIntOption,
     [property: DataMember(Order = 3), MemoryPackOrder(3), Key(3)] ApiNullable<int> ApiNullable,
-    [property: DataMember(Order = 4), MemoryPackOrder(4), Key(4)] ApiNullable8<int> ApiNullable8);
+    [property: DataMember(Order = 4), MemoryPackOrder(4), Key(4)] ApiNullable8<long> ApiNullable8);
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public sealed partial record GoldenGenericDto<T>(

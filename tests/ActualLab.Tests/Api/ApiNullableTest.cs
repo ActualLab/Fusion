@@ -1,3 +1,4 @@
+#if !NETFRAMEWORK // These types live in ActualLab.Serialization.MemoryPack
 namespace ActualLab.Tests.Api;
 
 public class ApiNullableTest(ITestOutputHelper @out) : TestBase(@out)
@@ -57,3 +58,5 @@ public class ApiNullableTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 }
+
+#endif

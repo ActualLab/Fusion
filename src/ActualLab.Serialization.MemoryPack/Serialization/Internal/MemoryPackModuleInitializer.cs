@@ -1,3 +1,4 @@
+using ActualLab.Api.Internal;
 using ActualLab.Serialization.Trimming;
 using ActualLab.Trimming;
 
@@ -14,8 +15,12 @@ internal static class MemoryPackModuleInitializer
     static MemoryPackModuleInitializer()
     {
         // Only trimming analysis needs it: KeepSerializable's body never runs
-        if (CodeKeeper.AlwaysFalse)
+        if (CodeKeeper.AlwaysFalse) {
             CodeKeeper.Extension = new MemoryPackCodeKeeperExtension(CodeKeeper.Extension);
+            CodeKeeper.Keep(typeof(ApiOptionMessagePackFormatter<>));
+            CodeKeeper.Keep(typeof(ApiNullableMessagePackFormatter<>));
+            CodeKeeper.Keep(typeof(ApiNullable8MessagePackFormatter<>));
+        }
     }
 
     [ModuleInitializer]

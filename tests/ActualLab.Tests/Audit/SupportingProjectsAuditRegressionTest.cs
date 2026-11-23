@@ -144,17 +144,6 @@ public class SupportingProjectsAuditRegressionTest
     }
 
     [Fact]
-    public void ApiOptionConverterShouldConsumeItsWholeDeclaredArray()
-    {
-        var serializer = NerdbankMessagePackByteSerializer.Default.ToTyped<ApiOption<int>>();
-        var data = new byte[] { 0x92, 0x01, 0x02 };
-
-        _ = serializer.Read(data, out var readLength);
-
-        readLength.Should().Be(data.Length);
-    }
-
-    [Fact]
     public void RpcStreamConverterShouldConsumeTheWholeObjectId()
     {
         var serializer = NerdbankMessagePackByteSerializer.Default.ToTyped<RpcStream<int>?>();

@@ -32,6 +32,10 @@ public static class ApiOption
         => value.HasValue
             ? new ApiOption<T>(true, value.GetValueOrDefault())
             : default;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiOption<T> ToApiOption<T>(this Option<T> option)
+        => new(option.HasValue, option.ValueOrDefault!);
 }
 
 /// <summary>

@@ -24,6 +24,9 @@ public class TypeRefTest(ITestOutputHelper @out) : TestBase(@out)
 #if !NETFRAMEWORK
             ($"ActualLab.Serialization.MemoryPackSerialized`1[[{int32Name}]], ActualLab.Core",
                 typeof(MemoryPackSerialized<int>)),
+            ($"ActualLab.Api.ApiOption`1[[{int32Name}]], ActualLab.Core", typeof(ActualLab.Api.ApiOption<int>)),
+            ($"ActualLab.Api.ApiNullable`1[[{int32Name}]], ActualLab.Core", typeof(ActualLab.Api.ApiNullable<int>)),
+            ($"ActualLab.Api.ApiNullable8`1[[{int32Name}]], ActualLab.Core", typeof(ActualLab.Api.ApiNullable8<int>)),
 #endif
         };
 

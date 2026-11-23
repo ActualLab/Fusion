@@ -43,9 +43,6 @@ internal static class CoreModuleInitializer
         CodeKeeper.Keep(typeof(TypeDecoratingUniSerializedMessagePackFormatter<,>));
         CodeKeeper.Keep(typeof(ImmutableBimapMessagePackFormatter<,>));
         CodeKeeper.Keep(typeof(SanitizedStringMessagePackFormatter<>));
-        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiOptionMessagePackFormatter<>));
-        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiNullableMessagePackFormatter<>));
-        CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiNullable8MessagePackFormatter<>));
         CodeKeeper.Keep(typeof(ActualLab.Api.Internal.ApiArrayMessagePackFormatter<>));
         // Every RPC handshake carries it, and reflection-based System.Text.Json (json5) needs its [JsonConstructor]
         CodeKeeper.Keep<VersionSet>();

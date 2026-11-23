@@ -52,6 +52,7 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         Test(default(MessagePackData), "null");
         Test(new MessagePackData([0,1]), "\"AAE=\"");
 
+#if !NETFRAMEWORK // These types live in ActualLab.Serialization.MemoryPack
         // ApiOption
         Test(default(ApiOption<int>), "[]");
         Test(ApiOption.Some(1), "[1]");
@@ -63,6 +64,7 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         // ApiNullable8
         Test(default(ApiNullable8<int>), "null");
         Test(ApiNullable8.Value(1), "1");
+#endif
 
         // ApiArray
         Test(ApiArray<int>.Empty, "[]");

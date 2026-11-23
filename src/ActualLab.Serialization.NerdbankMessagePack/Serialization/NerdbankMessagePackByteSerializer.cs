@@ -165,9 +165,6 @@ public class NerdbankMessagePackByteSerializer : IByteSerializer
             ConverterTypes = [
                 typeof(OptionNerdbankConverter<>),
                 typeof(ResultNerdbankConverter<>),
-                typeof(ApiOptionNerdbankConverter<>),
-                typeof(ApiNullableNerdbankConverter<>),
-                typeof(ApiNullable8NerdbankConverter<>),
                 typeof(ApiArrayNerdbankConverter<>),
                 typeof(ApiMapNerdbankConverter<,>),
                 typeof(RpcStreamNerdbankConverter<>),

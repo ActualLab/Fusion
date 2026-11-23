@@ -56,7 +56,7 @@ public interface IOption
 [method: JsonConstructor, SerializationConstructor]
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
-    : IOption, ICanBeNone<Option<T>>, IEquatable<Option<T>>, IComparable<Option<T>>, IConvertibleTo<ApiOption<T>>
+    : IOption, ICanBeNone<Option<T>>, IEquatable<Option<T>>, IComparable<Option<T>>
 {
     /// <summary>
     /// Returns an option of type <typeparamref name="T"/> with no value.
@@ -130,8 +130,6 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
         throw new InvalidCastException();
     }
 
-    public Option<T> ToApiOption() => new(HasValue, ValueOrDefault);
-    ApiOption<T> IConvertibleTo<ApiOption<T>>.Convert() => new(HasValue, ValueOrDefault!);
 
     // Equality
 
