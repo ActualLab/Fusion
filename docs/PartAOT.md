@@ -271,18 +271,26 @@ also emit one `[ModuleInitializer]` per assembly, `ActualLabSerializationRoots`,
 closed formatters and converters of every closed generic type the assembly uses:
 
 - in the signatures of its non-private methods, which include RPC service methods;
-- in the data members of its serializable types, and of the serializable types those reference.
+- in the data members of its serializable types (`[DataContract]` or `[MessagePackObject]`),
+  and of the serializable types those reference;
+- in the public members of the types its `JsonSerializerContext`s list.
 
 For MessagePack, these are the formatters named by `[MessagePackFormatter]`, the ones MessagePack's
 source generator creates for generic `[MessagePackObject]` types, and MessagePack's own array,
-`List<T>`, `Dictionary<TKey, TValue>` and `Nullable<T>` formatters. The same initializer suppresses
-IL3050 on the resolver MessagePack's source generator creates, since its `MakeGenericType` calls
-are what these roots cover. For System.Text.Json, these are the converters the `[JsonConverter]`
-factories of generic types create.
+`List<T>`, `Dictionary<TKey, TValue>` and `Nullable<T>` formatters. An assembly-level attribute
+suppresses IL3050 on the resolver MessagePack's source generator creates (under its default name),
+since its `MakeGenericType` calls are what these roots cover. For System.Text.Json, these are the
+converters the `[JsonConverter]` factories of generic types create.
 
-A closed generic type that is serialized but appears in neither place, e.g. one passed to a
-serializer directly, isn't covered: use it in a signature or data member, or keep its formatter
-with `CodeKeeper.Keep<TFormatter>()`.
+What isn't covered:
+
+- a closed generic type that is serialized but appears in none of the places above, e.g. one
+  passed to a serializer directly: use it in a signature or data member, or keep its formatter
+  with `CodeKeeper.Keep<TFormatter>()`;
+- a nested generic `[MessagePackObject]` type: MessagePack names its formatter differently, so
+  warning `ALG0005` asks you to move it out or keep its formatter yourself;
+- types the generated code can't name: `dynamic`, pointers, file-local and obsolete types, and
+  the types of other source generators.
 
 The roots are opt-in: only an app needs them, and only in the assemblies that declare its contracts
 and serializable types. Define `ACTUALLAB_SERIALIZATION_ROOTS` there; ActualLab's own libraries do.
@@ -295,12 +303,19 @@ and serializable types. Define `ACTUALLAB_SERIALIZATION_ROOTS` there; ActualLab'
 </PropertyGroup>
 ```
 
+The `NativeAotFull` sample shows the same roots written by hand, one file per serializer in its
+[`Roots`](https://github.com/ActualLab/Fusion/tree/master/samples/NativeAotFull/Roots) folder:
+`MessagePackRoots.cs` and `SystemJsonRoots.cs` mirror what the generator emits, while
+`MemoryPackRoots.cs`, `NerdbankRoots.cs` and `NewtonsoftJsonRoots.cs` show what these serializers
+need, since the generator doesn't cover them.
+
 ### System.Text.Json
 
-NativeAOT apps have no reflection-based System.Text.Json, so the `json5` RPC formats, and
-`SystemJsonSerializer` in general, need source-generated metadata for every type they serialize.
-`SystemJsonSerializer.TypeInfoResolver` collects it: ActualLab's libraries add their contexts there,
-which cover primitives and their own types, and an app adds its own one at startup:
+Apps that disable reflection-based System.Text.Json, which NativeAOT and trimmed apps do by default,
+need source-generated metadata for every type the `json5` RPC formats, and `SystemJsonSerializer`
+in general, serialize. On .NET 8+, `SystemJsonSerializer.TypeInfoResolver` collects it: ActualLab's
+libraries add their contexts there, which cover primitives and their own types, and an app adds its
+own one at startup:
 
 ```cs
 [JsonSerializable(typeof(Option<int>))]
@@ -310,15 +325,19 @@ public sealed partial class AppJsonContext : JsonSerializerContext;
 SystemJsonSerializer.TypeInfoResolver.Add(AppJsonContext.Default);
 ```
 
-`SystemJsonSerializer`'s default options try these contexts first and fall back to reflection only
-where it's enabled, i.e. not under NativeAOT.
+Add it before the types it covers are first serialized: System.Text.Json caches each lookup,
+including a failed one. `SystemJsonSerializer`'s default options try these contexts first and fall
+back to reflection only where it's enabled. If you replace `SystemJsonSerializer.DefaultOptions`,
+set `TypeInfoResolver = SystemJsonSerializer.CreateDefaultTypeInfoResolver()` to keep them.
 
 In an assembly that defines `ACTUALLAB_SERIALIZATION_ROOTS` and declares a `JsonSerializerContext`,
 `ActualLab.Generators` checks the RPC service methods it declares: warning `ALG0004` names each type
 they take or return that no context covers, either this assembly's own or one of a referenced
-assembly that uses `ActualLab.Generators` too. A type counts as covered when a context lists it
-or it's reachable from a listed type through public properties, fields, element types or type
-arguments.
+assembly that defines `ACTUALLAB_SERIALIZATION_ROOTS` too. A type counts as covered when a context
+lists it or it's reachable from a listed type through public properties, fields, element types or
+type arguments; the type arguments of a type with its own `[JsonConverter]` aren't, since its
+converter serializes them. The check doesn't verify that the context is added to
+`SystemJsonSerializer.TypeInfoResolver`.
 
 ## Project Configuration
 

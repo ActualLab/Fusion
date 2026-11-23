@@ -22,7 +22,8 @@ public class SerializationRootsGenerator : IIncrementalGenerator
             .Select(static (item, cancellationToken) => item.Right
                 ? SerializationRootsBuilder.Build(item.Left, cancellationToken)
                 : SerializationRootsResult.None);
-        context.RegisterSourceOutput(result, static (context, result) => {
+        // Implementation-only: nothing in the output is visible to other code, so design-time builds skip it
+        context.RegisterImplementationSourceOutput(result, static (context, result) => {
             try {
                 foreach (var diagnostic in result.Diagnostics)
                     context.ReportDiagnostic(diagnostic);

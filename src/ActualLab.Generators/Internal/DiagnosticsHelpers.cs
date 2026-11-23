@@ -57,6 +57,15 @@ public static class DiagnosticsHelpers
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnrootedMessagePackFormatterDescriptor = new(
+        id: "ALG0005",
+        title: "MessagePack formatter of a nested generic type isn't rooted",
+        messageFormat: "The MessagePack formatter of '{0}' isn't rooted for NativeAOT: it's a nested generic "
+            + "[MessagePackObject] type; move it out of '{1}' or keep its formatter with CodeKeeper.Keep",
+        category: nameof(SerializationRootsGenerator),
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     // Diagnostics
 
     public static readonly Action<string>? WriteDebug = IsDebugOutputEnabled
@@ -98,6 +107,13 @@ public static class DiagnosticsHelpers
             parameter.ContainingSymbol.ToDisplayString(),
             parameter.Name,
             reason);
+
+    public static Diagnostic UnrootedMessagePackFormatter(INamedTypeSymbol type)
+        => Diagnostic.Create(
+            UnrootedMessagePackFormatterDescriptor,
+            type.OriginalDefinition.Locations.FirstOrDefault(l => l.IsInSource) ?? Location.None,
+            type.ToDisplayString(),
+            type.ContainingType!.ToDisplayString());
 
     public static Diagnostic UncoveredRpcJsonType(ITypeSymbol type, IMethodSymbol method)
         => Diagnostic.Create(

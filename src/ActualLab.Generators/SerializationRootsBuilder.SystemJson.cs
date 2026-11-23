@@ -17,11 +17,14 @@ internal sealed partial class SerializationRootsBuilder
     private readonly List<INamedTypeSymbol> _jsonContexts = new();
     private readonly List<INamedTypeSymbol> _rpcServiceTypes = new();
 
+    // Private methods
+
     private void InitializeSystemJson()
     {
-        _jsonConverterAttribute = _compilation.GetTypeByMetadataName("System.Text.Json.Serialization.JsonConverterAttribute");
-        _jsonSerializableAttribute = _compilation.GetTypeByMetadataName("System.Text.Json.Serialization.JsonSerializableAttribute");
-        _jsonSerializerContextType = _compilation.GetTypeByMetadataName("System.Text.Json.Serialization.JsonSerializerContext");
+        const string ns = "System.Text.Json.Serialization";
+        _jsonConverterAttribute = _compilation.GetTypeByMetadataName($"{ns}.JsonConverterAttribute");
+        _jsonSerializableAttribute = _compilation.GetTypeByMetadataName($"{ns}.JsonSerializableAttribute");
+        _jsonSerializerContextType = _compilation.GetTypeByMetadataName($"{ns}.JsonSerializerContext");
         _rpcServiceType = _compilation.GetTypeByMetadataName("ActualLab.Rpc.IRpcService");
         _cancellationTokenType = _compilation.GetTypeByMetadataName("System.Threading.CancellationToken");
         _jsonSerializableTypesAttribute = _compilation.GetTypeByMetadataName(JsonSerializableTypesAttributeName);
@@ -36,18 +39,47 @@ internal sealed partial class SerializationRootsBuilder
             _rpcServiceTypes.Add(type);
     }
 
+    // The types System.Text.Json serializes needn't be [DataContract] or [MessagePackObject] ones,
+    // so the closed generic types used in the public members of the [JsonSerializable] types are collected too
+    private void CollectJsonSerializableTypes()
+    {
+        var visitedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var type in GetJsonSerializableTypes())
+            VisitJsonGraph(type, visitedTypes, 0);
+    }
+
+    private void VisitJsonGraph(ITypeSymbol type, HashSet<ITypeSymbol> visitedTypes, int depth)
+    {
+        if (depth > MaxDepth || !visitedTypes.Add(type))
+            return;
+
+        Visit(type, 0);
+        switch (type) {
+        case IArrayTypeSymbol arrayType:
+            VisitJsonGraph(arrayType.ElementType, visitedTypes, depth + 1);
+            break;
+        case INamedTypeSymbol namedType:
+            foreach (var typeArgument in namedType.TypeArguments)
+                VisitJsonGraph(typeArgument, visitedTypes, depth + 1);
+            foreach (var memberType in GetPublicDataMemberTypes(namedType))
+                VisitJsonGraph(memberType, visitedTypes, depth + 1);
+            break;
+        }
+    }
+
     private void AddSystemJsonRoots(ITypeSymbol type, SortedSet<string> statements)
     {
         if (type is not INamedTypeSymbol { IsGenericType: true, ContainingType: null } namedType)
             return;
 
-        // A converter factory closes its nested converter of the same arity over the type's arguments
+        // A converter factory closes its nested converter of the same arity over the type's arguments;
+        // when there are a few, e.g. for value and reference type arguments, the constraints tell which
         var attribute = GetAttribute(namedType.OriginalDefinition, _jsonConverterAttribute);
-        if (attribute is not { ConstructorArguments: [{ Value: INamedTypeSymbol { IsGenericType: false } factoryType }, ..] })
+        if (attribute?.ConstructorArguments is not [{ Value: INamedTypeSymbol { IsGenericType: false } factory }, ..])
             return;
 
-        foreach (var converterType in factoryType.GetTypeMembers())
-            if (converterType.Arity == namedType.Arity)
+        foreach (var converterType in factory.GetTypeMembers())
+            if (converterType.Arity == namedType.Arity && SatisfiesConstraints(converterType, namedType.TypeArguments))
                 AddKeep(converterType.Construct(namedType.TypeArguments.ToArray()), statements);
     }
 
@@ -62,7 +94,7 @@ internal sealed partial class SerializationRootsBuilder
 
         var coveredTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
         foreach (var type in GetJsonSerializableTypes().Concat(GetReferencedJsonSerializableTypes()))
-            Cover(type, coveredTypes);
+            Cover(type, coveredTypes, 0);
 
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
         var reportedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
@@ -73,7 +105,7 @@ internal sealed partial class SerializationRootsBuilder
 
                 var types = method.Parameters.Select(p => p.Type).Append(UnwrapTask(method.ReturnType));
                 foreach (var type in types) {
-                    if (type is null or ITypeParameterSymbol || type.SpecialType == SpecialType.System_Void)
+                    if (type is null || ContainsTypeParameters(type) || type.SpecialType == SpecialType.System_Void)
                         continue;
                     if (SymbolEqualityComparer.Default.Equals(type, _cancellationTokenType))
                         continue;
@@ -104,7 +136,7 @@ internal sealed partial class SerializationRootsBuilder
             return null;
 
         var types = GetJsonSerializableTypes()
-            .Where(t => _compilation.IsSymbolAccessibleWithin(t, _compilation.Assembly))
+            .Where(t => IsRootable(t) && _compilation.IsSymbolAccessibleWithin(t, _compilation.Assembly))
             .Select(t => $"typeof({t.ToGlobalName()})")
             .Distinct(StringComparer.Ordinal)
             .ToList();
@@ -123,43 +155,78 @@ internal sealed partial class SerializationRootsBuilder
                 if (!SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _jsonSerializableTypesAttribute))
                     continue;
 
-                foreach (var argument in attribute.ConstructorArguments)
-                    foreach (var value in argument.Kind == TypedConstantKind.Array ? argument.Values : ImmutableArray.Create(argument))
+                foreach (var argument in attribute.ConstructorArguments) {
+                    var values = argument.Kind == TypedConstantKind.Array
+                        ? argument.Values
+                        : ImmutableArray.Create(argument);
+                    foreach (var value in values)
                         if (value.Value is ITypeSymbol type)
                             yield return type;
+                }
             }
     }
 
     // Mirrors what System.Text.Json's source generator includes for a [JsonSerializable] type
-    private void Cover(ITypeSymbol type, HashSet<ITypeSymbol> coveredTypes)
+    private void Cover(ITypeSymbol type, HashSet<ITypeSymbol> coveredTypes, int depth)
     {
-        if (!coveredTypes.Add(type))
+        if (depth > MaxDepth || !coveredTypes.Add(type))
             return;
 
         switch (type) {
         case IArrayTypeSymbol arrayType:
-            Cover(arrayType.ElementType, coveredTypes);
+            Cover(arrayType.ElementType, coveredTypes, depth + 1);
             break;
         case INamedTypeSymbol namedType:
-            foreach (var typeArgument in namedType.TypeArguments)
-                Cover(typeArgument, coveredTypes);
+            // A custom converter serializes the type itself, so the generator includes neither
+            // its type arguments nor its members
             if (HasAttribute(namedType.OriginalDefinition, _jsonConverterAttribute))
-                break; // A custom converter handles its members
+                break;
 
-            foreach (var member in namedType.GetMembers()) {
-                if (member is IPropertySymbol { IsStatic: false, DeclaredAccessibility: Accessibility.Public } property)
-                    Cover(property.Type, coveredTypes);
-                else if (member is IFieldSymbol { IsStatic: false, DeclaredAccessibility: Accessibility.Public } field)
-                    Cover(field.Type, coveredTypes);
-            }
+            foreach (var typeArgument in namedType.TypeArguments)
+                Cover(typeArgument, coveredTypes, depth + 1);
+            foreach (var memberType in GetPublicDataMemberTypes(namedType))
+                Cover(memberType, coveredTypes, depth + 1);
             break;
         }
     }
 
+    private static IEnumerable<ITypeSymbol> GetPublicDataMemberTypes(INamedTypeSymbol type)
+    {
+        for (var t = type; t is not null; t = t.BaseType)
+            foreach (var member in t.GetMembers()) {
+                if (member is IPropertySymbol { IsStatic: false, DeclaredAccessibility: Accessibility.Public } property)
+                    yield return property.Type;
+                else if (member is IFieldSymbol { IsStatic: false, DeclaredAccessibility: Accessibility.Public } field)
+                    yield return field.Type;
+            }
+    }
+
+    private static bool SatisfiesConstraints(INamedTypeSymbol genericType, ImmutableArray<ITypeSymbol> typeArguments)
+    {
+        for (var i = 0; i < typeArguments.Length; i++) {
+            var parameter = genericType.TypeParameters[i];
+            var argument = typeArguments[i];
+            var isNullableValueType = argument is INamedTypeSymbol {
+                OriginalDefinition.SpecialType: SpecialType.System_Nullable_T,
+            };
+            if (parameter.HasValueTypeConstraint && (!argument.IsValueType || isNullableValueType))
+                return false;
+            if (parameter.HasUnmanagedTypeConstraint && !argument.IsUnmanagedType)
+                return false;
+            if (parameter.HasReferenceTypeConstraint && !argument.IsReferenceType)
+                return false;
+            // Type constraints aren't checked, so a converter with one isn't rooted
+            if (parameter.ConstraintTypes.Length != 0)
+                return false;
+        }
+        return true;
+    }
+
     private static ITypeSymbol? UnwrapTask(ITypeSymbol type)
-        => type is INamedTypeSymbol { IsGenericType: true, Name: "Task" or "ValueTask", TypeArguments: [var resultType] }
-            && string.Equals(type.ContainingNamespace.ToDisplayString(), "System.Threading.Tasks", StringComparison.Ordinal)
-            ? resultType
+        => type is INamedTypeSymbol { IsGenericType: true, Name: "Task" or "ValueTask", TypeArguments: [var result] }
+            && string.Equals(
+                type.ContainingNamespace.ToDisplayString(), "System.Threading.Tasks", StringComparison.Ordinal)
+            ? result
             : type is INamedTypeSymbol { IsGenericType: false, Name: "Task" or "ValueTask" } ? null : type;
 
     private static bool InheritsFrom(INamedTypeSymbol type, INamedTypeSymbol baseType)

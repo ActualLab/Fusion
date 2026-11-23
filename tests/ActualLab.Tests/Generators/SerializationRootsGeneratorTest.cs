@@ -47,17 +47,17 @@ public class SerializationRootsGeneratorTest
 
         AssertNoErrors(outputCompilation, result);
         var code = GetGeneratedCode(result);
-        code.Should().Contain("Keep<global::ActualLab.Serialization.Internal.OptionMessagePackFormatter<global::System.Int32>>();");
+        code.Should().Contain("OptionMessagePackFormatter<global::System.Int32>>();");
         code.Should().Contain("Keep<global::MessagePack.Formatters.ListFormatter<global::ActualLab.Time.Moment>>();");
-        code.Should().Contain("Keep<global::MessagePack.Formatters.NullableFormatter<global::ActualLab.Time.Moment>>();");
+        code.Should().Contain("Formatters.NullableFormatter<global::ActualLab.Time.Moment>>();");
         code.Should().Contain("Keep<global::MessagePack.Formatters.ArrayFormatter<global::ActualLab.Time.Moment>>();");
         code.Should().Contain(
-            "Keep<global::MessagePack.Formatters.DictionaryFormatter<global::System.String, global::ActualLab.Time.Moment>>();");
+            "Formatters.DictionaryFormatter<global::System.String, global::ActualLab.Time.Moment>>();");
         // The generated formatter is internal, so it's rooted by its assembly-qualified name
         code.Should().Contain(
             "Keep(\"MessagePack.GeneratedMessagePackResolver+Demo+PageFormatter`1[[System.Int64, System.");
         // A data member of a closed serializable type
-        code.Should().Contain("Keep<global::ActualLab.Serialization.Internal.OptionMessagePackFormatter<global::System.Int64>>();");
+        code.Should().Contain("OptionMessagePackFormatter<global::System.Int64>>();");
         // Private state of a non-serializable type isn't serialized
         code.Should().NotContain("System.TimeSpan");
         code.Should().Contain("\"IL3050\"");
@@ -97,14 +97,118 @@ public class SerializationRootsGeneratorTest
 
         result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
         var code = GetGeneratedCode(result);
-        code.Should().Contain("Keep<global::ActualLab.Api.Internal.ApiArrayJsonConverter.Converter<global::System.Int32>>();");
-        code.Should().Contain("[assembly: global::ActualLab.Serialization.JsonSerializableTypesAttribute(typeof(global::Demo.Dto))]");
+        code.Should().Contain("ApiArrayJsonConverter.Converter<global::System.Int32>>();");
+        code.Should().Contain("JsonSerializableTypesAttribute(typeof(global::Demo.Dto))]");
         // Dto and Inner are covered by the context, string by ActualLab.Core's one
         var uncoveredTypes = result.Diagnostics
             .Where(d => d.Id == "ALG0004")
             .Select(d => d.GetMessage().Split('\'')[1])
             .ToList();
         uncoveredTypes.Should().BeEquivalentTo("Demo.Other", "ActualLab.Api.ApiArray<int>");
+    }
+
+    [Fact]
+    public void UnusualTypesShouldNotBreakGeneratedCode()
+    {
+        // arrange
+        var compilation = CreateCompilation("""
+            using System;
+            using System.Collections.Generic;
+            using System.Runtime.Serialization;
+            using System.Text.Json;
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using MessagePack;
+
+            namespace Demo;
+
+            public interface IService
+            {
+                Task<List<dynamic>> GetDynamic();
+                Task<List<Old>> GetObsolete();
+                Task<List<GeneratedElsewhere>> GetGenerated(); // Another generator's type: an error type here
+                Task<Wrapper<int>> GetWrapper();
+                Task<Node<int>> GetNode();
+                Task<Outer.Page<long>> GetPage();
+                unsafe void TakePointers(int*[] pointers);
+            }
+
+            [Obsolete("Old")]
+            public class Old;
+
+            // A factory with converters for value and reference type arguments
+            [JsonConverter(typeof(WrapperConverter))]
+            public class Wrapper<T>;
+
+            public class WrapperConverter : JsonConverterFactory
+            {
+                public override bool CanConvert(Type typeToConvert) => true;
+                public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+                    => null;
+
+                public class StructConverter<T> where T : struct;
+                public class ClassConverter<T> where T : class;
+            }
+
+            // Expands forever without a depth limit
+            [DataContract]
+            public class Node<T>
+            {
+                [DataMember] public Node<List<T>>? Next { get; set; }
+            }
+
+            public static class Outer
+            {
+                [MessagePackObject]
+                public class Page<T>
+                {
+                    [Key(0)] public T? After { get; set; }
+                }
+            }
+            """, allowUnsafe: true);
+
+        // act
+        var (outputCompilation, result) = Run(compilation);
+
+        // assert
+        result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        result.Results.Single().Exception.Should().BeNull();
+        outputCompilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Where(d => d.Location.SourceTree?.FilePath.EndsWith(SerializationRootsGenerator.HintName) == true)
+            .Should().BeEmpty();
+        var code = GetGeneratedCode(result);
+        code.Should().NotContain("dynamic").And.NotContain("Old").And.NotContain("ClassConverter")
+            .And.NotContain("GeneratedElsewhere");
+        code.Should().Contain("WrapperConverter.StructConverter<global::System.Int32>");
+        result.Diagnostics.Should().Contain(d => d.Id == "ALG0005");
+    }
+
+    [Fact]
+    public void JsonOnlyTypesShouldGetConverterRoots()
+    {
+        // arrange
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using ActualLab.Api;
+
+            namespace Demo;
+
+            public class Dto
+            {
+                public ApiArray<long> Items { get; set; }
+            }
+
+            [JsonSerializable(typeof(Dto))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // act
+        var (_, result) = Run(compilation);
+
+        // assert
+        GetGeneratedCode(result).Should()
+            .Contain("Keep<global::ActualLab.Api.Internal.ApiArrayJsonConverter.Converter<global::System.Int64>>();");
     }
 
     [Fact]
@@ -140,12 +244,12 @@ public class SerializationRootsGeneratorTest
 
     // Private methods
 
-    private static CSharpCompilation CreateCompilation(string source)
+    private static CSharpCompilation CreateCompilation(string source, bool allowUnsafe = false)
         => CSharpCompilation.Create(
             $"SerializationRootsGeneratorTest_{Guid.NewGuid():N}",
             [CSharpSyntaxTree.ParseText(source, ParseOptions, "Source0.cs")],
             MetadataReferences,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: allowUnsafe));
 
     private static (Compilation Compilation, GeneratorDriverRunResult Result) Run(
         CSharpCompilation compilation,

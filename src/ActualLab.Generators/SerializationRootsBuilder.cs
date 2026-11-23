@@ -1,4 +1,5 @@
 namespace ActualLab.Generators;
+using static DiagnosticsHelpers;
 
 // Collects the closed generic types this assembly's declarations use (plus the ones nested in
 // the serializable types they reference), maps each to the closed formatter types serializers
@@ -8,6 +9,8 @@ internal sealed partial class SerializationRootsBuilder
     private const string CodeKeeperTypeName = "global::ActualLab.Trimming.CodeKeeper";
     private const string RootsTypeName = "ActualLabSerializationRoots";
     private const string GeneratedMessagePackResolverTypeName = "MessagePack.GeneratedMessagePackResolver";
+    // Bounds the walk: [DataContract] class Node<T> { public Node<List<T>> Next; } expands forever
+    private const int MaxDepth = 8;
     // MessagePack's DynamicGenericResolver closes these via MakeGenericType
     private static readonly (string TypeName, string FormatterTypeName)[] MessagePackBuiltInFormatters = [
         ("System.Collections.Generic.List`1", "MessagePack.Formatters.ListFormatter`1"),
@@ -20,29 +23,34 @@ internal sealed partial class SerializationRootsBuilder
     private const string MessagePackResolverSuppression
         = "[assembly: global::System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage(\"AOT\", \"IL3050\", "
         + "Scope = \"member\", "
-        + "Target = \"M:MessagePack.GeneratedMessagePackResolver.GeneratedMessagePackResolverGetFormatterHelper.GetFormatter(System.Type)\", "
+        + "Target = \"M:MessagePack.GeneratedMessagePackResolver.GeneratedMessagePackResolverGetFormatterHelper"
+        + ".GetFormatter(System.Type)\", "
         + "Justification = \"ActualLab.Generators roots the closed generic formatters this assembly uses\")]";
 
     private readonly Compilation _compilation;
     private readonly CancellationToken _cancellationToken;
     private readonly HashSet<ITypeSymbol> _visitedTypes = new(SymbolEqualityComparer.Default);
     private readonly List<ITypeSymbol> _closedTypes = new();
+    private readonly ImmutableArray<Diagnostic>.Builder _diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
     private readonly INamedTypeSymbol? _messagePackObjectAttribute;
     private readonly INamedTypeSymbol? _messagePackFormatterAttribute;
     private readonly Dictionary<INamedTypeSymbol, INamedTypeSymbol> _messagePackBuiltInFormatters
         = new(SymbolEqualityComparer.Default);
     private readonly INamedTypeSymbol? _messagePackArrayFormatter;
     private readonly INamedTypeSymbol? _dataContractAttribute;
+    private readonly INamedTypeSymbol? _obsoleteAttribute;
 
     public static SerializationRootsResult Build(Compilation compilation, CancellationToken cancellationToken)
     {
         if (compilation.GetTypeByMetadataName("ActualLab.Trimming.CodeKeeper") is null)
             return SerializationRootsResult.None;
+        // NativeAOT targets have it; older targets don't need the roots
         if (compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.ModuleInitializerAttribute") is null)
-            return SerializationRootsResult.None; // NativeAOT targets have it; older targets don't need the roots
+            return SerializationRootsResult.None;
 
         var builder = new SerializationRootsBuilder(compilation, cancellationToken);
         builder.CollectDeclaredTypes(compilation.Assembly.GlobalNamespace);
+        builder.CollectJsonSerializableTypes();
         var statements = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var type in builder._closedTypes) {
             builder.AddMessagePackRoots(type, statements);
@@ -56,7 +64,8 @@ internal sealed partial class SerializationRootsBuilder
         var code = statements.Count == 0 && assemblyAttributes.Count == 0
             ? null
             : BuildSource(assemblyAttributes, statements);
-        return new SerializationRootsResult(code, builder.GetSystemJsonDiagnostics());
+        builder._diagnostics.AddRange(builder.GetSystemJsonDiagnostics());
+        return new SerializationRootsResult(code, builder._diagnostics.ToImmutable());
     }
 
     private SerializationRootsBuilder(Compilation compilation, CancellationToken cancellationToken)
@@ -65,7 +74,9 @@ internal sealed partial class SerializationRootsBuilder
         _cancellationToken = cancellationToken;
         _messagePackObjectAttribute = compilation.GetTypeByMetadataName("MessagePack.MessagePackObjectAttribute");
         _messagePackFormatterAttribute = compilation.GetTypeByMetadataName("MessagePack.MessagePackFormatterAttribute");
-        _dataContractAttribute = compilation.GetTypeByMetadataName("System.Runtime.Serialization.DataContractAttribute");
+        _dataContractAttribute = compilation.GetTypeByMetadataName(
+            "System.Runtime.Serialization.DataContractAttribute");
+        _obsoleteAttribute = compilation.GetTypeByMetadataName("System.ObsoleteAttribute");
         InitializeSystemJson();
         if (_messagePackObjectAttribute is null)
             return;
@@ -79,7 +90,7 @@ internal sealed partial class SerializationRootsBuilder
         _messagePackArrayFormatter = compilation.GetTypeByMetadataName(MessagePackArrayFormatterTypeName);
     }
 
-    // Type collection
+    // Private methods
 
     private void CollectDeclaredTypes(INamespaceSymbol ns)
     {
@@ -98,16 +109,16 @@ internal sealed partial class SerializationRootsBuilder
             CollectDeclaredType(nestedType);
         CollectSystemJsonDeclaration(type);
 
-        Visit(type.BaseType);
+        Visit(type.BaseType, 0);
         foreach (var @interface in type.Interfaces)
-            Visit(@interface);
+            Visit(@interface, 0);
         // What gets serialized: the signatures other code can call (RPC services are among them),
         // and the data members of serializable types - not the private state of everything else
         foreach (var member in type.GetMembers())
             if (member is IMethodSymbol method && IsCallableFromOutside(method))
-                VisitMember(method);
+                VisitMember(method, 0);
         if (IsSerializable(type))
-            VisitDataMembers(type);
+            VisitDataMembers(type, 0);
     }
 
     private static bool IsCallableFromOutside(IMethodSymbol method)
@@ -115,56 +126,57 @@ internal sealed partial class SerializationRootsBuilder
             or Accessibility.ProtectedOrInternal or Accessibility.Internal
             && method.MethodKind is MethodKind.Ordinary or MethodKind.Constructor;
 
-    private void VisitDataMembers(INamedTypeSymbol type)
+    private void VisitDataMembers(INamedTypeSymbol type, int depth)
     {
         foreach (var member in type.GetMembers())
             if (member is IFieldSymbol { IsStatic: false } or IPropertySymbol { IsStatic: false })
-                VisitMember(member);
+                VisitMember(member, depth);
     }
 
-    private void VisitMember(ISymbol member)
+    private void VisitMember(ISymbol member, int depth)
     {
         switch (member) {
         case IFieldSymbol field:
-            Visit(field.Type);
+            Visit(field.Type, depth);
             break;
         case IPropertySymbol property:
-            Visit(property.Type);
+            Visit(property.Type, depth);
             foreach (var parameter in property.Parameters)
-                Visit(parameter.Type);
+                Visit(parameter.Type, depth);
             break;
         case IMethodSymbol method:
-            Visit(method.ReturnType);
+            Visit(method.ReturnType, depth);
             foreach (var parameter in method.Parameters)
-                Visit(parameter.Type);
+                Visit(parameter.Type, depth);
             break;
         }
     }
 
-    private void Visit(ITypeSymbol? type)
+    private void Visit(ITypeSymbol? type, int depth)
     {
-        if (type is null || !_visitedTypes.Add(type))
+        if (type is null || depth > MaxDepth || !_visitedTypes.Add(type))
             return;
 
+        _cancellationToken.ThrowIfCancellationRequested();
         switch (type) {
         case IArrayTypeSymbol arrayType:
-            Visit(arrayType.ElementType);
-            if (!ContainsTypeParameters(arrayType))
+            Visit(arrayType.ElementType, depth + 1);
+            if (!ContainsTypeParameters(arrayType) && IsRootable(arrayType))
                 _closedTypes.Add(arrayType);
             break;
         case INamedTypeSymbol namedType:
-            Visit(namedType.ContainingType);
+            Visit(namedType.ContainingType, depth + 1);
             if (namedType.IsGenericType) {
                 foreach (var typeArgument in namedType.TypeArguments)
-                    Visit(typeArgument);
-                if (!ContainsTypeParameters(namedType))
+                    Visit(typeArgument, depth + 1);
+                if (!ContainsTypeParameters(namedType) && IsRootable(namedType))
                     _closedTypes.Add(namedType);
             }
             // The members of a closed generic serializable type, or of one declared elsewhere,
             // may use closed generic types this assembly's declarations don't
             var isForeign = !SymbolEqualityComparer.Default.Equals(namedType.ContainingAssembly, _compilation.Assembly);
             if ((isForeign || namedType.IsGenericType) && IsSerializable(namedType))
-                VisitDataMembers(namedType);
+                VisitDataMembers(namedType, depth + 1);
             break;
         }
     }
@@ -173,7 +185,18 @@ internal sealed partial class SerializationRootsBuilder
         => HasAttribute(type.OriginalDefinition, _messagePackObjectAttribute)
             || HasAttribute(type.OriginalDefinition, _dataContractAttribute);
 
-    // MessagePack
+    // Generated code can name only well-formed, visible types: not dynamic, pointers, types
+    // another generator produces (error types here), file-local or obsolete ones
+    private bool IsRootable(ITypeSymbol type)
+        => type switch {
+            IArrayTypeSymbol arrayType => IsRootable(arrayType.ElementType),
+            INamedTypeSymbol namedType => namedType.TypeKind != TypeKind.Error
+                && namedType.MetadataName.IndexOf('<') < 0 // File-local types have mangled names
+                && !HasAttribute(namedType.OriginalDefinition, _obsoleteAttribute)
+                && namedType.TypeArguments.All(IsRootable)
+                && (namedType.ContainingType is null || IsRootable(namedType.ContainingType)),
+            _ => false,
+        };
 
     private void AddMessagePackRoots(ITypeSymbol type, SortedSet<string> statements)
     {
@@ -189,8 +212,7 @@ internal sealed partial class SerializationRootsBuilder
             return;
 
         var definition = namedType.OriginalDefinition;
-        var formatterAttribute = definition.GetAttributes()
-            .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, _messagePackFormatterAttribute));
+        var formatterAttribute = GetAttribute(definition, _messagePackFormatterAttribute);
         if (formatterAttribute is { ConstructorArguments: [{ Value: INamedTypeSymbol formatterType }, ..] }) {
             formatterType = formatterType.OriginalDefinition;
             if (formatterType.Arity == namedType.Arity && namedType.ContainingType is null)
@@ -201,21 +223,27 @@ internal sealed partial class SerializationRootsBuilder
             AddKeep(builtInFormatterType.Construct(namedType.TypeArguments.ToArray()), statements);
             return;
         }
-        // The formatter MessagePack's source generator creates for a generic [MessagePackObject] type is internal,
-        // so it's rooted by name: it's nested into GeneratedMessagePackResolver via one class per namespace part.
-        // Its names for nested types differ, so these aren't rooted.
-        if (HasAttribute(definition, _messagePackObjectAttribute) && namedType.ContainingType is null) {
-            var path = definition.ContainingNamespace.IsGlobalNamespace
-                ? GeneratedMessagePackResolverTypeName
-                : $"{GeneratedMessagePackResolverTypeName}+{definition.ContainingNamespace.ToDisplayString().Replace('.', '+')}";
-            var formatterTypeName = $"{path}+{definition.Name}Formatter`{definition.Arity}"
-                + GetTypeArgumentsReflectionName(namedType.TypeArguments)
-                + $", {definition.ContainingAssembly.Name}";
-            statements.Add($"{CodeKeeperTypeName}.Keep(\"{formatterTypeName}\");");
-        }
-    }
+        if (!HasAttribute(definition, _messagePackObjectAttribute))
+            return;
 
-    // Helpers
+        // MessagePack's source generator names the formatters of nested types differently,
+        // and the generated formatters can't be referenced from here, so a warning is all we can do
+        if (namedType.ContainingType is not null) {
+            _diagnostics.Add(UnrootedMessagePackFormatter(namedType));
+            return;
+        }
+
+        // The formatter MessagePack's source generator creates for a generic [MessagePackObject] type is internal,
+        // so it's rooted by name: it's nested into GeneratedMessagePackResolver via one class per namespace part
+        var ns = definition.ContainingNamespace;
+        var path = ns.IsGlobalNamespace
+            ? GeneratedMessagePackResolverTypeName
+            : $"{GeneratedMessagePackResolverTypeName}+{ns.ToDisplayString().Replace('.', '+')}";
+        var formatterTypeName = $"{path}+{definition.Name}Formatter`{definition.Arity}"
+            + GetTypeArgumentsReflectionName(namedType.TypeArguments)
+            + $", {definition.ContainingAssembly.Name}";
+        statements.Add($"{CodeKeeperTypeName}.Keep(\"{formatterTypeName}\");");
+    }
 
     private void AddKeep(INamedTypeSymbol type, SortedSet<string> statements)
     {
@@ -228,7 +256,8 @@ internal sealed partial class SerializationRootsBuilder
     private bool IsAccessible(ITypeSymbol type)
         => type switch {
             IArrayTypeSymbol arrayType => IsAccessible(arrayType.ElementType),
-            INamedTypeSymbol namedType => _compilation.IsSymbolAccessibleWithin(namedType.OriginalDefinition, _compilation.Assembly)
+            INamedTypeSymbol namedType
+                => _compilation.IsSymbolAccessibleWithin(namedType.OriginalDefinition, _compilation.Assembly)
                 && namedType.TypeArguments.All(IsAccessible)
                 && (namedType.ContainingType is null || IsAccessible(namedType.ContainingType)),
             _ => false,
@@ -240,7 +269,8 @@ internal sealed partial class SerializationRootsBuilder
     private static AttributeData? GetAttribute(ISymbol symbol, INamedTypeSymbol? attributeType)
         => attributeType is null
             ? null
-            : symbol.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeType));
+            : symbol.GetAttributes()
+                .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeType));
 
     private static bool ContainsTypeParameters(ITypeSymbol type)
         => type switch {
@@ -298,7 +328,8 @@ internal sealed partial class SerializationRootsBuilder
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
         sb.AppendLine("#nullable enable");
-        sb.AppendLine("#pragma warning disable CA2255");
+        // CS0612, CS0618: a rooted formatter or converter may be obsolete
+        sb.AppendLine("#pragma warning disable CA2255, CS0612, CS0618");
         sb.AppendLine();
         foreach (var attribute in assemblyAttributes)
             sb.AppendLine(attribute);
