@@ -9,9 +9,7 @@ namespace ActualLab.Fusion.Extensions.Internal;
 /// </summary>
 internal static class FusionExtContractsModuleInitializer
 {
-#if NET8_0_OR_GREATER
     [ModuleInitializer]
-#endif
     internal static void Initialize()
         => SystemJsonSerializer.TypeInfoResolver.Add(FusionExtJsonContext.Default);
 }

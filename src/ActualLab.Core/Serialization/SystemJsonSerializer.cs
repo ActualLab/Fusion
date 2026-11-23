@@ -102,18 +102,18 @@ public class SystemJsonSerializer : TextSerializerBase
     }
 
 #if NET8_0_OR_GREATER
+    public static IJsonTypeInfoResolver CreateDefaultTypeInfoResolver()
+        // NativeAOT apps disable reflection-based serialization by default, so then only TypeInfoResolver is used
+        => JsonSerializer.IsReflectionEnabledByDefault
+            ? JsonTypeInfoResolver.Combine(TypeInfoResolver, new DefaultJsonTypeInfoResolver())
+            : TypeInfoResolver;
+
     private static SystemJsonTypeInfoResolver CreateTypeInfoResolver()
     {
         var resolver = new SystemJsonTypeInfoResolver();
         resolver.Add(CoreJsonContext.Default);
         return resolver;
     }
-
-    public static IJsonTypeInfoResolver CreateDefaultTypeInfoResolver()
-        // NativeAOT apps disable reflection-based serialization by default, so then only TypeInfoResolver is used
-        => JsonSerializer.IsReflectionEnabledByDefault
-            ? JsonTypeInfoResolver.Combine(TypeInfoResolver, new DefaultJsonTypeInfoResolver())
-            : TypeInfoResolver;
 #endif
 
     // Instance members

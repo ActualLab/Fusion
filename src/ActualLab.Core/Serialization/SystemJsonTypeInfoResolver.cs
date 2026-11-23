@@ -6,8 +6,9 @@ namespace ActualLab.Serialization;
 /// <summary>
 /// An <see cref="IJsonTypeInfoResolver"/> that tries the resolvers added to it in order,
 /// e.g. source-generated <see cref="System.Text.Json.Serialization.JsonSerializerContext"/>s.
-/// Resolvers can be added at any time, unlike to a <see cref="JsonSerializerOptions"/> instance
-/// that was already used.
+/// Unlike a <see cref="JsonSerializerOptions"/> instance, it accepts new resolvers after it was used,
+/// but System.Text.Json caches the lookups made with the options, including the failed ones:
+/// add a resolver before the types it covers are first serialized.
 /// </summary>
 public sealed class SystemJsonTypeInfoResolver : IJsonTypeInfoResolver
 {
