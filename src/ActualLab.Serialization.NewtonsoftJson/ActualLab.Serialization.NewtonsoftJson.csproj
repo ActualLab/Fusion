@@ -4,7 +4,7 @@
     <PackageTags>actual_chat actual_lab actual_lab_fusion newtonsoft json</PackageTags>
     <Description>ActualLab.Serialization.NewtonsoftJson - Newtonsoft.Json support for ActualLab.Fusion: <!--
     -->an ITextSerializer, converters for ActualLab types, and Newtonsoft.Json-based RPC serialization formats.</Description>
-    <RootNamespace>ActualLab.Serialization</RootNamespace>
+    <RootNamespace>ActualLab</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" />

@@ -4,7 +4,7 @@
     <PackageTags>actual_chat actual_lab actual_lab_fusion memorypack</PackageTags>
     <Description>ActualLab.Serialization.MemoryPack - MemoryPack support for ActualLab.Fusion: <!--
     -->an IByteSerializer, formatters for ActualLab types, and MemoryPack-based RPC serialization formats.</Description>
-    <RootNamespace>ActualLab.Serialization</RootNamespace>
+    <RootNamespace>ActualLab</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MemoryPack.Core" />
