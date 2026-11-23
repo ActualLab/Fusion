@@ -20,7 +20,8 @@ public class RpcStreamJsonConverter : JsonConverterFactory
 
             var tArg = t.GetGenericArguments()[0];
             var tConverter = typeof(Converter<>).MakeGenericType(tArg);
-            return (JsonConverter)tConverter.CreateInstance();
+            // Not ActivatorExt.CreateInstance: NativeAOT can't build a constructor delegate for a new closed type
+            return (JsonConverter)Activator.CreateInstance(tConverter)!;
         });
 
     // Nested type

@@ -1,6 +1,7 @@
 using ActualLab.Interception.Trimming;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Serialization.Internal;
 using ActualLab.Rpc.Trimming;
 using ActualLab.Trimming;
 
@@ -17,6 +18,9 @@ internal static class RpcModuleInitializer
     {
         if (CodeKeeper.AlwaysFalse)
             ProxyCodeKeeper.Extension = new RpcProxyCodeKeeperExtension();
+#if NET8_0_OR_GREATER
+        SystemJsonSerializer.TypeInfoResolver.Add(RpcJsonContext.Default);
+#endif
 
         // Access a bunch of types here to ensure JIT generates calls
         // to their methods w/o type initializer check further.

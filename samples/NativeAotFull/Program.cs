@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 using ActualLab.Api;
 using ActualLab.Compliance;
 using ActualLab.Fusion.Extensions;
@@ -15,6 +16,7 @@ using static System.Console;
 // round-tripping the types whose trimming / AOT support matters. Exit code 1 = a check failed.
 
 KeepSerializableTypes();
+SystemJsonSerializer.TypeInfoResolver.Add(AppJsonContext.Default);
 var formatKeys = args.Length > 0 ? args : GetAllFormatKeys();
 var failureCount = 0;
 foreach (var formatKey in formatKeys)
@@ -201,6 +203,27 @@ public sealed partial record ApiDto(
     PropertyBag<TypeSchema.Any> Bag,
     [property: DataMember(Order = 4), Key(4), MemoryPackOrder(4), MemoryPackAllowSerialize]
     SanitizedString<Sanitizers.Hidden> Secret);
+
+// NativeAOT has no reflection-based System.Text.Json, so the json5 formats need the metadata
+// of every type the RPC calls carry; ActualLab's own types and primitives are covered already
+[JsonSerializable(typeof(SayHelloCommand))]
+[JsonSerializable(typeof(ApiDto))]
+[JsonSerializable(typeof(PropertyBag<CustomSchema>))]
+[JsonSerializable(typeof(SanitizedString<Sanitizers.Hidden>))]
+[JsonSerializable(typeof(SanitizedString<CustomSanitizer>))]
+[JsonSerializable(typeof(Option<int>))]
+[JsonSerializable(typeof(int?))]
+[JsonSerializable(typeof(List<int>))]
+[JsonSerializable(typeof(Moment?))]
+[JsonSerializable(typeof(Moment[]))]
+[JsonSerializable(typeof(List<Moment>))]
+[JsonSerializable(typeof(Dictionary<string, Moment>))]
+[JsonSerializable(typeof(ApiArray<int>))]
+[JsonSerializable(typeof(PageRef<long>))]
+[JsonSerializable(typeof(ApiOption<int>))]
+[JsonSerializable(typeof(ApiNullable<int>))]
+[JsonSerializable(typeof(ApiNullable8<long>))]
+public sealed partial class AppJsonContext : JsonSerializerContext;
 
 public sealed class CustomSchema : TypeSchema
 {

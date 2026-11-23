@@ -24,7 +24,8 @@ public class UniSerializedJsonConverter : JsonConverterFactory
         var converterType = typeToConvert.GetGenericTypeDefinition() == typeof(UniSerialized<>)
             ? typeof(Converter<>).MakeGenericType(arguments)
             : typeof(TypeDecoratingConverter<,>).MakeGenericType(arguments);
-        return (JsonConverter)converterType.CreateInstance();
+        // Not ActivatorExt.CreateInstance: NativeAOT can't build a constructor delegate for a new closed type
+        return (JsonConverter)Activator.CreateInstance(converterType)!;
     }
 
     // Private methods

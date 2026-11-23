@@ -10,24 +10,24 @@ using static DiagnosticsHelpers;
 public class SerializationRootsGenerator : IIncrementalGenerator
 {
     public const string HintName = "ActualLab.SerializationRoots.g.cs";
-    // Defining it (e.g. in <DefineConstants>) disables the generator for the assembly
-    public const string DisableSymbol = "ACTUALLAB_NO_SERIALIZATION_ROOTS";
+    // The generator runs only for assemblies that define it (e.g. in <DefineConstants>)
+    public const string EnableSymbol = "ACTUALLAB_SERIALIZATION_ROOTS";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var isDisabled = context.ParseOptionsProvider.Select(static (options, _)
-            => options.PreprocessorSymbolNames.Contains(DisableSymbol, StringComparer.Ordinal));
-        var code = context.CompilationProvider
-            .Combine(isDisabled)
+        var isEnabled = context.ParseOptionsProvider.Select(static (options, _)
+            => options.PreprocessorSymbolNames.Contains(EnableSymbol, StringComparer.Ordinal));
+        var result = context.CompilationProvider
+            .Combine(isEnabled)
             .Select(static (item, cancellationToken) => item.Right
-                ? null
-                : SerializationRootsBuilder.Build(item.Left, cancellationToken));
-        context.RegisterSourceOutput(code, static (context, code) => {
-            if (code is null)
-                return;
-
+                ? SerializationRootsBuilder.Build(item.Left, cancellationToken)
+                : SerializationRootsResult.None);
+        context.RegisterSourceOutput(result, static (context, result) => {
             try {
-                context.AddSource(HintName, code);
+                foreach (var diagnostic in result.Diagnostics)
+                    context.ReportDiagnostic(diagnostic);
+                if (result.Code is not null)
+                    context.AddSource(HintName, result.Code);
             }
             catch (Exception e) {
                 context.ReportDebug(e);

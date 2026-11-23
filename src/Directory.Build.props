@@ -24,6 +24,11 @@
     <DefineConstants Condition="$(UseDynamicMethods)">$(DefineConstants);USE_DYNAMIC_METHODS</DefineConstants>
   </PropertyGroup>
 
+  <!-- ActualLab.Generators' NativeAOT serialization roots: every library with serializable types or RPC contracts -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);ACTUALLAB_SERIALIZATION_ROOTS</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup>
     <!-- UseRuntimeAsync (.NET 11+): makes the compiler emit MethodImplOptions.Async methods that
          the runtime suspends, instead of generating async state machine types.

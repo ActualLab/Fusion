@@ -19,7 +19,8 @@ public class SanitizedStringJsonConverter : JsonConverterFactory
                 return null;
 
             var tConverter = typeof(Converter<>).MakeGenericType(t.GetGenericArguments()[0]);
-            return (JsonConverter)tConverter.CreateInstance();
+            // Not ActivatorExt.CreateInstance: NativeAOT can't build a constructor delegate for a new closed type
+            return (JsonConverter)Activator.CreateInstance(tConverter)!;
         });
 
     // Nested types

@@ -266,9 +266,9 @@ inspecting its types; such an assembly gets no generated proxies.
 
 Serializers create the formatter of a closed generic type like `Option<int>`, `List<Moment>` or
 `PageRef<long>` with `MakeGenericType`. NativeAOT can do that only for instantiations it compiled,
-and it compiles none of them for value-type arguments on its own. So `ActualLab.Generators` also
-emits one `[ModuleInitializer]` per assembly, `ActualLabSerializationRoots`, that keeps the closed
-formatters of every closed generic type the assembly uses:
+and it compiles none of them for value-type arguments on its own. So `ActualLab.Generators` can
+also emit one `[ModuleInitializer]` per assembly, `ActualLabSerializationRoots`, that keeps the
+closed formatters and converters of every closed generic type the assembly uses:
 
 - in the signatures of its non-private methods, which include RPC service methods;
 - in the data members of its serializable types, and of the serializable types those reference.
@@ -277,21 +277,48 @@ For MessagePack, these are the formatters named by `[MessagePackFormatter]`, the
 source generator creates for generic `[MessagePackObject]` types, and MessagePack's own array,
 `List<T>`, `Dictionary<TKey, TValue>` and `Nullable<T>` formatters. The same initializer suppresses
 IL3050 on the resolver MessagePack's source generator creates, since its `MakeGenericType` calls
-are what these roots cover.
+are what these roots cover. For System.Text.Json, these are the converters the `[JsonConverter]`
+factories of generic types create.
 
 A closed generic type that is serialized but appears in neither place, e.g. one passed to a
 serializer directly, isn't covered: use it in a signature or data member, or keep its formatter
 with `CodeKeeper.Keep<TFormatter>()`.
 
-The roots are generated for every assembly that references `ActualLab.Generators`. To turn them
-off for an assembly, define `ACTUALLAB_NO_SERIALIZATION_ROOTS`. Both symbols go to `DefineConstants`:
+The roots are opt-in: only an app needs them, and only in the assemblies that declare its contracts
+and serializable types. Define `ACTUALLAB_SERIALIZATION_ROOTS` there; ActualLab's own libraries do.
+`ACTUALLAB_NO_PROXIES`, on the other hand, turns proxy generation off for an assembly. Both go to
+`DefineConstants`:
 
 ```xml
 <PropertyGroup>
-  <DefineConstants>$(DefineConstants);ACTUALLAB_NO_PROXIES;ACTUALLAB_NO_SERIALIZATION_ROOTS</DefineConstants>
+  <DefineConstants>$(DefineConstants);ACTUALLAB_SERIALIZATION_ROOTS</DefineConstants>
 </PropertyGroup>
 ```
 
+### System.Text.Json
+
+NativeAOT apps have no reflection-based System.Text.Json, so the `json5` RPC formats, and
+`SystemJsonSerializer` in general, need source-generated metadata for every type they serialize.
+`SystemJsonSerializer.TypeInfoResolver` collects it: ActualLab's libraries add their contexts there,
+which cover primitives and their own types, and an app adds its own one at startup:
+
+```cs
+[JsonSerializable(typeof(Option<int>))]
+[JsonSerializable(typeof(OrderDto))]
+public sealed partial class AppJsonContext : JsonSerializerContext;
+
+SystemJsonSerializer.TypeInfoResolver.Add(AppJsonContext.Default);
+```
+
+`SystemJsonSerializer`'s default options try these contexts first and fall back to reflection only
+where it's enabled, i.e. not under NativeAOT.
+
+In an assembly that defines `ACTUALLAB_SERIALIZATION_ROOTS` and declares a `JsonSerializerContext`,
+`ActualLab.Generators` checks the RPC service methods it declares: warning `ALG0004` names each type
+they take or return that no context covers, either this assembly's own or one of a referenced
+assembly that uses `ActualLab.Generators` too. A type counts as covered when a context lists it
+or it's reachable from a listed type through public properties, fields, element types or type
+arguments.
 
 ## Project Configuration
 

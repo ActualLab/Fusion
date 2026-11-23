@@ -3,9 +3,10 @@ namespace ActualLab.Generators;
 // Collects the closed generic types this assembly's declarations use (plus the ones nested in
 // the serializable types they reference), maps each to the closed formatter types serializers
 // instantiate for it via reflection, and roots those from a module initializer.
-internal sealed class SerializationRootsBuilder
+internal sealed partial class SerializationRootsBuilder
 {
     private const string CodeKeeperTypeName = "global::ActualLab.Trimming.CodeKeeper";
+    private const string RootsTypeName = "ActualLabSerializationRoots";
     private const string GeneratedMessagePackResolverTypeName = "MessagePack.GeneratedMessagePackResolver";
     // MessagePack's DynamicGenericResolver closes these via MakeGenericType
     private static readonly (string TypeName, string FormatterTypeName)[] MessagePackBuiltInFormatters = [
@@ -31,25 +32,31 @@ internal sealed class SerializationRootsBuilder
     private readonly Dictionary<INamedTypeSymbol, INamedTypeSymbol> _messagePackBuiltInFormatters
         = new(SymbolEqualityComparer.Default);
     private readonly INamedTypeSymbol? _messagePackArrayFormatter;
+    private readonly INamedTypeSymbol? _dataContractAttribute;
 
-    public static string? Build(Compilation compilation, CancellationToken cancellationToken)
+    public static SerializationRootsResult Build(Compilation compilation, CancellationToken cancellationToken)
     {
         if (compilation.GetTypeByMetadataName("ActualLab.Trimming.CodeKeeper") is null)
-            return null;
+            return SerializationRootsResult.None;
         if (compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.ModuleInitializerAttribute") is null)
-            return null; // NativeAOT targets have it; older targets don't need the roots
+            return SerializationRootsResult.None; // NativeAOT targets have it; older targets don't need the roots
 
         var builder = new SerializationRootsBuilder(compilation, cancellationToken);
         builder.CollectDeclaredTypes(compilation.Assembly.GlobalNamespace);
         var statements = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var type in builder._closedTypes)
+        foreach (var type in builder._closedTypes) {
             builder.AddMessagePackRoots(type, statements);
+            builder.AddSystemJsonRoots(type, statements);
+        }
         var assemblyAttributes = new List<string>();
         if (builder._messagePackObjectAttribute is not null)
             assemblyAttributes.Add(MessagePackResolverSuppression);
-        return statements.Count == 0 && assemblyAttributes.Count == 0
+        if (builder.GetJsonSerializableTypesAttribute() is { } jsonSerializableTypesAttribute)
+            assemblyAttributes.Add(jsonSerializableTypesAttribute);
+        var code = statements.Count == 0 && assemblyAttributes.Count == 0
             ? null
             : BuildSource(assemblyAttributes, statements);
+        return new SerializationRootsResult(code, builder.GetSystemJsonDiagnostics());
     }
 
     private SerializationRootsBuilder(Compilation compilation, CancellationToken cancellationToken)
@@ -58,6 +65,8 @@ internal sealed class SerializationRootsBuilder
         _cancellationToken = cancellationToken;
         _messagePackObjectAttribute = compilation.GetTypeByMetadataName("MessagePack.MessagePackObjectAttribute");
         _messagePackFormatterAttribute = compilation.GetTypeByMetadataName("MessagePack.MessagePackFormatterAttribute");
+        _dataContractAttribute = compilation.GetTypeByMetadataName("System.Runtime.Serialization.DataContractAttribute");
+        InitializeSystemJson();
         if (_messagePackObjectAttribute is null)
             return;
 
@@ -87,6 +96,7 @@ internal sealed class SerializationRootsBuilder
     {
         foreach (var nestedType in type.GetTypeMembers())
             CollectDeclaredType(nestedType);
+        CollectSystemJsonDeclaration(type);
 
         Visit(type.BaseType);
         foreach (var @interface in type.Interfaces)
@@ -160,7 +170,8 @@ internal sealed class SerializationRootsBuilder
     }
 
     private bool IsSerializable(INamedTypeSymbol type)
-        => HasAttribute(type.OriginalDefinition, _messagePackObjectAttribute);
+        => HasAttribute(type.OriginalDefinition, _messagePackObjectAttribute)
+            || HasAttribute(type.OriginalDefinition, _dataContractAttribute);
 
     // MessagePack
 
@@ -224,8 +235,12 @@ internal sealed class SerializationRootsBuilder
         };
 
     private static bool HasAttribute(ISymbol symbol, INamedTypeSymbol? attributeType)
-        => attributeType is not null && symbol.GetAttributes()
-            .Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeType));
+        => GetAttribute(symbol, attributeType) is not null;
+
+    private static AttributeData? GetAttribute(ISymbol symbol, INamedTypeSymbol? attributeType)
+        => attributeType is null
+            ? null
+            : symbol.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeType));
 
     private static bool ContainsTypeParameters(ITypeSymbol type)
         => type switch {
@@ -292,9 +307,13 @@ internal sealed class SerializationRootsBuilder
         if (statements.Count == 0)
             return sb.ToString();
 
-        sb.AppendLine("internal static class ActualLabSerializationRoots");
+        sb.AppendLine($"internal static class {RootsTypeName}");
         sb.AppendLine("{");
         sb.AppendLine("    [global::System.Runtime.CompilerServices.ModuleInitializer]");
+        // Like CodeKeeper's own: the roots are never executed, they only make the compiler keep the code
+        foreach (var (category, id) in new[] { ("Trimming", "IL2026"), ("AOT", "IL3050") })
+            sb.AppendLine("    [global::System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("
+                + $"\"{category}\", \"{id}\", Justification = \"The roots only keep the code\")]");
         sb.AppendLine("    internal static void Initialize()");
         sb.AppendLine("    {");
         sb.AppendLine($"        if (!{CodeKeeperTypeName}.AlwaysFalse)");

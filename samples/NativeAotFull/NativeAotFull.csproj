@@ -15,10 +15,10 @@
     <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
     <IlcDisableReflection>false</IlcDisableReflection>
     <IlcTrimMetadata>true</IlcTrimMetadata>
-    <!-- Lets the json5 formats use reflection-based System.Text.Json (off by default under NativeAOT) -->
-    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <!-- MsgPack006: false positive on the open generic [MessagePackFormatter] types of the Api* structs -->
     <NoWarn>$(NoWarn);MsgPack006</NoWarn>
+    <!-- ActualLab.Generators' NativeAOT serialization roots are opt-in -->
+    <DefineConstants>$(DefineConstants);ACTUALLAB_SERIALIZATION_ROOTS</DefineConstants>
   </PropertyGroup>
 
   <!-- Ensures ArgumentList variants with generics are trimmed in Native AOT -->

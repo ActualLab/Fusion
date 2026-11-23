@@ -47,6 +47,16 @@ public static class DiagnosticsHelpers
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UncoveredRpcJsonTypeDescriptor = new(
+        id: "ALG0004",
+        title: "RPC type has no System.Text.Json metadata",
+        messageFormat: "'{0}' is used by RPC method '{1}', but no JsonSerializerContext covers it, "
+            + "so it can't be serialized by the json5 formats under NativeAOT; "
+            + "add [JsonSerializable(typeof({0}))] to a JsonSerializerContext",
+        category: nameof(SerializationRootsGenerator),
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     // Diagnostics
 
     public static readonly Action<string>? WriteDebug = IsDebugOutputEnabled
@@ -88,6 +98,13 @@ public static class DiagnosticsHelpers
             parameter.ContainingSymbol.ToDisplayString(),
             parameter.Name,
             reason);
+
+    public static Diagnostic UncoveredRpcJsonType(ITypeSymbol type, IMethodSymbol method)
+        => Diagnostic.Create(
+            UncoveredRpcJsonTypeDescriptor,
+            method.Locations.FirstOrDefault() ?? Location.None,
+            type.ToDisplayString(),
+            method.ToDisplayString());
 
     public static Diagnostic ExcessiveProxyMethodArity(IMethodSymbol method, int maxArity)
         => Diagnostic.Create(

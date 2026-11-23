@@ -1,4 +1,7 @@
 using System.Buffers;
+#if NET8_0_OR_GREATER
+using System.Text.Json.Serialization.Metadata;
+#endif
 using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
@@ -19,10 +22,22 @@ public class SystemJsonSerializer : TextSerializerBase
     private static SystemJsonSerializer? _default;
     private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
+#if NET8_0_OR_GREATER
+    // Source-generated contexts of libraries and apps go here; the default options use them first
+    public static SystemJsonTypeInfoResolver TypeInfoResolver { get; } = CreateTypeInfoResolver();
+#endif
     public static JsonSerializerOptions PrettyOptions { get; set; }
-        = new() { WriteIndented = true };
+        = new() {
+#if NET8_0_OR_GREATER
+            TypeInfoResolver = CreateDefaultTypeInfoResolver(),
+#endif
+            WriteIndented = true,
+        };
     public static JsonSerializerOptions DefaultOptions { get; set; }
         = new() {
+#if NET8_0_OR_GREATER
+            TypeInfoResolver = CreateDefaultTypeInfoResolver(),
+#endif
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             // Cross-language clients (e.g. the TypeScript one) may send PascalCase
             // property names; Newtonsoft.Json reads them case-insensitively as well
@@ -85,6 +100,21 @@ public class SystemJsonSerializer : TextSerializerBase
                 Volatile.Write(ref _defaultTypeDecorating, value);
         }
     }
+
+#if NET8_0_OR_GREATER
+    private static SystemJsonTypeInfoResolver CreateTypeInfoResolver()
+    {
+        var resolver = new SystemJsonTypeInfoResolver();
+        resolver.Add(CoreJsonContext.Default);
+        return resolver;
+    }
+
+    public static IJsonTypeInfoResolver CreateDefaultTypeInfoResolver()
+        // NativeAOT apps disable reflection-based serialization by default, so then only TypeInfoResolver is used
+        => JsonSerializer.IsReflectionEnabledByDefault
+            ? JsonTypeInfoResolver.Combine(TypeInfoResolver, new DefaultJsonTypeInfoResolver())
+            : TypeInfoResolver;
+#endif
 
     // Instance members
 

@@ -7,7 +7,8 @@ namespace ActualLab.Tests.Generators;
 
 public class SerializationRootsGeneratorTest
 {
-    private static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.Preview);
+    private static readonly CSharpParseOptions ParseOptions = new CSharpParseOptions(LanguageVersion.Preview)
+        .WithPreprocessorSymbols(SerializationRootsGenerator.EnableSymbol);
     private static readonly MetadataReference[] MetadataReferences = GetMetadataReferences();
 
     [Fact]
@@ -63,9 +64,53 @@ public class SerializationRootsGeneratorTest
     }
 
     [Fact]
-    public void DisableSymbolTest()
+    public void SystemJsonTest()
     {
-        var options = ParseOptions.WithPreprocessorSymbols(SerializationRootsGenerator.DisableSymbol);
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Api;
+            using ActualLab.Rpc;
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<Dto> Get(Other other, ApiArray<int> items, string text);
+            }
+
+            public class Dto
+            {
+                public Inner Inner { get; set; } = new();
+            }
+
+            public class Inner;
+
+            public class Other;
+
+            [JsonSerializable(typeof(Dto))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // System.Text.Json's own generator doesn't run here, so the context doesn't compile
+        var (_, result) = Run(compilation);
+
+        result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var code = GetGeneratedCode(result);
+        code.Should().Contain("Keep<global::ActualLab.Api.Internal.ApiArrayJsonConverter.Converter<global::System.Int32>>();");
+        code.Should().Contain("[assembly: global::ActualLab.Serialization.JsonSerializableTypesAttribute(typeof(global::Demo.Dto))]");
+        // Dto and Inner are covered by the context, string by ActualLab.Core's one
+        var uncoveredTypes = result.Diagnostics
+            .Where(d => d.Id == "ALG0004")
+            .Select(d => d.GetMessage().Split('\'')[1])
+            .ToList();
+        uncoveredTypes.Should().BeEquivalentTo("Demo.Other", "ActualLab.Api.ApiArray<int>");
+    }
+
+    [Fact]
+    public void OptInTest()
+    {
+        var options = new CSharpParseOptions(LanguageVersion.Preview);
         var compilation = CSharpCompilation.Create(
             $"SerializationRootsGeneratorTest_{Guid.NewGuid():N}",
             [CSharpSyntaxTree.ParseText(
@@ -141,6 +186,8 @@ public class SerializationRootsGeneratorTest
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         paths.Add(typeof(ActualLab.Trimming.CodeKeeper).Assembly.Location);
         paths.Add(typeof(MessagePackObjectAttribute).Assembly.Location);
+        paths.Add(typeof(ActualLab.Rpc.IRpcService).Assembly.Location);
+        paths.Add(typeof(ActualLab.Interception.IRequiresAsyncProxy).Assembly.Location);
         return paths.Select(path => MetadataReference.CreateFromFile(path)).ToArray();
     }
 }
