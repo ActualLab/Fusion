@@ -830,11 +830,14 @@ reach the user only when they call a low-level API that obviously relies on refl
   `[UnconditionalSuppressMessage]` is compiled into the IL, so both honor it. Project-level
   `<NoWarn>` for IL codes is acceptable only in projects that are never trimmed (server-side
   projects, tests).
-- **Prefer code the compiler can resolve statically.** When `T` is known, create it with
-  `Activator.CreateInstance<T>()` (what `new T()` compiles to): NativeAOT resolves it for each
-  closed `T` without reflection metadata, and it's the fastest option. Reflecting on `typeof(T)`
-  needs metadata that NativeAOT may drop &ndash; a type-level `[DynamicallyAccessedMembers]` doesn't
-  help for a type that is only ever created by reflection.
+- **A suppression must hold for plain trimming too, not only NativeAOT.** NativeAOT compiles each
+  closed generic, so `Activator.CreateInstance<T>()` there is a direct constructor call. The IL
+  trimmer analyzes a generic definition once: inside a generic type, `Activator.CreateInstance<T>()`
+  or `CodeKeeper.Keep<T>()` with an unannotated `T` keeps nothing, and the IL2091 it reports is
+  real. Root each concrete type where the trimmer can see it instead &ndash; e.g.
+  `static TypeSchema() => CodeKeeper.Keep<Any>();` &ndash; and verify with a trimmed (non-AOT)
+  publish as well as the NativeAot sample. A type-level `[DynamicallyAccessedMembers]` doesn't help
+  for a type that only appears as a type argument.
 - **Don't make source generators emit unanalyzable code.** A `new()` constraint (or a
   `[DynamicallyAccessedMembers]` annotation) on a type parameter of a serializable generic type
   makes MessagePack's generated resolver report IL2055 in every app. Avoid such constraints; for a

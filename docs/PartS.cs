@@ -7,6 +7,7 @@ using ActualLab.Collections;
 using ActualLab.Collections.Internal;
 using ActualLab.Rpc;
 using ActualLab.Serialization;
+using ActualLab.Trimming;
 using MessagePack;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
@@ -33,16 +34,19 @@ public class MyObject { }
 #region PartS_IByteSerializer
 public interface IByteSerializer
 {
-    object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);
-    void Write(IBufferWriter<byte> bufferWriter, object? value, Type type);
+    IByteSerializer Root { get; }
+    object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength);
+    void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type);
+    IByteSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
 #endregion
 
 #region PartS_ITextSerializer
-public interface ITextSerializer
+public interface ITextSerializer : IByteSerializer
 {
-    object? Read(string data, Type type);
-    string Write(object? value, Type type);
+    object? ReadUnscoped(string data, Type type);
+    string WriteUnscoped(object? value, Type type);
+    // + ReadOnlyMemory<char> / TextWriter overloads
 }
 #endregion
 */
@@ -224,6 +228,15 @@ public partial record struct PropertyBagItem<TSchema>(
     where TSchema : TypeSchema;
 #endregion
 */
+
+#region PartS_CustomTypeSchema
+public sealed class MySchema : TypeSchema
+{
+    static MySchema() => CodeKeeper.Keep<MySchema>(); // Keeps the constructor in trimmed apps
+
+    public override bool IsAllowed(Type type) => type.Namespace == "MyApp.Contracts";
+}
+#endregion
 
 // ============================================================================
 // Annotating Types for Serialization

@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using ActualLab.Compliance;
+using ActualLab.Trimming;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using static System.Console;
@@ -53,6 +54,9 @@ public sealed class ConnectRequest(string path, string query)
 #region PartSan_CustomSanitizer
 public sealed class EmailDomain : Sanitizer
 {
+    // Keeps the parameterless constructor in trimmed apps
+    static EmailDomain() => CodeKeeper.Keep<EmailDomain>();
+
     // Null never reaches here - Sanitizer.Apply passes it through
     protected override string Sanitize(string value)
     {

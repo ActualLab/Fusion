@@ -444,6 +444,9 @@ single instance is shared process-wide. A sanitizer with a parameterless constru
 ```cs
 public sealed class EmailDomain : Sanitizer
 {
+    // Keeps the parameterless constructor in trimmed apps
+    static EmailDomain() => CodeKeeper.Keep<EmailDomain>();
+
     // Null never reaches here - Sanitizer.Apply passes it through
     protected override string Sanitize(string value)
     {
@@ -455,6 +458,10 @@ public sealed class EmailDomain : Sanitizer
 }
 ```
 <!-- endSnippet -->
+
+The static constructor matters only in trimmed apps (e.g. Blazor WebAssembly, MAUI): sanitizers
+are created by reflection, so nothing else tells the trimmer to keep `EmailDomain`'s constructor.
+The built-in sanitizers do the same in `Sanitizer`'s static constructor.
 
 The protected override and the public `static string? Sanitize<TSanitizer>(string?)` helper share a
 name on purpose: inside a sanitizer, `Sanitize<Sanitizers.Hidden>(value)` reads as "sanitize this

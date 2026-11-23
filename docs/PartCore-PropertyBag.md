@@ -158,7 +158,7 @@ PropertyBag uses `TypeDecoratingUniSerialized<TSchema, object>` internally, whic
 public partial record struct PropertyBagItem<TSchema>(
     [property: DataMember(Order = 0), Key(0)] string Key,
     [property: DataMember(Order = 1), Key(1)] TypeDecoratingUniSerialized<TSchema, object> Serialized)
-    where TSchema : TypeSchema, new();
+    where TSchema : TypeSchema;
 ```
 
 This means:

@@ -117,14 +117,6 @@ A serializable hash set with sorted enumeration, intended for use in API contrac
 
 Factory methods for creating `ApiArray<T>` instances.
 
-###### `ApiNullable`, `ApiNullable8`, `ApiNullableExt`
-
-Factory methods for creating `ApiNullable<T>` instances.
-
-###### `ApiOption`
-
-Factory methods for creating `ApiOption<T>` instances.
-
 ###### `ApiCollectionExt`
 
 Extension methods for converting collections to `Api` collection types.
@@ -3417,6 +3409,16 @@ A `ByteSerialized<T>` variant that uses type-decorating Nerdbank.MessagePack ser
 The `nmsgpack6`/`nmsgpack6c` RPC wire formats backed by Nerdbank.MessagePack (add their LZ4 variants with `f.AddLZ4Variants()`). Enable them with `rpc.ConfigureWireFormats(f => f.AddNerdbankMessagePack())`.
 
 ## ActualLab.Serialization.MemoryPack
+
+### ActualLab.Api
+
+###### `ApiOption<T>`, `ApiOption`
+
+A packed (padding-free) `Option<T>` for MemoryPack contracts, plus its factory methods. `ToApiOption()` converts an `Option<T>`.
+
+###### `ApiNullable<T>`, `ApiNullable8<T>`, `ApiNullable`, `ApiNullable8`, `ApiNullableExt`
+
+`T?` replacements for MemoryPack contracts that add no padding of their own (padding inside `T` still leaks): `ApiNullable<T>` is packed; `ApiNullable8<T>` keeps the `T?` layout of an 8-byte-aligned `T` with a `long` flag.
 
 ### ActualLab.Serialization
 

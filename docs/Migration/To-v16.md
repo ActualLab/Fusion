@@ -5,7 +5,9 @@ makes MessagePack the default binary serializer and RPC format, and replaces the
 format registry with per-container wire format configuration.
 
 The wire formats themselves don't change: `mempack*`, `njson*` and the persisted Newtonsoft.Json
-data are byte-for-byte the same as in v15. What changes is the defaults and how you opt in. Most
+data are byte-for-byte the same as in v15, except for type-decorated payloads naming a type that
+moved to another assembly (see [Upgrade Constraints](#upgrade-constraints)). What changes is the
+defaults and how you opt in. Most
 apps only need [Step 1](#step-1-reference-the-packages-you-use) and
 [Step 4](#step-4-configure-rpc-formats-per-container).
 
@@ -16,6 +18,10 @@ apps only need [Step 1](#step-1-reference-the-packages-you-use) and
   the type name these commands are serialized with.
 - **v15 clients default to `mempack6`.** To keep them working while you roll out v16, the server
   must serve it: add `f.AddMemoryPack()` there (see [Step 4](#step-4-configure-rpc-formats-per-container)).
+- **Moved type names only resolve forward.** v16 reads payloads that name a moved type by its old
+  assembly (`TypeRef.MovedTypes`), but it writes the new name, which v15 can't resolve. This
+  affects type-decorated payloads (e.g. `PropertyBag` values) that contain `ApiOption`,
+  `ApiNullable`, `ApiNullable8` or the moved backend commands.
 
 ## Step 1: Reference the packages you use
 
@@ -147,9 +153,13 @@ These types exist only for MemoryPack contracts &ndash; see
 [MemoryPack and Unmanaged Structs](../PartS.md#memorypack-and-unmanaged-structs) for why.
 
 - Reference `ActualLab.Serialization.MemoryPack` wherever you use them; namespaces are unchanged.
+  The package has no .NET Framework / .NET Standard 2.0 build, so these types aren't available
+  there anymore: use `Option<T>` / `T?` in contracts shared with such targets.
 - `Option<T>.ToApiOption()` is now an extension method in that package, and `Option<T>` no longer
   implements `IConvertibleTo<ApiOption<T>>`. `ApiOption<T>.ToOption()` is unchanged.
-- `ActualLab.Serialization.NerdbankMessagePack` no longer has converters for them.
+- `ActualLab.Serialization.NerdbankMessagePack` no longer has converters for them, so don't use
+  them with the `nmsgpack*` formats. Before v16, `ApiOption<T>` was written as `[]` / `[v]`, and
+  `ApiNullable<T>` / `ApiNullable8<T>` as `nil` / the plain value.
 - Payloads that name them with their old assembly (`ActualLab.Core`) still resolve via
   `TypeRef.MovedTypes`.
 
@@ -164,8 +174,11 @@ These types exist only for MemoryPack contracts &ndash; see
   goes from `{"MessagePack": bin}` to `[bin]`.
 - **`TSchema : TypeSchema` and `TSanitizer : Sanitizer` type parameters lost their `new()`
   constraint** (`PropertyBag<TSchema>`, `SanitizedString<TSanitizer>`, the type-decorating
-  wrappers). Source that only uses these types compiles unchanged, but assemblies built against v15
-  that name the constraint must be rebuilt.
+  wrappers). A custom `TypeSchema` or `Sanitizer` still needs a public parameterless constructor,
+  but the compiler no longer checks it, and in trimmed apps the trimmer no longer keeps it: root it
+  with a static constructor, e.g. `static MySchema() => CodeKeeper.Keep<MySchema>();` (see
+  [PropertyBag Serialization](../PartS.md#propertybag-serialization)). Without it, a trimmed app
+  fails with `MissingMethodException` the first time the type is used.
 - **Moved type names.** `TypeRef.MovedTypes` maps the names of types that moved to another
   assembly, so payloads written by v15 still resolve them.
 - **`ActivatorExt.New<T>()`** is gone; use `Activator.CreateInstance<T>()`.

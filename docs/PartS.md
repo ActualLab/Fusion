@@ -34,8 +34,10 @@ Binary serializers implement `IByteSerializer`:
 ```cs
 public interface IByteSerializer
 {
-    object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);
-    void Write(IBufferWriter<byte> bufferWriter, object? value, Type type);
+    IByteSerializer Root { get; }
+    object? ReadUnscoped(ReadOnlyMemory<byte> data, Type type, out int readLength);
+    void WriteUnscoped(IBufferWriter<byte> bufferWriter, object? value, Type type);
+    IByteSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
 ```
 <!-- endSnippet -->
@@ -46,15 +48,18 @@ Text (JSON) serializers implement `ITextSerializer`:
 
 <!-- snippet: PartS_ITextSerializer -->
 ```cs
-public interface ITextSerializer
+public interface ITextSerializer : IByteSerializer
 {
-    object? Read(string data, Type type);
-    string Write(object? value, Type type);
+    object? ReadUnscoped(string data, Type type);
+    string WriteUnscoped(object? value, Type type);
+    // + ReadOnlyMemory<char> / TextWriter overloads
 }
 ```
 <!-- endSnippet -->
 
 Both interfaces have generic typed versions (`IByteSerializer<T>`, `ITextSerializer<T>`) for improved performance.
+Call the `Read` / `Write` extension methods rather than the `*Unscoped` members &ndash; see
+[Unscoped Serializer API](#unscoped-serializer-api).
 
 
 ## Built-in Serializers
@@ -299,6 +304,22 @@ This allows:
 - Cross-format serialization (JSON to binary and back)
 - Type preservation across serialization boundaries
 
+`TSchema` restricts the types a type-decorating serializer may materialize: `TypeSchema.Any`
+allows everything, `TypeSchema.PrimitiveOnly` only primitives, and you can derive your own. A custom
+schema needs a public parameterless constructor, and in trimmed apps it has to keep it explicitly,
+since it's created by reflection:
+
+<!-- snippet: PartS_CustomTypeSchema -->
+```cs
+public sealed class MySchema : TypeSchema
+{
+    static MySchema() => CodeKeeper.Keep<MySchema>(); // Keeps the constructor in trimmed apps
+
+    public override bool IsAllowed(Type type) => type.Namespace == "MyApp.Contracts";
+}
+```
+<!-- endSnippet -->
+
 ::: tip Operations Framework
 For details on how PropertyBag is used in the Operations Framework, see [Operations Framework Serialization](./PartO-Serialization.md).
 :::
@@ -435,15 +456,19 @@ before, so:
   results misbehaves &ndash; e.g. the client-side computed cache treats an unchanged result as
   changed.
 
-`ActualLab.Serialization.MemoryPack` provides padding-free alternatives for MemoryPack contracts:
+`ActualLab.Serialization.MemoryPack` provides alternatives for MemoryPack contracts that add no
+padding of their own (a `T` with padding inside still leaks it):
 
 | Instead of | Use | Why it's padding-free |
 |------------|-----|-----------------------|
 | `Option<T>` | `ApiOption<T>` | Packed (`Pack = 1`) |
 | `T?` | `ApiNullable<T>` | Packed (`Pack = 1`) |
-| `T?` with an 8-byte `T` (e.g. `Moment`) | `ApiNullable8<T>` | A `long` flag; byte-compatible with `T?` |
+| `T?` with an 8-byte-aligned `T` (e.g. `long`, `Moment`) | `ApiNullable8<T>` | A `long` flag in place of `T?`'s `bool` and padding |
 
-`ApiNullable8<T>` keeps the `T?` layout on purpose, so it's padding-free only for an 8-byte `T`.
+`ApiNullable8<T>` keeps the `T?` layout on purpose, but only for a `T` with 8-byte alignment
+(e.g. `long`, `double`, `Moment`): an 8-byte struct of two `int` fields is 4-byte aligned, so its
+`T?` puts the value at offset 4, while `ApiNullable8<T>` always puts it at 8. It reads any non-zero flag as "has value", so a `T?` payload
+written with garbage in its padding can read back as non-null.
 Your own unmanaged structs need the same care: avoid gaps between their fields, or give them
 `[StructLayout(LayoutKind.Sequential, Pack = 1)]`.
 

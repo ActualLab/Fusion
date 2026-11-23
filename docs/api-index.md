@@ -35,7 +35,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `HashSetSlim1..4<T>` (struct) — compact hash sets, inline before fallback to `HashSet`
 - `BinaryHeap<TPriority, TValue>` — min-heap
 - `FenwickTree<T>` — binary indexed tree for prefix sums
-- `ApiList<T>`, `ApiMap<TKey,TValue>`, `ApiSet<T>`, `ApiNullable<T>` — serializable API contract collections
+- `ApiList<T>`, `ApiMap<TKey,TValue>`, `ApiSet<T>` — serializable API contract collections
 - `PruningCache<TKey,TValue>` — capacity-bounded cache, lock-free reads, background prune to half capacity
 - `VersionSetExt` — `Where` / `IntersectScopes` for `VersionSet`
 
@@ -79,7 +79,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `NerdbankMessagePackByteSerializer` — Nerdbank.MessagePack binary serializer (in `ActualLab.Serialization.NerdbankMessagePack`)
 
 ### Serialization packages — [PartS.md](PartS.md#serializer-packages)
-- `ActualLab.Serialization.MemoryPack` — `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`, formatters for ActualLab types; `MemoryPackSerialization.Register()` / `Register<T>()`; `RpcMemoryPackWireFormats`, `AddMemoryPack()`
+- `ActualLab.Serialization.MemoryPack` — `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`, formatters for ActualLab types; `ApiOption<T>`, `ApiNullable<T>`, `ApiNullable8<T>` (`Option<T>` / `T?` replacements for MemoryPack contracts that add no padding of their own); `MemoryPackSerialization.Register()` / `Register<T>()`; `RpcMemoryPackWireFormats`, `AddMemoryPack()`
 - `ActualLab.Serialization.NewtonsoftJson` — `NewtonsoftJsonSerializer`, `NewtonsoftJsonContractResolver`, `NewtonsoftJsonSerialized<T>`; `NewtonsoftJsonSerialization.Register()`; `RpcNewtonsoftJsonWireFormats`, `AddNewtonsoftJson()`
 - `ActualLab.Serialization.NerdbankMessagePack` — `NerdbankMessagePackByteSerializer`; `RpcNerdbankWireFormats`, `AddNerdbankMessagePack()`
 
