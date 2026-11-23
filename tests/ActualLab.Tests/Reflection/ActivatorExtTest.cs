@@ -106,6 +106,30 @@ public class ActivatorExtTest(ITestOutputHelper @out) : TestBase(@out)
         created.Should().NotContain(typeof(H2));
     }
 
+    [Fact]
+    public void CreateInstanceUsesRegisteredDelegateTest()
+    {
+        // arrange
+        var instance = new Registered();
+        ActivatorExt.RegisterConstructorDelegate(() => instance);
+
+        // act
+        var result = typeof(Registered).CreateInstance();
+
+        // assert
+        result.Should().BeSameAs(instance);
+    }
+
+    [Fact]
+    public void CreateInstanceDoesNotWrapConstructorExceptionsTest()
+    {
+        // act
+        var act = () => typeof(ThrowingCtor).CreateInstance();
+
+        // assert
+        act.Should().Throw<InvalidOperationException>().WithMessage("Constructor failed.");
+    }
+
     // Nested types
 
     public readonly record struct S0(int Unused = 0);
@@ -134,4 +158,12 @@ public class ActivatorExtTest(ITestOutputHelper @out) : TestBase(@out)
 
     public record H1(int A);
     public record H2(int A);
+
+    public sealed class Registered;
+
+    public sealed class ThrowingCtor
+    {
+        public ThrowingCtor()
+            => throw new InvalidOperationException("Constructor failed.");
+    }
 }

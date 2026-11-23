@@ -140,11 +140,18 @@ public static class ActivatorExt
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors
             | DynamicallyAccessedMemberTypes.NonPublicConstructors)] this Type type)
     {
+        // Classes go through the constructor delegate rather than Activator.CreateInstance(Type):
+        // it honors RegisterConstructorDelegate and doesn't wrap constructor exceptions.
         // A value type gets its zeroed default even when it declares a parameterless constructor
-        // (C# 10+), which Activator.CreateInstance would run - see ValueTypeConstructorTest
-        return type.IsValueType
-            ? type.GetDefaultValue()!
-            : ((Func<object>)type.GetConstructorDelegate()!).Invoke();
+        // (C# 10+), which Activator.CreateInstance would run - see ValueTypeConstructorTest.
+        if (!type.IsValueType)
+            return ((Func<object>)type.GetConstructorDelegate()!).Invoke();
+
+#if !NETSTANDARD2_0
+        return RuntimeHelpers.GetUninitializedObject(type);
+#else
+        return FormatterServices.GetUninitializedObject(type);
+#endif
     }
 
     public static object CreateInstance<T1>(
