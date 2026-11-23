@@ -10,6 +10,7 @@ namespace ActualLab.Serialization.Internal;
 /// Newtonsoft.Json converter for <see cref="ApiArray{T}"/>.
 /// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Used constructors should be there for sure.")]
+[UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Used constructors should be there for sure.")]
 public class ApiArrayNewtonsoftJsonConverter : JsonConverter
 {
     // TODO: Replace w/ GenericInstanceCache

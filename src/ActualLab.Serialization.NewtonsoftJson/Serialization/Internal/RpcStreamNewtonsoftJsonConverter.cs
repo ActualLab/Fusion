@@ -8,6 +8,7 @@ namespace ActualLab.Serialization.Internal;
 /// <summary>
 /// Newtonsoft.Json converter that serializes <see cref="RpcStream{T}"/> instances as strings.
 /// </summary>
+[UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Used constructors should be there for sure.")]
 public class RpcStreamNewtonsoftJsonConverter : JsonConverter
 {
     // TODO: Replace w/ GenericInstanceCache

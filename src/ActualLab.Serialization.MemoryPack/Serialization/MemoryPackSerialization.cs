@@ -18,6 +18,7 @@ namespace ActualLab.Serialization;
 /// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume serializable types are fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume serializable types are fully preserved")]

@@ -90,6 +90,7 @@ public sealed class ComputeMethodDef : MethodDef
             ")",
             IsValid ? "" : " - invalid");
 
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "We assume compute method code is preserved")]
     public ComputeMethodFunction CreateComputeMethodFunction(FusionHub hub)
     {
         var functionType = ComputedOptions.IsConsolidating
@@ -100,6 +101,7 @@ public sealed class ComputeMethodDef : MethodDef
             .CreateInstance(hub, this);
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "We assume compute method code is preserved")]
     public RemoteComputeMethodFunction CreateRemoteComputeMethodFunction(FusionHub hub, RpcMethodDef rpcMethodDef)
     {
         var functionType = typeof(RemoteComputeMethodFunction<>);
