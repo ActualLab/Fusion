@@ -140,6 +140,7 @@ public readonly struct FusionBuilder
     internal FusionBuilder(FusionBuilder fusion, RpcServiceMode defaultServiceMode, bool setDefaultServiceMode)
     {
         Services = fusion.Services;
+        Tag = fusion.Tag;
         Commander = fusion.Commander;
         Rpc = fusion.Rpc;
         ServiceTypeResolver = fusion.ServiceTypeResolver;
