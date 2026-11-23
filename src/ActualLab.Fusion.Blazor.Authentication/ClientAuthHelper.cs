@@ -1,5 +1,6 @@
 using Microsoft.JSInterop;
 using ActualLab.Fusion.Authentication;
+using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.Blazor.Authentication;
 
@@ -25,9 +26,16 @@ public class ClientAuthHelper(IServiceProvider services) : IHasServices
         if (CachedSchemas is not null)
             return CachedSchemas;
 
-        var sSchemas = await JSRuntime
-            .InvokeAsync<string>("eval", SchemasJavaScriptExpression)
-            .ConfigureAwait(false); // The rest of this method doesn't depend on Blazor
+        string sSchemas;
+        try {
+            sSchemas = await JSRuntime
+                .InvokeAsync<string>("eval", SchemasJavaScriptExpression)
+                .ConfigureAwait(false); // The rest of this method doesn't depend on Blazor
+        }
+        catch (Exception e) when (e.IsServiceProviderDisposedException()) {
+            return [];
+        }
+
         var lSchemas = ListFormat.Default.Parse(sSchemas);
         var schemas = new (string, string)[lSchemas.Count / 2];
         for (int i = 0, j = 0; i < schemas.Length; i++, j += 2)
@@ -36,11 +44,27 @@ public class ClientAuthHelper(IServiceProvider services) : IHasServices
         return CachedSchemas;
     }
 
-    public virtual ValueTask SignIn(string? schema = null)
-        => JSRuntime.InvokeVoidAsync("FusionAuth.signIn", schema ?? "");
+    // SignIn and SignOut do nothing once the page they'd run in is gone (e.g., a Blazor Server circuit)
+    public virtual async ValueTask SignIn(string? schema = null)
+    {
+        try {
+            await JSRuntime.InvokeVoidAsync("FusionAuth.signIn", schema ?? "").ConfigureAwait(false);
+        }
+        catch (Exception e) when (e.IsServiceProviderDisposedException()) {
+            // Intended
+        }
+    }
 
-    public virtual ValueTask SignOut()
-        => JSRuntime.InvokeVoidAsync("FusionAuth.signOut");
+    public virtual async ValueTask SignOut()
+    {
+        try {
+            await JSRuntime.InvokeVoidAsync("FusionAuth.signOut").ConfigureAwait(false);
+        }
+        catch (Exception e) when (e.IsServiceProviderDisposedException()) {
+            // Intended
+        }
+    }
+
     public virtual Task SignOut(Session session, bool force = false)
         => Commander.Call(new Auth_SignOut(session, force));
     public virtual Task SignOutEverywhere(bool force = true)
