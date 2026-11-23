@@ -46,6 +46,8 @@ apps only need [Step 1](#step-1-reference-the-packages-you-use) and
   `f.AddCompressedVariants(suffix, compression, mode)` adds the compressed variants of the binary
   formats (see [Dictionaries](../PartR-Serialization.md#dictionaries) and
   [Step 9](#step-9-compressed-variants-take-a-suffix-and-a-bytecompression)).
+- **Zstandard on .NET 11+.** `ZstdByteCodec` adds Zstandard frame compression, backed by
+  .NET's own implementation, with the same preset dictionary support (see [Zstandard](../PartR-Serialization.md#zstandard-net-11)).
 - **Keyed MessagePack.** `f.AddKeyedMessagePack()` adds `msgpack6k` / `msgpack6ck`, which serialize
   your types as string-keyed maps instead of `[Key(N)]` arrays, so e.g. a TypeScript client reads
   them by member name (see [Keyed MessagePack](../PartR-Serialization.md#keyed-messagepack)).

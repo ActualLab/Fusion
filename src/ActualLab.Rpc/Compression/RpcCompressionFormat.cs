@@ -13,6 +13,9 @@ public sealed class RpcCompressionFormat(
     RpcCompressionOptions? options = null)
 {
     public static readonly RpcCompressionFormat LZ4 = new("lz4", LZ4ByteCodec.Default);
+#if NET11_0_OR_GREATER
+    public static readonly RpcCompressionFormat Zstd = new("zstd", ZstdByteCodec.Default);
+#endif
 
     public Symbol Id { get; } = id;
     public ByteCodec Codec { get; } = codec;
@@ -29,6 +32,10 @@ public sealed class RpcCompressionFormat(
         if (options is null) {
             if (ReferenceEquals(codec, LZ4ByteCodec.Default))
                 return LZ4;
+#if NET11_0_OR_GREATER
+            if (ReferenceEquals(codec, ZstdByteCodec.Default))
+                return Zstd;
+#endif
         }
         return new(id, codec, options);
     }

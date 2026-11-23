@@ -189,4 +189,8 @@ public static class Errors
         => new InvalidOperationException("LZ4 block encoding failed.");
     public static Exception LZ4DecodeFailed()
         => new FormatException("Invalid or corrupted LZ4 frame.");
+    public static Exception ZstdEncodeFailed()
+        => new InvalidOperationException("Zstandard encoding failed.");
+    public static Exception ZstdDecodeFailed()
+        => new FormatException("Invalid or corrupted Zstandard frame.");
 }

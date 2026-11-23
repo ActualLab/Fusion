@@ -327,6 +327,16 @@ services.AddRpc().ConfigureWireFormats(f => {
 window plus `1 + ExtraBlocks` blocks, and once it's full, the window slides back with a 64 KB copy,
 so more blocks amortize that copy better at the cost of memory.
 
+### Zstandard (.NET 11+)
+
+On .NET 11 and later, Zstandard is available too, backed by .NET's own `System.IO.Compression`
+implementation: `ZstdByteCodec`, e.g. `f.AddCompressedVariants("zstd", ZstdByteCodec.Default)`.
+`Quality` is zstd's compression level (1 by default; negative levels are faster), and a
+decoder accepts windows up to 2^`MaxWindowLog2` bytes (8 MB by default), so a peer can't make
+it allocate more. Its dictionary is a `ZstandardDictionary` digested once, for `Quality`. Compared to LZ4, zstd compresses better but is slower, especially
+when decompressing &ndash; `CompressionBenchmarks` in `tests/ActualLab.Fusion.Tests.BenchmarkRunner`
+measures both on RPC-like frames.
+
 
 ## Configuring Formats
 
