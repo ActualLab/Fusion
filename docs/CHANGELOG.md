@@ -11,6 +11,19 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 16.0.50+910509349 | npm: 16.0.50
+
+Release date: 2026-11-23
+
+A fix release on top of 16.0.47.
+
+### Fixed
+
+- **CommandR:** `AddCommander()` works without RPC. A container with `AddCommander()` but no
+  `AddRpc()` / `AddFusion()` failed on its first command with "No service for type
+  'ActualLab.Rpc.RpcHub'"; `RpcCommandHandler` now passes commands through when there's no
+  `RpcHub`. The bug predates v16.
+
 ## 16.0.47+230e52097 | npm: 16.0.47
 
 Release date: 2026-11-23
