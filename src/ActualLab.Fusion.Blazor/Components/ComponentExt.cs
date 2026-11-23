@@ -55,7 +55,9 @@ public static class ComponentExt
 
     private static readonly ContextCallback DispatchStateHasChangedInvoker = static state => {
         var component = (ComponentBase)state!;
+#pragma warning disable CS8602 // The static constructor assigns StateHasChangedInvoker before this runs
         _ = component.GetDispatcher().InvokeAsync(() => StateHasChangedInvoker(component));
+#pragma warning restore CS8602
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

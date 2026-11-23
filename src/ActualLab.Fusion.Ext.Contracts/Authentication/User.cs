@@ -54,7 +54,7 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
     {
         Id = id;
         Name = name;
-        Claims = new();
+        Claims = new(StringComparer.Ordinal);
         Identities = new();
     }
 

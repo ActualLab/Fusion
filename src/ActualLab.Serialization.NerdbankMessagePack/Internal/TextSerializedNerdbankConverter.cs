@@ -45,7 +45,9 @@ public sealed class NewtonsoftJsonSerializedNerdbankConverterFactory : IMessageP
 
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume serializable types are fully preserved")]
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "We assume serializable types are fully preserved")]
+#pragma warning disable RCS1242 // IMessagePackConverterFactory declares the parameter as "in"
     public MessagePackConverter? CreateConverter(Type type, ITypeShape? shape, in ConverterContext context)
+#pragma warning restore RCS1242
     {
         if (!type.IsGenericType)
             return null;

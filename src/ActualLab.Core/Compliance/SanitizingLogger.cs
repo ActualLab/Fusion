@@ -30,7 +30,12 @@ public sealed class SanitizingLogger(ILogger inner) : ILogger
     public bool IsEnabled(LogLevel logLevel)
         => Inner.IsEnabled(logLevel);
 
+#if NET7_0_OR_GREATER
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull
         => Inner.BeginScope(state);
+#else
+    public IDisposable BeginScope<TState>(TState state)
+        => Inner.BeginScope(state);
+#endif
 }

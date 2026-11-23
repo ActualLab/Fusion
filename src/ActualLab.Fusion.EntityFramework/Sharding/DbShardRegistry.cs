@@ -47,7 +47,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
         if (initialShards.Length == 0)
             throw new ArgumentOutOfRangeException(nameof(initialShards), "Initial shard set is empty.");
 
-        var shards = initialShards.ToImmutableHashSet();
+        var shards = initialShards.ToImmutableHashSet(StringComparer.Ordinal);
         HasSingleShard = shards.Contains(DbShard.Single);
         if (HasSingleShard) {
             if (shards.Count != 1)
@@ -69,7 +69,9 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
             async ct => {
                 var filter = await EventProcessorShardFilter.Use(ct).ConfigureAwait(false);
                 var shards1 = await Shards.Use(ct).ConfigureAwait(false);
-                return shards1.Where(shard => filter.Invoke(shard) && !DbShard.IsTemplate(shard)).ToImmutableHashSet();
+                return shards1
+                    .Where(shard => filter.Invoke(shard) && !DbShard.IsTemplate(shard))
+                    .ToImmutableHashSet(StringComparer.Ordinal);
             },
             StateCategories.Get(GetType(), nameof(EventProcessorShards)));
     }

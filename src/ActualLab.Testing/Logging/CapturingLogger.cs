@@ -7,9 +7,7 @@ namespace ActualLab.Testing.Logging;
 public sealed class CapturingLogger(CapturingLoggerProvider provider, string category) : ILogger
 {
     public IDisposable BeginScope<TState>(TState state)
-#if NET7_0_OR_GREATER
         where TState : notnull
-#endif
         => null!;
 
     public bool IsEnabled(LogLevel logLevel)

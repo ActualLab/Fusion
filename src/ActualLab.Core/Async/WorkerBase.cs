@@ -65,7 +65,9 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
             }, default);
             // ReSharper disable once PossibleMultipleWriteAccessInDoubleCheckLocking
             Volatile.Write(ref _whenRunning, whenRunning);
+#pragma warning disable MA0100 // Restoring the execution context flow right after Task.Run is intended
             return whenRunning;
+#pragma warning restore MA0100
         }
     }
 

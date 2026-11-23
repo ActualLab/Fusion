@@ -331,7 +331,9 @@ public sealed class ComputedRegistry
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ComputedInput? x, ComputedInput? y)
+#pragma warning disable CS8604 // IEqualityComparer<T> isn't null-annotated in .NET Standard
             => ComputedInput.EqualityComparer.Equals(x, y);
+#pragma warning restore CS8604
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ComputedInput obj)

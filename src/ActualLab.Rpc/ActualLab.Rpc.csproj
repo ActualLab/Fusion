@@ -9,6 +9,12 @@
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
   </ItemGroup>
 
+  <!-- SYSLIB1037: System.Text.Json 6.x's source generator flags JsonRpcMessage's init-only properties,
+       but they are set by its [JsonConstructor], and json5 round-trips on these targets -->
+  <PropertyGroup Condition="$(TargetFramework.StartsWith('net6')) or $(TargetFramework.StartsWith('net5')) or $(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.StartsWith('netstandard'))">
+    <NoWarn>$(NoWarn);SYSLIB1037</NoWarn>
+  </PropertyGroup>
+
   <!-- System.IO.Pipelines is in Microsoft.NETCore.App on net9+; older targets need the package -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="System.IO.Pipelines" VersionOverride="$(MicrosoftExtensionsVersion8)" />

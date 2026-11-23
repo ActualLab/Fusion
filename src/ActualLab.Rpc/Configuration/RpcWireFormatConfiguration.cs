@@ -48,8 +48,10 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
     public bool ContainsKey(string key)
         => _formats.ContainsKey(key);
 
+#pragma warning disable CS8767 // IReadOnlyDictionary<,> isn't null-annotated in .NET Standard
     public bool TryGetValue(string key, [MaybeNullWhen(false)] out RpcWireFormat value)
         => _formats.TryGetValue(key, out value);
+#pragma warning restore CS8767
 
     public IEnumerator<KeyValuePair<string, RpcWireFormat>> GetEnumerator()
         => _formats.GetEnumerator();
