@@ -328,6 +328,13 @@ window plus `1 + ExtraBlocks` blocks, and once it's full, the window slides back
 so more blocks amortize that copy better at the cost of memory: with the defaults, each
 encoder or decoder buffer takes about 144 KB (80 KB with `ExtraBlocks = 0`).
 
+`HashLog` (12 by default) sizes the encoder's match-finder hash table: 2^`HashLog` slots, 4 bytes
+each. More slots find more matches on larger frames, at more memory per encoder and a costlier
+reset (it clears the table, or copies the dictionary's one); an encoder that encoded nothing since
+its last reset skips it. Decoding doesn't depend on it, so it's local to the encoder, and a `-lz4`
+peer reads the output of any `HashLog`. `LZ4ByteCodec.HL16` is the preset with 64K slots
+(`HashLog = 16`, a 256 KB table; the encoder's pooled state buffer rounds that up to 512 KB).
+
 ### Zstandard (.NET 11+)
 
 On .NET 11 and later, Zstandard is available too, backed by .NET's own `System.IO.Compression`
@@ -381,6 +388,22 @@ to offer, and its thresholds only matter above `MinCompressedFrameSize` &ndash; 
 LZ4 gets the frames of 256..2047 bytes, and Zstandard the larger ones. To route smaller frames to a
 codec too, lower `MinCompressedFrameSize` in the options passed to `AddCompressedVariants`.
 
+
+### Presets
+
+| Preset | Codec |
+|--------|-------|
+| `LZ4ByteCodec.Default` | LZ4, 16 KB blocks, 4K hash slots |
+| `LZ4ByteCodec.HL16` | LZ4, 16 KB blocks, 64K hash slots |
+| `ZstdByteCodec.Default` / `ZstdByteCodec.Q3` | Zstandard, level 1 / 3, 128 KB window (.NET 11+) |
+| `SelectingByteCodec.LZ4HL16_And_Zstd_At1K` / `LZ4HL16_And_ZstdQ3_At1K` | `LZ4ByteCodec.HL16` below 1 KB, `ZstdByteCodec.Default` / `Q3` from 1 KB on (.NET 11+) |
+
+Presets are created on first use and shared. Adding variants with one, e.g.
+`f.AddCompressedVariants("lz4zstd", SelectingByteCodec.LZ4HL16_And_Zstd_At1K)`, creates its
+encoder and decoder once to validate it (and prepare its dictionary), so it fails at startup
+rather than per connection where a codec isn't supported. `LZ4ByteCodec.HL16` can use the reserved `lz4` suffix, since its output is plain
+LZ4 that any `-lz4` peer reads; the selecting presets need a suffix of their own, which both peers
+must use for the same preset.
 
 ## Configuring Formats
 

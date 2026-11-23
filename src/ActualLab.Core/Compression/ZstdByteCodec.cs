@@ -16,6 +16,7 @@ public sealed record ZstdByteCodec : ByteCodec
     public const int DefaultMaxWindowLog2 = 23;
 
     public static ZstdByteCodec Default { get; } = new();
+    public static ZstdByteCodec Q3 => Presets.Q3;
 
     // zstd's compression level: lower is faster, and negative levels trade ratio for speed
     public int Quality {
@@ -50,7 +51,7 @@ public sealed record ZstdByteCodec : ByteCodec
             ? "zstd" : null;
 
     public override string ToString()
-        => $"Zstd(q{Quality}, {FormatSize(1 << WindowLog2)}{FormatDictionary()})";
+        => $"Zstd(Q{Quality}, WL{WindowLog2}{FormatDictionary()})";
 
     public override ByteEncoder NewEncoder()
         => new ZstdByteEncoder(this);
@@ -74,5 +75,13 @@ public sealed record ZstdByteCodec : ByteCodec
         => value < ZstandardCompressionOptions.MinWindowLog2 || value > ZstandardCompressionOptions.MaxWindowLog2
             ? throw new ArgumentOutOfRangeException(nameof(value))
             : value;
+
+    // Nested types
+
+    // Presets are created on first use
+    private static class Presets
+    {
+        public static readonly ZstdByteCodec Q3 = new() { Quality = 3 };
+    }
 }
 #endif

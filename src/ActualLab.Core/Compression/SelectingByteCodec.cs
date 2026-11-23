@@ -14,6 +14,12 @@ public sealed record SelectingByteCodec : ByteCodec
 {
     public const int MaxCodecCount = 256;
 
+#if NET11_0_OR_GREATER
+    // LZ4 with 64K hash slots below 1 KB, Zstandard (level 1 or 3) from 1 KB on
+    public static SelectingByteCodec LZ4HL16_And_Zstd_At1K => LZ4HL16AndZstdPreset.Instance;
+    public static SelectingByteCodec LZ4HL16_And_ZstdQ3_At1K => LZ4HL16AndZstdQ3Preset.Instance;
+#endif
+
     public ImmutableArray<ByteCodec> Codecs {
         get;
         init {
@@ -45,4 +51,21 @@ public sealed record SelectingByteCodec : ByteCodec
 
     public override ByteDecoder NewDecoder()
         => new SelectingByteDecoder(this);
+
+#if NET11_0_OR_GREATER
+    // Nested types
+
+    // Presets are created on first use, each by its own holder
+    private static class LZ4HL16AndZstdPreset
+    {
+        public static readonly SelectingByteCodec Instance
+            = new(static frame => frame.Length < 1024 ? 0 : 1, LZ4ByteCodec.HL16, ZstdByteCodec.Default);
+    }
+
+    private static class LZ4HL16AndZstdQ3Preset
+    {
+        public static readonly SelectingByteCodec Instance
+            = new(static frame => frame.Length < 1024 ? 0 : 1, LZ4ByteCodec.HL16, ZstdByteCodec.Q3);
+    }
+#endif
 }

@@ -97,7 +97,39 @@ public class ZstdByteEncoderTest(ITestOutputHelper @out) : ByteEncoderTestBase(@
                 pair.Decoder.Reset();
             }
         }
-        codec.ToString().Should().Be("Selecting(LZ4(16K), Zstd(q1, 128K+dict))");
+        codec.ToString().Should().Be("Selecting(LZ4(16K), Zstd(Q1, WL17+dict))");
+    }
+
+    [Fact]
+    public void PresetsShouldBeSharedAndWork()
+    {
+        // arrange
+        var presets = new[] { SelectingByteCodec.LZ4HL16_And_Zstd_At1K, SelectingByteCodec.LZ4HL16_And_ZstdQ3_At1K };
+        var rnd = new Random(2);
+
+        // assert
+        ZstdByteCodec.Q3.Should().BeSameAs(ZstdByteCodec.Q3);
+        ZstdByteCodec.Q3.Quality.Should().Be(3);
+        SelectingByteCodec.LZ4HL16_And_Zstd_At1K.Should().BeSameAs(SelectingByteCodec.LZ4HL16_And_Zstd_At1K);
+        SelectingByteCodec.LZ4HL16_And_Zstd_At1K.ToString()
+            .Should().Be("Selecting(LZ4(16K, HL16), Zstd(Q1, WL17))");
+        SelectingByteCodec.LZ4HL16_And_ZstdQ3_At1K.ToString()
+            .Should().Be("Selecting(LZ4(16K, HL16), Zstd(Q3, WL17))");
+        foreach (var length in (int[])[1023, 1024, 1025]) {
+            using var encoder = SelectingByteCodec.LZ4HL16_And_Zstd_At1K.NewEncoder();
+            using var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
+            encoder.Encode(LZ4DictionaryTest.NewMessages(length, length), buffer);
+            buffer.WrittenSpan[0].Should().Be(length < 1024 ? (byte)0 : (byte)1);
+        }
+        foreach (var codec in presets) {
+            using var pair = new CodecPair(codec.NewEncoder(), codec.NewDecoder());
+            for (var i = 0; i < 100; i++) {
+                var source = LZ4DictionaryTest.NewMessages(i, rnd.Next(1, 5000));
+                var encoded = pair.Encode(source);
+                encoded[0].Should().Be(source.Length < 1024 ? (byte)0 : (byte)1);
+                pair.Decode(encoded, MaxLength).Should().Equal(source);
+            }
+        }
     }
 
     [Fact]
@@ -193,8 +225,8 @@ public class ZstdDictionaryTest(ITestOutputHelper @out) : ByteEncoderTestBase(@o
             copyPair.RoundTrip(frame).Should().Equal(frame);
         copy.DictionaryData.ToArray().Should().Equal(SharedDictionaryData);
         sameDataCopy.Should().NotBe(shared, "ByteCodec records use reference equality");
-        shared.ToString().Should().Be("Zstd(q1, 128K+dict)");
-        copy.ToString().Should().Be("Zstd(q3, 128K+dict)");
+        shared.ToString().Should().Be("Zstd(Q1, WL17+dict)");
+        copy.ToString().Should().Be("Zstd(Q3, WL17+dict)");
         new CodecPair(sameDataCopy.NewEncoder(), Shared.NewDecoder()).RoundTrip(frame).Should().Equal(frame);
     }
 
