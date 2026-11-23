@@ -9,7 +9,9 @@ namespace ActualLab.Api.Internal;
 /// <summary>
 /// MessagePack formatter for <see cref="ApiNullable8{T}"/>.
 /// </summary>
+#if NET8_0_OR_GREATER // MessagePack v3 (source-generated resolvers) is used on .NET 8+ only
 [ExcludeFormatterFromSourceGeneratedResolver]
+#endif
 public sealed class ApiNullable8MessagePackFormatter<T> : IMessagePackFormatter<ApiNullable8<T>>
     where T : struct
 {
