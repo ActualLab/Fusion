@@ -337,6 +337,37 @@ it allocate more. Its dictionary is a `ZstandardDictionary` digested once, for `
 when decompressing &ndash; `CompressionBenchmarks` in `tests/ActualLab.Fusion.Tests.BenchmarkRunner`
 measures both on RPC-like frames.
 
+### Selecting a Codec per Frame
+
+`SelectingByteCodec` combines several codecs (up to 256) and a selector that picks one of them
+for every frame &ndash; typically by its length, e.g. LZ4 for small frames and Zstandard for large ones:
+
+<!-- snippet: PartRSerialization_SelectingCodec -->
+```cs
+// LZ4 for small frames, Zstandard for the rest; each frame starts with its codec's index
+var lz4OrZstd = new SelectingByteCodec(
+    static frame => frame.Length < 2048 ? 0 : 1,
+    LZ4ByteCodec.Default, ZstdByteCodec.Default);
+services.AddRpc().ConfigureWireFormats(f => {
+    f.AddCompressedVariants("lz4zstd", lz4OrZstd); // "msgpack6c-lz4zstd", ...
+});
+```
+<!-- endSnippet -->
+
+Every encoded frame starts with one byte, the index of the codec that encoded it, so the decoder
+needs no selector and both peers only have to agree on the list of codecs. Nothing is copied: the
+encoder writes the index byte and lets the selected encoder write right after it, and the decoder
+passes the rest of the frame to the matching decoder as a slice. Each codec keeps its own
+compression context (and its own dictionary), so it sees only the frames routed to it, and
+`Reset` resets all of them.
+
+In RPC, the selector never sees the smallest frames: a frame shorter than
+`RpcCompressionOptions.MinCompressedFrameSize` (512 bytes by default) is sent stored, before any
+codec sees it, with no index byte and no copy. So "uncompressed" is not a choice the selector needs
+to offer, and its thresholds only matter above `MinCompressedFrameSize` &ndash; in the example above,
+LZ4 gets the frames of 512..2047 bytes, and Zstandard the larger ones. To route smaller frames to a
+codec too, lower `MinCompressedFrameSize` in the options passed to `AddCompressedVariants`.
+
 
 ## Configuring Formats
 

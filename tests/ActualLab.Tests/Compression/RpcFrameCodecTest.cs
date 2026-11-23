@@ -55,6 +55,36 @@ public class RpcFrameCodecTest(ITestOutputHelper @out) : TestBase(@out)
         Decode(decoder, frame).Should().Equal(payload);
     }
 
+    // Frames below MinCompressedFrameSize are stored before the selector sees them
+    [Fact]
+    public void SelectingCodecSeesOnlyCompressedFramesTest()
+    {
+        // arrange
+        var selected = new List<int>();
+        var codec = new SelectingByteCodec(
+            frame => {
+                selected.Add(frame.Length);
+                return frame.Length < 2048 ? 0 : 1;
+            },
+            LZ4ByteCodec.Default, LZ4ByteCodec.Default with { BlockSize = 32 * 1024 });
+        var minSize = RpcCompressionOptions.Default.MinCompressedFrameSize;
+        using var encoder = new RpcFrameEncoder(codec.NewEncoder(), RpcCompressionOptions.Default, 1024, MaxFrameSize);
+        using var decoder = new RpcFrameDecoder(codec.NewDecoder(), 1024, MaxFrameSize);
+
+        // act + assert
+        foreach (var (length, codecIndex) in ((int, int)[])[(minSize - 1, -1), (minSize, 0), (2047, 0), (5000, 1)]) {
+            var payload = NewPayload(length, length);
+            var frame = Encode(encoder, payload);
+            var header = frame.AsSpan().ReadLittleEndian();
+            if (codecIndex < 0)
+                (header & RpcFrameCodec.CompressedFrameFlag).Should().Be(0);
+            else
+                frame[Int32Size].Should().Be((byte)codecIndex);
+            Decode(decoder, frame).Should().Equal(payload);
+        }
+        selected.Should().Equal(minSize, 2047, 5000);
+    }
+
     // Mixing stored and compressed frames must not desynchronize the pair: a stored frame is
     // deliberately never fed to either codec.
     [Fact]

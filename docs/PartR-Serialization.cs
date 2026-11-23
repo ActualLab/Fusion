@@ -138,6 +138,19 @@ public static class ConfiguringFormats
         #endregion
     }
 
+    public static void SelectingCodec(IServiceCollection services)
+    {
+        #region PartRSerialization_SelectingCodec
+        // LZ4 for small frames, Zstandard for the rest; each frame starts with its codec's index
+        var lz4OrZstd = new SelectingByteCodec(
+            static frame => frame.Length < 2048 ? 0 : 1,
+            LZ4ByteCodec.Default, ZstdByteCodec.Default);
+        services.AddRpc().ConfigureWireFormats(f => {
+            f.AddCompressedVariants("lz4zstd", lz4OrZstd); // "msgpack6c-lz4zstd", ...
+        });
+        #endregion
+    }
+
     public static void AddFormats(IServiceCollection services)
     {
         #region PartRSerialization_AddFormats

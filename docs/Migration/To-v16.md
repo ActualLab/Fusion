@@ -48,6 +48,9 @@ apps only need [Step 1](#step-1-reference-the-packages-you-use) and
   [Step 9](#step-9-compressed-variants-take-a-suffix-and-a-bytecompression)).
 - **Zstandard on .NET 11+.** `ZstdByteCodec` adds Zstandard frame compression, backed by
   .NET's own implementation, with the same preset dictionary support (see [Zstandard](../PartR-Serialization.md#zstandard-net-11)).
+- **Per-frame codec selection.** `SelectingByteCodec` picks one of several codecs for each frame,
+  e.g. LZ4 for small frames and Zstandard for large ones, and marks the frame with a 1-byte codec
+  index (see [Selecting a Codec per Frame](../PartR-Serialization.md#selecting-a-codec-per-frame)).
 - **Keyed MessagePack.** `f.AddKeyedMessagePack()` adds `msgpack6k` / `msgpack6ck`, which serialize
   your types as string-keyed maps instead of `[Key(N)]` arrays, so e.g. a TypeScript client reads
   them by member name (see [Keyed MessagePack](../PartR-Serialization.md#keyed-messagepack)).
