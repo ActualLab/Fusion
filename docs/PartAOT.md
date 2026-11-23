@@ -330,14 +330,23 @@ including a failed one. `SystemJsonSerializer`'s default options try these conte
 back to reflection only where it's enabled. If you replace `SystemJsonSerializer.DefaultOptions`,
 set `TypeInfoResolver = SystemJsonSerializer.CreateDefaultTypeInfoResolver()` to keep them.
 
-In an assembly that defines `ACTUALLAB_SERIALIZATION_ROOTS` and declares a `JsonSerializerContext`,
-`ActualLab.Generators` checks the RPC service methods it declares: warning `ALG0004` names each type
+In an assembly that defines `ACTUALLAB_SERIALIZATION_ROOTS` and declares a `JsonSerializerContext`
+listing a type its RPC calls carry (a parameter or result type, or one reachable from them; primitives
+don't count), `ActualLab.Generators` checks the RPC service methods it declares: warning `ALG0004` names each type
 they take or return that no context covers, either this assembly's own or one of a referenced
 assembly that defines `ACTUALLAB_SERIALIZATION_ROOTS` too. A type counts as covered when a context
 lists it or it's reachable from a listed type through public properties, fields, element types or
 type arguments; the type arguments of a type with its own `[JsonConverter]` aren't, since its
 converter serializes them. The check doesn't verify that the context is added to
 `SystemJsonSerializer.TypeInfoResolver`.
+
+To exclude a type from the check, e.g. because the app never sends it over the json5 formats,
+list it in an assembly-level `IgnoreJsonCoverage` attribute; an open generic type excludes each of
+its closed types:
+
+```cs
+[assembly: IgnoreJsonCoverage(typeof(LegacyDto), typeof(Box<>))]
+```
 
 ## Project Configuration
 

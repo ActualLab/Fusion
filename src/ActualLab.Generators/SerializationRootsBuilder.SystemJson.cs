@@ -7,6 +7,7 @@ using static DiagnosticsHelpers;
 internal sealed partial class SerializationRootsBuilder
 {
     private const string JsonSerializableTypesAttributeName = "ActualLab.Serialization.JsonSerializableTypesAttribute";
+    private const string IgnoreJsonCoverageAttributeName = "ActualLab.Serialization.IgnoreJsonCoverageAttribute";
 
     private INamedTypeSymbol? _jsonConverterAttribute;
     private INamedTypeSymbol? _jsonSerializableAttribute;
@@ -14,6 +15,7 @@ internal sealed partial class SerializationRootsBuilder
     private INamedTypeSymbol? _rpcServiceType;
     private INamedTypeSymbol? _cancellationTokenType;
     private INamedTypeSymbol? _jsonSerializableTypesAttribute;
+    private INamedTypeSymbol? _ignoreJsonCoverageAttribute;
     private readonly List<INamedTypeSymbol> _jsonContexts = new();
     private readonly List<INamedTypeSymbol> _rpcServiceTypes = new();
 
@@ -28,6 +30,7 @@ internal sealed partial class SerializationRootsBuilder
         _rpcServiceType = _compilation.GetTypeByMetadataName("ActualLab.Rpc.IRpcService");
         _cancellationTokenType = _compilation.GetTypeByMetadataName("System.Threading.CancellationToken");
         _jsonSerializableTypesAttribute = _compilation.GetTypeByMetadataName(JsonSerializableTypesAttributeName);
+        _ignoreJsonCoverageAttribute = _compilation.GetTypeByMetadataName(IgnoreJsonCoverageAttributeName);
     }
 
     private void CollectSystemJsonDeclaration(INamedTypeSymbol type)
@@ -83,7 +86,8 @@ internal sealed partial class SerializationRootsBuilder
                 AddKeep(converterType.Construct(namedType.TypeArguments.ToArray()), statements);
     }
 
-    // Reported only for assemblies declaring a JsonSerializerContext, i.e. using source-generated System.Text.Json
+    // Reported only for assemblies whose own JsonSerializerContexts list a type RPC calls carry,
+    // i.e. use source-generated System.Text.Json for RPC: a context used for anything else says nothing about it
     private ImmutableArray<Diagnostic> GetSystemJsonDiagnostics()
     {
         if (_jsonContexts.Count == 0 || _rpcServiceTypes.Count == 0 || _jsonSerializableAttribute is null)
@@ -92,12 +96,32 @@ internal sealed partial class SerializationRootsBuilder
         if (_compilation.GetTypeByMetadataName("ActualLab.Serialization.SystemJsonTypeInfoResolver") is null)
             return ImmutableArray<Diagnostic>.Empty;
 
+        var rpcTypes = GetRpcCarriedTypes();
+        var rpcGraphTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var (type, _) in rpcTypes)
+            Cover(type, rpcGraphTypes, 0);
+        // Primitives are listed for anything, so they don't tell a context serves RPC
+        var listedTypes = GetJsonSerializableTypes();
+        if (!listedTypes.Any(t => t.SpecialType == SpecialType.None && rpcGraphTypes.Contains(t)))
+            return ImmutableArray<Diagnostic>.Empty;
+
         var coveredTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (var type in GetJsonSerializableTypes().Concat(GetReferencedJsonSerializableTypes()))
+        foreach (var type in listedTypes.Concat(GetReferencedJsonSerializableTypes()))
             Cover(type, coveredTypes, 0);
+        var ignoredTypes = GetTypeArguments(_compilation.Assembly, _ignoreJsonCoverageAttribute).ToList();
 
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        var reportedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var (type, method) in rpcTypes)
+            if (!coveredTypes.Contains(type) && !IsIgnored(type, ignoredTypes))
+                diagnostics.Add(UncoveredRpcJsonType(type, method));
+        return diagnostics.ToImmutable();
+    }
+
+    // Each type the RPC methods of this assembly take or return, with the first method using it
+    private List<(ITypeSymbol Type, IMethodSymbol Method)> GetRpcCarriedTypes()
+    {
+        var result = new List<(ITypeSymbol, IMethodSymbol)>();
+        var seenTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
         foreach (var serviceType in _rpcServiceTypes)
             foreach (var method in serviceType.GetMembers().OfType<IMethodSymbol>()) {
                 if (method.MethodKind != MethodKind.Ordinary)
@@ -109,13 +133,11 @@ internal sealed partial class SerializationRootsBuilder
                         continue;
                     if (SymbolEqualityComparer.Default.Equals(type, _cancellationTokenType))
                         continue;
-                    if (coveredTypes.Contains(type) || !reportedTypes.Add(type))
-                        continue;
-
-                    diagnostics.Add(UncoveredRpcJsonType(type, method));
+                    if (seenTypes.Add(type))
+                        result.Add((type, method));
                 }
             }
-        return diagnostics.ToImmutable();
+        return result;
     }
 
     // The [JsonSerializable] types of this assembly's contexts
@@ -146,24 +168,34 @@ internal sealed partial class SerializationRootsBuilder
     }
 
     private IEnumerable<ITypeSymbol> GetReferencedJsonSerializableTypes()
+        => _compilation.SourceModule.ReferencedAssemblySymbols
+            .SelectMany(assembly => GetTypeArguments(assembly, _jsonSerializableTypesAttribute));
+
+    // An open generic type, e.g. typeof(Box<>), ignores each of its closed types
+    private static bool IsIgnored(ITypeSymbol type, List<ITypeSymbol> ignoredTypes)
+        => ignoredTypes.Any(ignoredType => ignoredType is INamedTypeSymbol { IsUnboundGenericType: true }
+            ? SymbolEqualityComparer.Default.Equals(ignoredType.OriginalDefinition, type.OriginalDefinition)
+            : SymbolEqualityComparer.Default.Equals(ignoredType, type));
+
+    // The types listed by an assembly's attributes of the given type, which take them as params Type[]
+    private static IEnumerable<ITypeSymbol> GetTypeArguments(IAssemblySymbol assembly, INamedTypeSymbol? attributeType)
     {
-        if (_jsonSerializableTypesAttribute is null)
+        if (attributeType is null)
             yield break;
 
-        foreach (var assembly in _compilation.SourceModule.ReferencedAssemblySymbols)
-            foreach (var attribute in assembly.GetAttributes()) {
-                if (!SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _jsonSerializableTypesAttribute))
-                    continue;
+        foreach (var attribute in assembly.GetAttributes()) {
+            if (!SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType))
+                continue;
 
-                foreach (var argument in attribute.ConstructorArguments) {
-                    var values = argument.Kind == TypedConstantKind.Array
-                        ? argument.Values
-                        : ImmutableArray.Create(argument);
-                    foreach (var value in values)
-                        if (value.Value is ITypeSymbol type)
-                            yield return type;
-                }
+            foreach (var argument in attribute.ConstructorArguments) {
+                var values = argument.Kind == TypedConstantKind.Array
+                    ? argument.Values
+                    : ImmutableArray.Create(argument);
+                foreach (var value in values)
+                    if (value.Value is ITypeSymbol type)
+                        yield return type;
             }
+        }
     }
 
     // Mirrors what System.Text.Json's source generator includes for a [JsonSerializable] type

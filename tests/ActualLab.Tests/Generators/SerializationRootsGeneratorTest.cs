@@ -108,6 +108,83 @@ public class SerializationRootsGeneratorTest
     }
 
     [Fact]
+    public void ContextUnrelatedToRpcShouldNotTriggerALG0004()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Rpc;
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<Dto> Get(Other other, string text);
+            }
+
+            public class Dto;
+
+            public class Other;
+
+            public class Settings
+            {
+                public string Name { get; set; } = "";
+            }
+
+            [JsonSerializable(typeof(Settings))]
+            [JsonSerializable(typeof(string))]
+            internal partial class SettingsJsonContext : JsonSerializerContext;
+            """);
+
+        // Act
+        var (_, result) = Run(compilation);
+
+        // Assert
+        result.Diagnostics.Where(d => d.Id == "ALG0004").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void IgnoreJsonCoverageShouldSuppressALG0004()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Api;
+            using ActualLab.Rpc;
+            using ActualLab.Serialization;
+
+            [assembly: IgnoreJsonCoverage(typeof(Demo.Other))]
+            [assembly: IgnoreJsonCoverage(typeof(ApiArray<>))]
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<Dto> Get(Other other, ApiArray<int> items, ApiOption<int> option);
+            }
+
+            public class Dto;
+
+            public class Other;
+
+            [JsonSerializable(typeof(Dto))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // Act
+        var (_, result) = Run(compilation);
+
+        // Assert
+        var uncoveredTypes = result.Diagnostics
+            .Where(d => d.Id == "ALG0004")
+            .Select(d => d.GetMessage().Split('\'')[1])
+            .ToList();
+        uncoveredTypes.Should().BeEquivalentTo("ActualLab.Api.ApiOption<int>");
+    }
+
+    [Fact]
     public void UnusualTypesShouldNotBreakGeneratedCode()
     {
         // arrange

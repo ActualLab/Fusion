@@ -52,7 +52,8 @@ public static class DiagnosticsHelpers
         title: "RPC type has no System.Text.Json metadata",
         messageFormat: "'{0}' is used by RPC method '{1}', but no JsonSerializerContext covers it, "
             + "so it can't be serialized by the json5 formats under NativeAOT; "
-            + "add [JsonSerializable(typeof({0}))] to a JsonSerializerContext",
+            + "add [JsonSerializable(typeof({0}))] to a JsonSerializerContext, "
+            + "or [assembly: IgnoreJsonCoverage(typeof({0}))] if it's never serialized with System.Text.Json",
         category: nameof(SerializationRootsGenerator),
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
