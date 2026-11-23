@@ -14,19 +14,23 @@ namespace ActualLab.CommandR.Rpc;
 public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private IServiceProvider Services { get; } = services;
-    private RpcHub RpcHub { get; } = services.RpcHub();
+    // AddCommander() doesn't add RPC, so RpcHub is null in a container without it
+    private RpcHub? RpcHub { get; } = services.GetService<RpcHub>();
     private ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = CommanderCommandHandlerPriority.RpcRoutingCommandHandler)]
     public Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
+        if (RpcHub is not { } rpcHub)
+            return context.InvokeRemainingHandlers(cancellationToken); // No RPC -> nothing to route
+
         var finalHandler = context.ExecutionState.Handlers.FinalHandler;
         if (finalHandler is not IMethodCommandHandler methodHandler)
             return context.InvokeRemainingHandlers(cancellationToken); // Final handler isn't a method handler
 
         var serviceType = methodHandler.ServiceType;
         var method = methodHandler.Method;
-        if (GetRpcMethodDef(serviceType, method) is not { } rpcMethodDef)
+        if (GetRpcMethodDef(rpcHub, serviceType, method) is not { } rpcMethodDef)
             return context.InvokeRemainingHandlers(cancellationToken); // Not an RPC method
 
         var isDistributedOrClient =
@@ -90,7 +94,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                     context.ResetResult();
                     Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}",
                         rerouteCount, context.UntypedCommand);
-                    await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayer
+                    await rpcHub.InternalServices.OutboundCallOptions.ReroutingDelayer
                         .Invoke(rpcMethodDef, rerouteCount, cancellationToken)
                         .ConfigureAwait(false);
                 }
@@ -100,9 +104,9 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
 
     // Private methods
 
-    private RpcMethodDef? GetRpcMethodDef(Type serviceType, MethodInfo method)
+    private RpcMethodDef? GetRpcMethodDef(RpcHub rpcHub, Type serviceType, MethodInfo method)
     {
-        var serviceDef = RpcHub.ServiceRegistry.Get(serviceType);
+        var serviceDef = rpcHub.ServiceRegistry.Get(serviceType);
         if (serviceDef is null || !serviceDef.Mode.IsAnyClient())
             return null; // Not a client or distributed RPC service
 

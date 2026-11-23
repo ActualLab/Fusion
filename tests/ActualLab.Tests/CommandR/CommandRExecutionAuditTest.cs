@@ -92,7 +92,7 @@ public class CommandRExecutionAuditTest
             "GetRpcMethodDef",
             BindingFlags.Instance | BindingFlags.NonPublic)!;
 
-        getRpcMethodDef.Invoke(handler, [typeof(IMalformedRpcCommandService), method]);
+        getRpcMethodDef.Invoke(handler, [serviceProvider.RpcHub(), typeof(IMalformedRpcCommandService), method]);
 
         loggerProvider.Content.Should().Contain("must have 2 parameters instead of 3");
     }
