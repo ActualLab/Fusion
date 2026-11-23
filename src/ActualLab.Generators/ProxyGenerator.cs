@@ -9,6 +9,9 @@ using static GenerationHelpers;
 [Generator]
 public class ProxyGenerator : IIncrementalGenerator
 {
+    // Defining it (e.g. in <DefineConstants>) disables the generator for the assembly
+    public const string DisableSymbol = "ACTUALLAB_NO_PROXIES";
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var items = context.SyntaxProvider
@@ -18,8 +21,10 @@ public class ProxyGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(items, Generate);
     }
 
+    // Checked here rather than in a combined provider: this way a disabled assembly skips the semantic step
     private static bool CouldBeAugmented(SyntaxNode node, CancellationToken cancellationToken)
-        => node is ClassDeclarationSyntax or InterfaceDeclarationSyntax;
+        => node is ClassDeclarationSyntax or InterfaceDeclarationSyntax
+            && !node.SyntaxTree.Options.PreprocessorSymbolNames.Contains(DisableSymbol, StringComparer.Ordinal);
 
     private static (SemanticModel SemanticModel, TypeDeclarationSyntax? TypeDef)
         MustAugment(GeneratorSyntaxContext context, CancellationToken cancellationToken)

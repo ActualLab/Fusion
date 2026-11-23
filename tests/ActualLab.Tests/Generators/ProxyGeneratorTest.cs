@@ -12,6 +12,27 @@ public class ProxyGeneratorTest
     private static readonly MetadataReference[] MetadataReferences = GetMetadataReferences();
 
     [Fact]
+    public void DisableSymbolTest()
+    {
+        var options = ParseOptions.WithPreprocessorSymbols(ProxyGenerator.DisableSymbol);
+        var compilation = CreateCompilation(CSharpSyntaxTree.ParseText("""
+            using System.Threading.Tasks;
+            using ActualLab.Interception;
+
+            namespace Demo;
+
+            public interface IDisabledProxy : IRequiresAsyncProxy
+            {
+                Task Run();
+            }
+            """, options, "Source0.cs"));
+
+        var (_, _, result) = Run(compilation);
+
+        result.Results.Single().GeneratedSources.Should().BeEmpty();
+    }
+
+    [Fact]
     public void SourceHintsMustIncludeGenericArity()
     {
         var compilation = CreateCompilation("""
