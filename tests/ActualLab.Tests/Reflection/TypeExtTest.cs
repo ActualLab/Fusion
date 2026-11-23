@@ -14,6 +14,15 @@ public class TypeExtTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public void GetDefaultValueTest()
+    {
+        typeof(string).GetDefaultValue().Should().BeNull();
+        typeof(int).GetDefaultValue().Should().Be(0);
+        typeof(int?).GetDefaultValue().Should().BeNull();
+        typeof(Moment?).GetDefaultValue().Should().BeNull();
+    }
+
+    [Fact]
     public void GetAllBaseTypesTest()
     {
         var baseTypes = GetType().GetAllBaseTypes().ToArray();

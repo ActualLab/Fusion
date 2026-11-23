@@ -57,10 +57,14 @@ public static partial class TypeExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static object? GetDefaultValue(this Type type)
     {
+        // A boxed default T? is null, but GetUninitializedObject(typeof(T?)) returns a boxed default T
+        if (!type.IsValueType || Nullable.GetUnderlyingType(type) is not null)
+            return null;
+
 #if !NETSTANDARD2_0
-        return !type.IsValueType ? null : RuntimeHelpers.GetUninitializedObject(type);
+        return RuntimeHelpers.GetUninitializedObject(type);
 #else
-        return !type.IsValueType ? null : FormatterServices.GetUninitializedObject(type);
+        return FormatterServices.GetUninitializedObject(type);
 #endif
     }
 
