@@ -43,9 +43,9 @@ apps only need [Step 1](#step-1-reference-the-packages-you-use) and
   copy of K4os.Compression.LZ4). `ByteCodec` is the codec: an immutable record of its settings
   plus an optional preset dictionary (`DictionaryData`), which it prepares once and shares
   with every encoder, so even the first frames after a compression context reset compress well.
-  `f.AddCompressedVariants(suffix, compression, mode)` adds the compressed variants of the binary
+  `f.AddCompressedVariants(suffix, codec, mode)` adds the compressed variants of the binary
   formats (see [Dictionaries](../PartR-Serialization.md#dictionaries) and
-  [Step 9](#step-9-compressed-variants-take-a-suffix-and-a-bytecompression)).
+  [Step 9](#step-9-compressed-variants-take-a-suffix-and-a-bytecodec)).
 - **Zstandard on .NET 11+.** `ZstdByteCodec` adds Zstandard frame compression, backed by
   .NET's own implementation, with the same preset dictionary support (see [Zstandard](../PartR-Serialization.md#zstandard-net-11)).
 - **Per-frame codec selection.** `SelectingByteCodec` picks one of several codecs for each frame,
@@ -263,7 +263,9 @@ existing format.
 | `f.AddLZ4Variants(RpcCompressionMode.Full)` | `f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full)` |
 | `f.AddLZ4Variants(filter, modes)` | `f.AddCompressedVariants(suffix, LZ4ByteCodec.Default, mode, filter)`, once per mode |
 | `format.WithLZ4()` | `format.WithCompression("lz4", LZ4ByteCodec.Default)` |
-| `new RpcCompressionFormat(id, compressorFactory, decompressorFactory, options)` | `new RpcCompressionFormat(id, codec, options)` |
+| `format.WithLZ4(RpcCompressionMode.Full)` | `format.WithCompression("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full)` |
+| `format.WithCompression(key, compressionFormat, mode)` | `format.WithCompressionFormat(key, compressionFormat, mode)` |
+| `new RpcCompressionFormat(id, compressorFactory, decompressorFactory, options)` | `new RpcCompressionFormat(codec, options)` |
 | `ByteCompressor` / `ByteDecompressor` | `ByteEncoder` / `ByteDecoder` (`Compress` / `Decompress` became `Encode` / `Decode`) |
 | `new LZ4ByteCompressor(blockSize)` / `new LZ4ByteDecompressor(blockSize)` | `new LZ4ByteCodec { BlockSize = blockSize }.NewEncoder()` / `.NewDecoder()` |
 

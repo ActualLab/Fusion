@@ -23,7 +23,14 @@ public class CompressionBenchmarks
     private ByteDecoder _decoder = null!;
     private ArrayPoolBuffer<byte> _buffer = null!;
 
-    [Params("LZ4", "LZ4+Dict", "Zstd1", "Zstd1+Dict", "Zstd-5", "Zstd-5+Dict", "Zstd3")]
+    public static IEnumerable<string> Codecs => [
+        "LZ4", "LZ4+Dict",
+#if NET11_0_OR_GREATER
+        "Zstd1", "Zstd1+Dict", "Zstd-5", "Zstd-5+Dict", "Zstd3",
+#endif
+    ];
+
+    [ParamsSource(nameof(Codecs))]
     public string Codec { get; set; } = "";
 
     [Params(300, 4000)]

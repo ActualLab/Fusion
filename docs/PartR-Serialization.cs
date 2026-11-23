@@ -113,7 +113,7 @@ public static class ConfiguringFormats
     public static void CustomLz4Format(IServiceCollection services)
     {
         #region PartRSerialization_CustomLz4Format
-        var lz4 = new RpcCompressionFormat("lz4-1k",
+        var lz4 = new RpcCompressionFormat(
             new LZ4ByteCodec { BlockSize = 8 * 1024 },
             new RpcCompressionOptions { MinCompressedFrameSize = 1024 });
         var format = new RpcWireFormat("msgpack6c-lz4-1k",
@@ -138,6 +138,7 @@ public static class ConfiguringFormats
         #endregion
     }
 
+#if NET11_0_OR_GREATER
     public static void SelectingCodec(IServiceCollection services)
     {
         #region PartRSerialization_SelectingCodec
@@ -150,6 +151,7 @@ public static class ConfiguringFormats
         });
         #endregion
     }
+#endif
 
     public static void AddFormats(IServiceCollection services)
     {

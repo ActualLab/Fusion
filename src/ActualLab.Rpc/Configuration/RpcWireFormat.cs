@@ -33,7 +33,7 @@ public sealed class RpcWireFormat(
     public override string ToString()
         => $"{GetType().GetName()}({Key})";
 
-    // The "<key>-<suffix>" variant compressed with the compression in the given mode, e.g.
+    // The "<key>-<suffix>" variant compressed with the codec in the given mode, e.g.
     // ("lz4", LZ4ByteCodec.Default) or ("lz4d1f", lz4WithDictionary, RpcCompressionMode.Full)
     public RpcWireFormat WithCompression(
         string suffix,
@@ -42,7 +42,7 @@ public sealed class RpcWireFormat(
         RpcCompressionOptions? options = null)
     {
         ValidateSuffix(suffix, codec, compressionMode);
-        var compressionFormat = RpcCompressionFormat.Get(suffix, codec, options);
+        var compressionFormat = RpcCompressionFormat.Get(codec, options);
         return WithCompressionFormat($"{Key}-{suffix}", compressionFormat, compressionMode);
     }
 
@@ -66,6 +66,8 @@ public sealed class RpcWireFormat(
     {
         if (suffix.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(suffix));
+        if (compressionMode == RpcCompressionMode.None)
+            throw new ArgumentOutOfRangeException(nameof(compressionMode));
 
         foreach (var name in (string[])["lz4", "zstd"]) {
             var expectedMode = string.Equals(suffix, name, StringComparison.Ordinal)

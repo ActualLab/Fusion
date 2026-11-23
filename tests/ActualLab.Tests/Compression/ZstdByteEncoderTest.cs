@@ -29,8 +29,79 @@ public class ZstdByteEncoderTest(ITestOutputHelper @out) : ByteEncoderTestBase(@
         }
     }
 
+    // The encoder's window is set explicitly, so even the slowest levels stay decodable
+    [Theory]
+    [InlineData(19, 16)]
+    [InlineData(22, 16)]
+    public void HighQualityShouldRoundTrip(int quality, int windowLog2)
+    {
+        // arrange
+        var codec = ZstdByteCodec.Default with { Quality = quality, WindowLog2 = windowLog2 };
+        using var pair = new CodecPair(codec.NewEncoder(), codec.NewDecoder());
+
+        // act + assert
+        for (var i = 0; i < 10; i++) {
+            var source = LZ4DictionaryTest.NewMessages(i, 100_000);
+            pair.RoundTrip(source).Should().Equal(source);
+        }
+    }
+
     [Fact]
-    public void ZstdVariantsShouldTakeCompression()
+    public void SettingsShouldBeValidated()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ZstdByteCodec.Default with { Quality = 1000 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => ZstdByteCodec.Default with { WindowLog2 = 5 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => ZstdByteCodec.Default with { MaxWindowLog2 = 40 });
+
+        var tooWide = ZstdByteCodec.Default with { WindowLog2 = 24 };
+        Assert.Throws<ArgumentOutOfRangeException>(() => tooWide.NewEncoder());
+        Assert.Throws<ArgumentOutOfRangeException>(() => tooWide.NewDecoder());
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new RpcWireFormatConfiguration().AddCompressedVariants("zstdw", tooWide));
+        (tooWide with { MaxWindowLog2 = 24 }).NewDecoder().Dispose();
+    }
+
+    [Fact]
+    public void WiderPeerWindowShouldBeRejected()
+    {
+        // arrange
+        var wide = ZstdByteCodec.Default with { WindowLog2 = 22 };
+        var narrow = ZstdByteCodec.Default with { MaxWindowLog2 = 20 };
+        using var pair = new CodecPair(wide.NewEncoder(), narrow.NewDecoder());
+        var source = LZ4DictionaryTest.NewMessages(0, 10_000); // The window is in the frame header
+
+        // act + assert
+        Assert.Throws<FormatException>(() => pair.RoundTrip(source));
+    }
+
+    // The documented use: LZ4 for small frames, Zstandard for large ones
+    [Fact]
+    public void SelectingCodecShouldMixLZ4AndZstd()
+    {
+        // arrange
+        var codec = new SelectingByteCodec(
+            static frame => frame.Length < 2048 ? 0 : 1,
+            LZ4ByteCodec.Default,
+            ZstdByteCodec.Default with { DictionaryData = LZ4DictionaryTest.NewMessages(9, 32_768) });
+        using var pair = new CodecPair(codec.NewEncoder(), codec.NewDecoder());
+        var rnd = new Random(1);
+
+        // act + assert
+        for (var i = 0; i < 300; i++) {
+            var source = LZ4DictionaryTest.NewMessages(i, rnd.Next(1, 10_000));
+            var encoded = pair.Encode(source);
+            encoded[0].Should().Be(source.Length < 2048 ? (byte)0 : (byte)1);
+            pair.Decode(encoded, MaxLength).Should().Equal(source);
+            if (i % 101 == 100) {
+                pair.Encoder.Reset();
+                pair.Decoder.Reset();
+            }
+        }
+        codec.ToString().Should().Be("Selecting(LZ4(16K), Zstd(q1, 128K+dict))");
+    }
+
+    [Fact]
+    public void ZstdVariantsShouldTakeCodec()
     {
         // arrange
         var formats = new RpcWireFormatConfiguration();
@@ -92,7 +163,8 @@ public class ZstdDictionaryTest(ITestOutputHelper @out) : ByteEncoderTestBase(@o
         // arrange
         using var pair = NewPair(Shared);
         var frame = LZ4DictionaryTest.NewMessages(3, 2000);
-        var expected = NewPair(Shared).Encode(frame);
+        using var fresh = NewPair(Shared);
+        var expected = fresh.Encode(frame);
 
         // act
         pair.RoundTrip(LZ4DictionaryTest.NewMessages(2, 50_000));
@@ -117,12 +189,12 @@ public class ZstdDictionaryTest(ITestOutputHelper @out) : ByteEncoderTestBase(@o
         var sameDataCopy = ZstdByteCodec.Default with { DictionaryData = SharedDictionaryData };
 
         // assert
-        shared.Dictionary.Should().NotBeNull();
-        copy.Dictionary.Should().NotBeNull().And.NotBeSameAs(shared.Dictionary, "a copy may have other settings");
+        using (var copyPair = NewPair(copy))
+            copyPair.RoundTrip(frame).Should().Equal(frame);
         copy.DictionaryData.ToArray().Should().Equal(SharedDictionaryData);
         sameDataCopy.Should().NotBe(shared, "ByteCodec records use reference equality");
-        shared.ToString().Should().Be("Zstd(q1+dict)");
-        copy.ToString().Should().Be("Zstd(q3+dict)");
+        shared.ToString().Should().Be("Zstd(q1, 128K+dict)");
+        copy.ToString().Should().Be("Zstd(q3, 128K+dict)");
         new CodecPair(sameDataCopy.NewEncoder(), Shared.NewDecoder()).RoundTrip(frame).Should().Equal(frame);
     }
 

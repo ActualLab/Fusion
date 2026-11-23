@@ -1,3 +1,4 @@
+using System.Buffers;
 using ActualLab.Compression;
 
 namespace ActualLab.Tests.Compression;
@@ -196,15 +197,41 @@ public abstract class ByteEncoderTestBase(ITestOutputHelper @out) : TestBase(@ou
         var compressed = pair.Encode(source);
         compressed[compressed.Length / 2] ^= 0xFF;
 
-        try {
-            pair.Decode(compressed, MaxLength).Should().NotEqual(source);
-        }
-        catch (Exception e) {
-            Out.WriteLine($"Rejected with {e.GetType().Name}");
+        DecodeOrNull(pair, compressed)?.Should().NotEqual(source);
+    }
+
+    // A frame cut mid-block must fail rather than decode partially or leak into the next frame.
+    // (A cut exactly at a block boundary is undetectable, but a 4 KB frame is a single block.)
+    [Fact]
+    public void TruncatedFrameIsRejectedTest()
+    {
+        var source = NewPayload(0, 4000);
+        byte[] compressed;
+        using (var pair = NewPair())
+            compressed = pair.Encode(source);
+
+        for (var length = 1; length < compressed.Length; length += 1 + length / 8) {
+            using var pair = NewPair();
+            var truncated = compressed.AsSpan(0, length).ToArray();
+            Assert.ThrowsAny<Exception>(() => pair.Decode(truncated, MaxLength));
         }
     }
 
-    // A reset by only one side must not silently produce the right bytes either
+    // A big spare buffer must not let a decoder produce much more than maxLength before it fails
+    [Fact]
+    public void MaxLengthIsEnforcedEarlyTest()
+    {
+        using var pair = NewPair();
+        var source = new byte[1 << 20];
+        var compressed = pair.Encode(source);
+        var target = new BoundedWriter(1 << 21);
+
+        Assert.Throws<FormatException>(() => pair.Decoder.Decode(compressed, target, 1000));
+        target.WrittenCount.Should().BeLessThan(1 << 16);
+    }
+
+    // A decoder that lost the history the encoder still references must not silently produce the
+    // right bytes. (An encoder-only reset is undetectable: a frame that references no history decodes fine.)
     [Fact]
     public void OneSidedResetIsNeverSilentlyAcceptedTest()
     {
@@ -212,15 +239,10 @@ public abstract class ByteEncoderTestBase(ITestOutputHelper @out) : TestBase(@ou
         var source = NewPayload(0, 4000);
 
         pair.RoundTrip(source).Should().Equal(source);
-        pair.Encoder.Reset(); // Decoder deliberately not reset
+        pair.Decoder.Reset(); // Encoder deliberately not reset
 
         var compressed = pair.Encode(source);
-        try {
-            pair.Decode(compressed, MaxLength).Should().NotEqual(source);
-        }
-        catch (Exception e) {
-            Out.WriteLine($"Rejected with {e.GetType().Name}");
-        }
+        DecodeOrNull(pair, compressed)?.Should().NotEqual(source);
     }
 
     [Fact]
@@ -236,6 +258,17 @@ public abstract class ByteEncoderTestBase(ITestOutputHelper @out) : TestBase(@ou
     }
 
     // Protected methods
+
+    protected byte[]? DecodeOrNull(CodecPair pair, byte[] compressed)
+    {
+        try {
+            return pair.Decode(compressed, MaxLength);
+        }
+        catch (Exception e) {
+            Out.WriteLine($"Rejected with {e.GetType().Name}");
+            return null;
+        }
+    }
 
     protected CodecPair NewPair()
         => new(NewEncoder(), NewDecoder());
@@ -299,6 +332,23 @@ public abstract class ByteEncoderTestBase(ITestOutputHelper @out) : TestBase(@ou
             if (sourceLength < maxLength)
                 encoder.GetMaxEncodedLength(sourceLength + 1).Should().BeGreaterThan(maxLength);
         }
+    }
+
+    // Always offers its whole spare capacity, as a pooled buffer may
+    protected sealed class BoundedWriter(int capacity) : IBufferWriter<byte>
+    {
+        private readonly byte[] _buffer = new byte[capacity];
+
+        public int WrittenCount { get; private set; }
+
+        public void Advance(int count)
+            => WrittenCount += count;
+
+        public Memory<byte> GetMemory(int sizeHint = 0)
+            => _buffer.AsMemory(WrittenCount);
+
+        public Span<byte> GetSpan(int sizeHint = 0)
+            => _buffer.AsSpan(WrittenCount);
     }
 
     protected sealed class CodecPair(ByteEncoder encoder, ByteDecoder decoder) : IDisposable

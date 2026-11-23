@@ -41,7 +41,7 @@ public abstract record ByteCodec
     public abstract ByteEncoder NewEncoder();
     public abstract ByteDecoder NewDecoder();
 
-    // Reference equality: a compression is an identity, and two equal configurations
+    // Reference equality: a codec is an identity, and two equal configurations
     // still prepare their dictionaries separately
     public virtual bool Equals(ByteCodec? other)
         => ReferenceEquals(this, other);

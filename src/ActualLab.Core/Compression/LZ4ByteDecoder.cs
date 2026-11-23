@@ -18,7 +18,7 @@ public sealed class LZ4ByteDecoder : ByteDecoder
     // all of it, so this is what the output span must be sized for
     public int BlockSize { get; }
 
-    // The compression must match the peer encoder's one (block size and dictionary)
+    // The codec must match the peer encoder's one (block size and dictionary)
     public LZ4ByteDecoder(LZ4ByteCodec? codec = null)
     {
         Codec = codec ??= LZ4ByteCodec.Default;

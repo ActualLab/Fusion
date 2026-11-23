@@ -30,7 +30,7 @@ public sealed class LZ4ByteEncoder : ByteEncoder
     // The encoder's own block size, which is what every bound here is sized for - see the ctor
     public int BlockSize { get; }
 
-    // The compression must match the peer decoder's one (block size and dictionary)
+    // The codec must match the peer decoder's one (block size and dictionary)
     public LZ4ByteEncoder(LZ4ByteCodec? codec = null)
     {
         Codec = codec ??= LZ4ByteCodec.Default;

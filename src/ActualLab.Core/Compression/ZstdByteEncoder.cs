@@ -18,16 +18,16 @@ public sealed class ZstdByteEncoder : ByteEncoder
 
     public ZstdByteCodec Codec { get; }
 
-    // The compression must match the peer decoder's one (dictionary)
+    // The codec must match the peer decoder's one (dictionary)
     public ZstdByteEncoder(ZstdByteCodec? codec = null)
     {
         Codec = codec ??= ZstdByteCodec.Default;
-        _encoder = codec.Dictionary is { } dictionary
-            ? new ZstandardEncoder(new ZstandardCompressionOptions {
-                Quality = codec.Quality,
-                Dictionary = dictionary,
-            })
-            : new ZstandardEncoder(codec.Quality);
+        codec.ValidateWindows();
+        _encoder = new ZstandardEncoder(new ZstandardCompressionOptions {
+            Quality = codec.Quality,
+            WindowLog2 = codec.WindowLog2,
+            Dictionary = codec.Dictionary,
+        });
     }
 
     public override void Dispose()

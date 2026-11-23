@@ -99,7 +99,7 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
     }
 
     // Adds the "<key>-<suffix>" variant of every format the filter accepts (all if there's no filter),
-    // compressed with the compression in the given mode: e.g. ("lz4", LZ4ByteCodec.Default),
+    // compressed with the codec in the given mode: e.g. ("lz4", LZ4ByteCodec.Default),
     // ("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full), ("lz4d1", lz4WithDictionary).
     // The "lz4" / "lz4f" / "zstd" / "zstdf" suffixes are reserved for the default codecs in these modes.
     // Text and compressed formats are always skipped, since they can't be compressed;
@@ -116,7 +116,7 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
             compressionMode,
             options);
 
-    // Same, but the factory picks the compression for each format (e.g. a dictionary per serializer);
+    // Same, but the factory picks the codec for each format (e.g. a dictionary per serializer);
     // null skips the format
     public void AddCompressedVariants(
         string suffix,
@@ -138,7 +138,7 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
             RpcWireFormat.ValidateSuffix(suffix, codec, compressionMode);
             var compressionFormat = compressionFormats.FirstOrDefault(x => ReferenceEquals(x.Codec, codec));
             if (compressionFormat is null) {
-                compressionFormat = RpcCompressionFormat.Get(suffix, codec, options);
+                compressionFormat = RpcCompressionFormat.Get(codec, options);
                 compressionFormats.Add(compressionFormat);
             }
             var variant = format.WithCompressionFormat($"{format.Key}-{suffix}", compressionFormat, compressionMode);

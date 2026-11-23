@@ -3,31 +3,44 @@ using ActualLab.Compression;
 namespace ActualLab.Rpc.Compression;
 
 /// <summary>
-/// A named, configured frame compression codec (<see cref="ByteCodec"/>) plus the policy its
-/// encoder follows. An <see cref="RpcWireFormat"/> names one of these, and its
+/// A configured frame compression codec (<see cref="ByteCodec"/>) plus the policy its encoder
+/// follows. An <see cref="RpcWireFormat"/> refers to one of these, and its
 /// <see cref="RpcCompressionMode"/> says which directions actually use it.
 /// </summary>
-public sealed class RpcCompressionFormat(
-    Symbol id,
-    ByteCodec codec,
-    RpcCompressionOptions? options = null)
+public sealed class RpcCompressionFormat
 {
-    public static readonly RpcCompressionFormat LZ4 = new("lz4", LZ4ByteCodec.Default);
+    // Not validated: creating a codec's contexts in a type initializer would make this type unusable
+    // where the codec isn't supported (e.g. Zstandard on Blazor WASM), even for LZ4 formats
+    public static readonly RpcCompressionFormat LZ4 = new(LZ4ByteCodec.Default, null, mustValidate: false);
 #if NET11_0_OR_GREATER
-    public static readonly RpcCompressionFormat Zstd = new("zstd", ZstdByteCodec.Default);
+    public static readonly RpcCompressionFormat Zstd = new(ZstdByteCodec.Default, null, mustValidate: false);
 #endif
 
-    public Symbol Id { get; } = id;
-    public ByteCodec Codec { get; } = codec;
-    public RpcCompressionOptions Options { get; } = options ?? RpcCompressionOptions.Default;
+    public ByteCodec Codec { get; }
+    public RpcCompressionOptions Options { get; }
+
+    public RpcCompressionFormat(ByteCodec codec, RpcCompressionOptions? options = null)
+        : this(codec, options, mustValidate: true)
+    { }
+
+    private RpcCompressionFormat(ByteCodec codec, RpcCompressionOptions? options, bool mustValidate)
+    {
+        if (mustValidate) {
+            // Fails here rather than on every connection; this also prepares the codec's dictionary
+            codec.NewEncoder().Dispose();
+            codec.NewDecoder().Dispose();
+        }
+        Codec = codec;
+        Options = options ?? RpcCompressionOptions.Default;
+    }
 
     public override string ToString()
-        => $"{GetType().GetName()}({Id}, {Codec})";
+        => $"{GetType().GetName()}({Codec}, {Options.ToShortString()})";
 
     // Internal methods
 
     // Formats of a default codec configuration share the static instance
-    internal static RpcCompressionFormat Get(Symbol id, ByteCodec codec, RpcCompressionOptions? options)
+    internal static RpcCompressionFormat Get(ByteCodec codec, RpcCompressionOptions? options)
     {
         if (options is null) {
             if (ReferenceEquals(codec, LZ4ByteCodec.Default))
@@ -37,6 +50,6 @@ public sealed class RpcCompressionFormat(
                 return Zstd;
 #endif
         }
-        return new(id, codec, options);
+        return new(codec, options);
     }
 }

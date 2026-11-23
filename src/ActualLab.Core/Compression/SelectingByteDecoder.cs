@@ -33,6 +33,8 @@ public sealed class SelectingByteDecoder : ByteDecoder
         var index = source.Span[0];
         if (index >= _decoders.Length)
             throw Errors.UnknownCodecIndex(index, _decoders.Length);
+        if (source.Length == 1) // The encoder never produces an index byte alone
+            throw Errors.UnknownCodecIndex(index, _decoders.Length);
 
         _decoders[index].Decode(source[1..], target, maxLength);
     }

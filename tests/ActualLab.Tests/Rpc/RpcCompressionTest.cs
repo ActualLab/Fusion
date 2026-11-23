@@ -1,4 +1,5 @@
 using ActualLab.Rpc;
+using ActualLab.Rpc.Compression;
 
 namespace ActualLab.Tests.Rpc;
 
@@ -35,7 +36,7 @@ public class RpcCompressionTest : RpcTestBase
         var peer = ClientServices.RpcHub().GetClientPeer(ClientPeerRef);
 
         (await client.Div(6, 2)).Should().Be(3);
-        peer.InboundCompression!.Id.Value.Should().Be("lz4");
+        peer.InboundCompression.Should().BeSameAs(RpcCompressionFormat.LZ4);
         peer.OutboundCompression.Should().BeNull();
 
         for (var i = 0; i < 200; i++)
@@ -55,8 +56,8 @@ public class RpcCompressionTest : RpcTestBase
         var peer = ClientServices.RpcHub().GetClientPeer(ClientPeerRef);
 
         (await client.Div(6, 2)).Should().Be(3);
-        peer.InboundCompression!.Id.Value.Should().Be("lz4");
-        peer.OutboundCompression!.Id.Value.Should().Be("lz4");
+        peer.InboundCompression.Should().BeSameAs(RpcCompressionFormat.LZ4);
+        peer.OutboundCompression.Should().BeSameAs(RpcCompressionFormat.LZ4);
 
         for (var i = 0; i < 200; i++)
             (await client.Add(i, 1)).Should().Be(i + 1);
@@ -83,7 +84,7 @@ public class RpcCompressionTest : RpcTestBase
 
             await peer.Disconnect().ConfigureAwait(false);
             (await client.Div(6, 2)).Should().Be(3);
-            peer.InboundCompression!.Id.Value.Should().Be("lz4");
+            peer.InboundCompression.Should().BeSameAs(RpcCompressionFormat.LZ4);
             (peer.OutboundCompression is not null).Should().Be(compressBothWays);
         }
     }

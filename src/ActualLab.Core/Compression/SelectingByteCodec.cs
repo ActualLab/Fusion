@@ -7,7 +7,8 @@ public delegate int ByteCodecSelector(ReadOnlySpan<byte> frame);
 /// A <see cref="ByteCodec"/> that encodes each frame with one of its <see cref="Codecs"/>, picked by
 /// <see cref="Selector"/> - e.g. LZ4 for small frames and Zstandard for large ones. Every encoded frame
 /// starts with the index of its codec (1 byte), and each codec keeps a context of its own, so it sees
-/// only the frames encoded with it. The inner codecs carry their own dictionaries.
+/// only the frames encoded with it. The inner codecs carry their own dictionaries: its own
+/// <see cref="ByteCodec.DictionaryData"/> is unused.
 /// </summary>
 public sealed record SelectingByteCodec : ByteCodec
 {
@@ -23,7 +24,10 @@ public sealed record SelectingByteCodec : ByteCodec
         }
     }
 
-    public ByteCodecSelector Selector { get; init; }
+    public ByteCodecSelector Selector {
+        get;
+        init => field = value ?? throw new ArgumentNullException(nameof(value));
+    }
 
     public override string? DefaultName => null;
 

@@ -252,7 +252,7 @@ connection pins and how far a BREACH-style probe can correlate across frames &md
 Compression is configured with a `ByteCodec`: an immutable record of a codec's settings plus
 an optional preset dictionary, e.g. `LZ4ByteCodec.Default` or
 `LZ4ByteCodec.Default with { ExtraBlocks = 8 }`. Since v16 the compressed variants are not in
-the default set. `f.AddCompressedVariants(suffix, compression, mode)` adds the `<key>-<suffix>`
+the default set. `f.AddCompressedVariants(suffix, codec, mode)` adds the `<key>-<suffix>`
 variant of every uncompressed binary format added so far, compressed in that mode
 (`RpcCompressionMode.ServerToClient` by default):
 
@@ -271,7 +271,7 @@ f.AddCompressedVariants("lzx", format => format.Key.StartsWith("msgpack6") ? lz4
 ```
 
 Text formats are always skipped, since they can't be compressed, and a key that's already taken
-fails the call. `format.WithCompression(suffix, compression, mode)` makes the compressed variant of
+fails the call. `format.WithCompression(suffix, codec, mode)` makes the compressed variant of
 a single format. A client can use a `-lz4` format only if the server serves it, so add the variants
 on both sides.
 
@@ -279,7 +279,7 @@ To compress with different settings, add a format of your own:
 
 <!-- snippet: PartRSerialization_CustomLz4Format -->
 ```cs
-var lz4 = new RpcCompressionFormat("lz4-1k",
+var lz4 = new RpcCompressionFormat(
     new LZ4ByteCodec { BlockSize = 8 * 1024 },
     new RpcCompressionOptions { MinCompressedFrameSize = 1024 });
 var format = new RpcWireFormat("msgpack6c-lz4-1k",
@@ -302,7 +302,7 @@ and headers it holds.
 
 `codec with { DictionaryData = data }` is a copy of the codec with the dictionary's
 source: a sample of typical frames, or a dictionary trained for the codec (e.g. by
-`ZstandardDictionary.Train`). The codec prepares it once, on first use, for its own settings
+`ZstandardDictionary.Train`). The codec prepares it once, on first use (an `RpcCompressionFormat` does that when it is created), for its own settings
 (a `with { ... }` copy prepares its own), and never changes it afterwards, so creating or resetting
 an encoder with it costs about as much as without it, and one instance should be shared by the
 whole app. `ByteCodec` records use reference equality. Both peers must use the same
@@ -325,17 +325,29 @@ services.AddRpc().ConfigureWireFormats(f => {
 `LZ4ByteCodec.BlockSize` (16 KB by default) must match on both peers. `ExtraBlocks`
 (4 by default) is local to each peer: an encoder's or decoder's buffer holds LZ4's 64 KB
 window plus `1 + ExtraBlocks` blocks, and once it's full, the window slides back with a 64 KB copy,
-so more blocks amortize that copy better at the cost of memory.
+so more blocks amortize that copy better at the cost of memory: with the defaults, each
+encoder or decoder buffer takes about 144 KB (80 KB with `ExtraBlocks = 0`).
 
 ### Zstandard (.NET 11+)
 
 On .NET 11 and later, Zstandard is available too, backed by .NET's own `System.IO.Compression`
 implementation: `ZstdByteCodec`, e.g. `f.AddCompressedVariants("zstd", ZstdByteCodec.Default)`.
-`Quality` is zstd's compression level (1 by default; negative levels are faster), and a
-decoder accepts windows up to 2^`MaxWindowLog2` bytes (8 MB by default), so a peer can't make
-it allocate more. Its dictionary is a `ZstandardDictionary` digested once, for `Quality`. Compared to LZ4, zstd compresses better but is slower, especially
-when decompressing &ndash; `CompressionBenchmarks` in `tests/ActualLab.Fusion.Tests.BenchmarkRunner`
-measures both on RPC-like frames.
+Its settings:
+
+- `Quality` is zstd's compression level (1 by default; negative levels are faster).
+- `WindowLog2` is the encoder's window, i.e. how far back a match may reach: 2^17 = 128 KB by
+  default, the same as the default `ContextResetBytes`, so a preset dictionary stays reachable
+  until the context is reset, while every connection's contexts stay small. The window is set
+  explicitly, so the levels that would otherwise pick a large one (up to 2^27 for level 22) stay
+  decodable.
+- `MaxWindowLog2` is the largest window the decoder accepts (2^23 = 8 MB by default): it bounds the
+  history a peer can make a decoder keep, not its total memory (output buffers come on top).
+  A frame with a larger window fails to decode, and a codec whose `WindowLog2` exceeds its own
+  `MaxWindowLog2` is rejected when its variants are added.
+
+Its dictionary is a `ZstandardDictionary` digested once, for `Quality`. Compared to LZ4, zstd
+compresses better but is slower, especially when decompressing &ndash; `CompressionBenchmarks` in
+`tests/ActualLab.Fusion.Tests.BenchmarkRunner` measures both on RPC-like frames.
 
 ### Selecting a Codec per Frame
 
@@ -354,7 +366,8 @@ services.AddRpc().ConfigureWireFormats(f => {
 ```
 <!-- endSnippet -->
 
-Every encoded frame starts with one byte, the index of the codec that encoded it, so the decoder
+Every encoded frame (except an empty one, which stays empty and never reaches the selector)
+starts with one byte, the index of the codec that encoded it, so the decoder
 needs no selector and both peers only have to agree on the list of codecs. Nothing is copied: the
 encoder writes the index byte and lets the selected encoder write right after it, and the decoder
 passes the rest of the frame to the matching decoder as a slice. Each codec keeps its own
@@ -383,7 +396,7 @@ so it can't change after that.
 | `Add(params ReadOnlySpan<RpcWireFormat>)` | Adds formats; a format with the same key replaces the existing one (and becomes the default if the replaced one was) |
 | `Remove(params ReadOnlySpan<string> keys)` / `Clear()` | Removes formats by key / removes all of them |
 | `Reset()` | Restores the formats, the default format and the backend-only formats of `RpcDefaultWireFormats` |
-| `AddCompressedVariants(suffix, compression, [mode], [filter])` | Adds the `<key>-<suffix>` variant of every uncompressed binary format the filter accepts (all of them if there's no filter), compressed with the `ByteCodec` in the given mode (`ServerToClient` by default); a factory overload picks the compression per format; fails if a key is already taken |
+| `AddCompressedVariants(suffix, codec, [mode], [filter])` | Adds the `<key>-<suffix>` variant of every uncompressed binary format the filter accepts (all of them if there's no filter), compressed with the `ByteCodec` in the given mode (`ServerToClient` by default); a factory overload picks the codec per format; fails if a key is already taken |
 | `DefaultFormat` | The default format (the one a client requests); it must be one of the added formats |
 | `BackendOnlyFormatKeys` | The formats clients can't select |
 | `AddMemoryPack()` | `mempack5`, `mempack5c`, `mempack6`, `mempack6c` (`ActualLab.Serialization.MemoryPack`) |

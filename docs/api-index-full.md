@@ -1517,7 +1517,7 @@ A single route generation of an `RpcRef`: carries the resolved target info for t
 
 ###### `RpcWireFormat`, `RpcDefaultWireFormats`, `RpcWireFormatResolver`
 
-Defines a named RPC wire format with its argument and message serializer factories; `WithCompression(suffix, compression)` makes a compressed variant. `RpcDefaultWireFormats` holds the built-in formats (`json5`, `json5np`, `msgpack5(c)`, `msgpack6(c)`), their list `All`, the `DefaultFormat` one (`msgpack6`) and `BackendOnlyFormatKeys` (`njson5`, `njson5np`). The resolver is the format registry of a container, built from `RpcConfiguration.WireFormats`; its `BackendOnlyFormatKeys` lists the formats a client may not pin via `?f=…`.
+Defines a named RPC wire format with its argument and message serializer factories; `WithCompression(suffix, codec)` makes a compressed variant. `RpcDefaultWireFormats` holds the built-in formats (`json5`, `json5np`, `msgpack5(c)`, `msgpack6(c)`), their list `All`, the `DefaultFormat` one (`msgpack6`) and `BackendOnlyFormatKeys` (`njson5`, `njson5np`). The resolver is the format registry of a container, built from `RpcConfiguration.WireFormats`; its `BackendOnlyFormatKeys` lists the formats a client may not pin via `?f=…`.
 
 ###### `RpcWireFormatConfiguration`
 

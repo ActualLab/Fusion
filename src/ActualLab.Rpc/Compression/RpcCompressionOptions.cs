@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace ActualLab.Rpc.Compression;
 
 /// <summary>
@@ -15,4 +17,15 @@ public sealed record RpcCompressionOptions
     // alongside attacker-controlled data in one frame safe - nothing here can.
     public long ContextResetBytes { get; init; } = 128 * 1024;
     public int ContextResetFrames { get; init; } = 512;
+
+    // E.g. "min 512, reset 128K/512": the minimal compressed frame size and the reset period (bytes/frames)
+    public string ToShortString()
+        => $"min {FormatSize(MinCompressedFrameSize)}, reset {FormatSize(ContextResetBytes)}/{ContextResetFrames}";
+
+    // Private methods
+
+    private static string FormatSize(long size)
+        => size % 1024 == 0 && size != 0
+            ? $"{size / 1024}K"
+            : size.ToString(CultureInfo.InvariantCulture);
 }

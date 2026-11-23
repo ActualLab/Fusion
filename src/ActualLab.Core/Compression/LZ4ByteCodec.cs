@@ -8,7 +8,7 @@ namespace ActualLab.Compression;
 /// </summary>
 public sealed record LZ4ByteCodec : ByteCodec
 {
-    // A encoder or decoder buffer holds LZ4's 64 KiB window plus 1 + ExtraBlocks blocks; once
+    // An encoder or decoder buffer holds LZ4's 64 KiB window plus 1 + ExtraBlocks blocks; once
     // it's full, the window slides back with a 64 KiB copy. With no extra blocks that happens on every frame
     // as soon as the window is full (with a dictionary, from the start), so this amortizes the copy.
     public const int DefaultExtraBlocks = 4;

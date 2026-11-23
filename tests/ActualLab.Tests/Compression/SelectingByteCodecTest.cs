@@ -112,6 +112,8 @@ public class SelectingByteCodecTest(ITestOutputHelper @out) : ByteEncoderTestBas
     [Fact]
     public void CodecsShouldBeValidated()
     {
+        Assert.Throws<ArgumentNullException>(() => new SelectingByteCodec(null!, LZ4ByteCodec.Default));
+        Assert.Throws<ArgumentNullException>(() => Codec with { Selector = null! });
         Assert.Throws<ArgumentOutOfRangeException>(() => new SelectingByteCodec(static _ => 0));
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new SelectingByteCodec(static _ => 0, Enumerable.Repeat(LZ4ByteCodec.Default, 257).ToArray()));
