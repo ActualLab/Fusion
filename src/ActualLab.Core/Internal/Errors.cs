@@ -5,6 +5,13 @@ namespace ActualLab.Internal;
 /// </summary>
 public static class Errors
 {
+    public static Exception ConstructorNotRooted(Type type, Exception innerException)
+        => new MissingMethodException(
+            $"Type '{type}' has no public parameterless constructor at runtime. "
+            + "If the app is trimmed, keep it by adding "
+            + $"'static {type.Name}() => CodeKeeper.Keep<{type.Name}>();' to the type.",
+            innerException);
+
     public static Exception MustBeClass(Type type, string? argumentName = null)
     {
         var message = $"'{type}' must be reference type (class).";

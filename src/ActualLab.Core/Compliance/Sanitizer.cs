@@ -1,3 +1,6 @@
+using ActualLab.Internal;
+using ActualLab.Trimming;
+
 namespace ActualLab.Compliance;
 
 /// <summary>
@@ -8,6 +11,19 @@ namespace ActualLab.Compliance;
 public abstract class Sanitizer
 {
     private static readonly ConcurrentDictionary<Type, Sanitizer> Cache = new();
+
+    // Trimming keeps a type's parameterless constructor only if something requires it statically;
+    // Get<TSanitizer>() and Get(Type) call it via reflection, which doesn't.
+    // A custom Sanitizer must root itself the same way: static MySanitizer() => CodeKeeper.Keep<MySanitizer>();
+    static Sanitizer()
+    {
+        CodeKeeper.Keep<Sanitizers.Hidden>();
+        CodeKeeper.Keep<Sanitizers.LengthHint>();
+        CodeKeeper.Keep<Sanitizers.PrefixAndLengthHint>();
+        CodeKeeper.Keep<Sanitizers.Fingerprint>();
+        CodeKeeper.Keep<Sanitizers.SessionString>();
+        CodeKeeper.Keep<Sanitizers.RpcRequestQuery>();
+    }
 
     // Static (Maybe)Sanitize
 
@@ -64,12 +80,21 @@ public abstract class Sanitizer
         where TSanitizer : Sanitizer
     {
         // Shares Get(Type)'s cache, so both overloads hand out the same instance. Activator.CreateInstance<T>
-        // is what "new TSanitizer()" compiles to: NativeAOT resolves it for each closed TSanitizer
+        // is what "new TSanitizer()" compiles to: NativeAOT resolves it for each closed TSanitizer, while
+        // plain trimming needs the constructor rooted - see Sanitizer's static constructor
         public static readonly TSanitizer Value
             = (TSanitizer)Cache.GetOrAdd(typeof(TSanitizer), static _ => CreateInstance());
 
-        [UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "Resolved for each closed TSanitizer")]
+        [UnconditionalSuppressMessage("Trimming", "IL2091",
+            Justification = "Sanitizer descendants root their constructors")]
         private static TSanitizer CreateInstance()
-            => Activator.CreateInstance<TSanitizer>();
+        {
+            try {
+                return Activator.CreateInstance<TSanitizer>();
+            }
+            catch (MissingMethodException e) {
+                throw Errors.ConstructorNotRooted(typeof(TSanitizer), e);
+            }
+        }
     }
 }

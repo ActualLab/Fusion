@@ -2,6 +2,8 @@ using ActualLab.Collections.Slim;
 using ActualLab.OS;
 using ActualLab.Text;
 using ActualLab.Time;
+using ActualLab.Internal;
+using ActualLab.Trimming;
 
 namespace ActualLab.Serialization;
 
@@ -10,6 +12,15 @@ namespace ActualLab.Serialization;
 /// </summary>
 public abstract class TypeSchema
 {
+    // Trimming keeps a type's parameterless constructor only if something requires it statically;
+    // TypeSchema<TSchema> calls it via Activator.CreateInstance<TSchema>(), which doesn't.
+    // A custom TypeSchema must root itself the same way: static MySchema() => CodeKeeper.Keep<MySchema>();
+    static TypeSchema()
+    {
+        CodeKeeper.Keep<Any>();
+        CodeKeeper.Keep<PrimitiveOnly>();
+    }
+
     public abstract bool IsAllowed(Type type);
 
     public sealed class Any : TypeSchema
@@ -71,11 +82,19 @@ public static class TypeSchema<TSchema>
 
     // Private methods
 
-    // What "new TSchema()" compiles to: the trimmer and NativeAOT resolve it for each closed TSchema,
-    // with no reflection involved
-    [UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "Resolved for each closed TSchema")]
+    // What "new TSchema()" compiles to. NativeAOT resolves it for each closed TSchema; plain trimming
+    // can't, so TSchema's constructor must be rooted - see TypeSchema's static constructor
+    [UnconditionalSuppressMessage("Trimming", "IL2091",
+        Justification = "TypeSchema descendants root their constructors")]
     private static TSchema CreateInstance()
-        => Activator.CreateInstance<TSchema>();
+    {
+        try {
+            return Activator.CreateInstance<TSchema>();
+        }
+        catch (MissingMethodException e) {
+            throw Errors.ConstructorNotRooted(typeof(TSchema), e);
+        }
+    }
 
     private static IByteSerializer CreateTypeDecoratingSerializer(
         IByteSerializer baseSerializer, Func<Type, bool>? typeFilter)
