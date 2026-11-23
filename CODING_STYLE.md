@@ -808,6 +808,41 @@ Search for `<NoWarn>` to see the list of disabled warnings.
 
 See [`.editorconfig`](../.editorconfig) for the complete list of silenced analyzer warnings.
 
+### Trimming and Native AOT Warnings (IL2xxx, IL3xxx)
+
+Fusion can't be fully trim-safe: serializers are pluggable, and proxies, RPC and command handling
+rely on reflection. What we guarantee instead is **no false positives**: an app that only uses
+Fusion's high-level features &ndash; registers services, compute methods, clients, commands,
+serializer packages &ndash; gets no trimming or AOT warnings from ActualLab code. A warning should
+reach the user only when they call a low-level API that obviously relies on reflection.
+
+- **Suppress where the user can't do better.** Code reached only through registration, builders,
+  module initializers, CodeKeeper blocks or serializer/formatter infrastructure gets
+  `[UnconditionalSuppressMessage]` in place, with a `Justification` stating the assumption (e.g.
+  "We assume serializable types are fully preserved"). Put it on the narrowest member; use the
+  type only when the whole type is reflection-based (CodeKeeper extensions, formatter registries).
+- **Don't propagate it to the caller.** `[RequiresUnreferencedCode]` / `[RequiresDynamicCode]` on a
+  member that registration calls would surface the warning in every app. Keep them for low-level
+  APIs whose callers pass the types or names to reflect on (e.g. `TypeRef.Resolve`), where the
+  caller can see and own the risk.
+- **Never use `#pragma warning disable IL*`.** A pragma silences only the build-time analyzer; the
+  trimmer and the AOT compiler still report the warning in every app that publishes.
+  `[UnconditionalSuppressMessage]` is compiled into the IL, so both honor it. Project-level
+  `<NoWarn>` for IL codes is acceptable only in projects that are never trimmed (server-side
+  projects, tests).
+- **Prefer code the compiler can resolve statically.** When `T` is known, create it with
+  `Activator.CreateInstance<T>()` (what `new T()` compiles to): NativeAOT resolves it for each
+  closed `T` without reflection metadata, and it's the fastest option. Reflecting on `typeof(T)`
+  needs metadata that NativeAOT may drop &ndash; a type-level `[DynamicallyAccessedMembers]` doesn't
+  help for a type that is only ever created by reflection.
+- **Don't make source generators emit unanalyzable code.** A `new()` constraint (or a
+  `[DynamicallyAccessedMembers]` annotation) on a type parameter of a serializable generic type
+  makes MessagePack's generated resolver report IL2055 in every app. Avoid such constraints; for a
+  formatter that needs one anyway (e.g. `where T : struct`), add
+  `[ExcludeFormatterFromSourceGeneratedResolver]` and let `[MessagePackFormatter]` find it.
+- **Verify with the NativeAot sample.** Publish it with `-p:TrimmerSingleWarn=false` and check that
+  no warning points into `src/`; the remaining ones come from third-party serializers and the BCL.
+
 ## TypeScript
 
 TypeScript follows the C# [Control-Flow Statements](#control-flow-statements)
