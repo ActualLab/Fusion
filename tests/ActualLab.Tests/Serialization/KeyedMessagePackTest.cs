@@ -2,6 +2,7 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Serialization.Internal;
 using MessagePack;
+using ActualLab.Compression;
 
 namespace ActualLab.Tests.Serialization;
 
@@ -67,7 +68,8 @@ public class KeyedMessagePackTest(ITestOutputHelper @out) : TestBase(@out)
 
         // act
         formats.AddKeyedMessagePack();
-        formats.AddLZ4Variants("lz4", filter: x => x.Key.EndsWith("k", StringComparison.Ordinal));
+        formats.AddCompressedVariants(
+            "lz4", LZ4ByteCodec.Default, filter: x => x.Key.EndsWith("k", StringComparison.Ordinal));
 
         // assert
         formats["msgpack6k"].Should().BeSameAs(RpcDefaultWireFormats.MessagePackV6K);

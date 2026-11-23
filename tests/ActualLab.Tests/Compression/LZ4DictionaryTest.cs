@@ -7,22 +7,22 @@ using ActualLab.Rpc.Compression;
 namespace ActualLab.Tests.Compression;
 
 // Every base test runs against one dictionary shared by all of them, so it also checks
-// that no compressor or decompressor changes it - xUnit runs these tests in parallel.
-// Compression without a dictionary is covered by LZ4ByteCompressorTest.
-public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(@out)
+// that no encoder or decoder changes it - xUnit runs these tests in parallel.
+// Compression without a dictionary is covered by LZ4ByteEncoderTest.
+public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteEncoderTestBase(@out)
 {
     private static readonly string[] Methods = [
         "ITodoService.Get", "ITodoService.List", "IAuth.GetUser", "IChatService.PostMessage",
         "$sys.Ok", "$sys.Invalidate", "$sys-c.Ok",
     ];
-    private static readonly LZ4ByteCompression Compression = LZ4ByteCompression.Default;
     private static readonly byte[] SharedDictionaryData = NewMessages(1, 64 * 1024);
-    private static readonly object SharedDictionary = Compression.CreateDictionary(SharedDictionaryData);
+    private static readonly ByteCodec Shared
+        = LZ4ByteCodec.Default with { DictionaryData = SharedDictionaryData };
 
-    protected override ByteCompressor NewCompressor()
-        => Compression.NewCompressor(SharedDictionary);
-    protected override ByteDecompressor NewDecompressor()
-        => Compression.NewDecompressor(SharedDictionary);
+    protected override ByteEncoder NewEncoder()
+        => Shared.NewEncoder();
+    protected override ByteDecoder NewDecoder()
+        => Shared.NewDecoder();
 
     [Theory]
     [InlineData(0)]
@@ -35,8 +35,8 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
     public void DictionaryOfAnySizeShouldRoundTrip(int length)
     {
         // arrange
-        var dictionary = Compression.CreateDictionary(NewMessages(1, length));
-        using var pair = NewPair(dictionary);
+        var codec = LZ4ByteCodec.Default with { DictionaryData = NewMessages(1, length) };
+        using var pair = NewPair(codec);
         var frames = Enumerable.Range(0, 200).Select(i => NewMessages(100 + i, 1 + i * 97 % 3000)).ToList();
 
         // act
@@ -50,13 +50,13 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
     public void DictionaryShouldShrinkFirstFrames()
     {
         // arrange
-        using var plain = new CodecPair(new LZ4ByteCompressor(), new LZ4ByteDecompressor());
-        using var primed = NewPair(SharedDictionary);
+        using var plain = NewPair(LZ4ByteCodec.Default);
+        using var primed = NewPair(Shared);
         var frames = Enumerable.Range(0, 5).Select(i => NewMessages(10 + i, 300)).ToList();
 
         // act
-        var plainSize = frames.Sum(x => plain.Compress(x).Length);
-        var primedSize = frames.Sum(x => primed.Compress(x).Length);
+        var plainSize = frames.Sum(x => plain.Encode(x).Length);
+        var primedSize = frames.Sum(x => primed.Encode(x).Length);
 
         // assert
         Out.WriteLine($"Plain: {plainSize} bytes, with dictionary: {primedSize} bytes");
@@ -64,113 +64,96 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
     }
 
     [Fact]
-    public void DictionaryShouldApplyAfterEveryReset()
+    public void ResetShouldRestoreDictionaryState()
     {
         // arrange
-        using var pair = NewPair(SharedDictionary);
+        using var pair = NewPair(Shared);
         var history = NewMessages(2, 200_000);
         var frame = NewMessages(3, 2000);
-        var expected = NewPair(SharedDictionary).Compress(frame);
+        var expected = NewPair(Shared).Encode(frame);
 
         // act
         pair.RoundTrip(history);
-        pair.Compressor.Reset();
-        pair.Decompressor.Reset();
-        var compressed = pair.Compress(frame);
+        pair.Encoder.Reset();
+        pair.Decoder.Reset();
+        var compressed = pair.Encode(frame);
 
         // assert
-        compressed.Should().Equal(expected, "after Reset a compressor must start from the dictionary state");
-        pair.Decompress(compressed, MaxLength).Should().Equal(frame);
+        compressed.Should().Equal(expected, "after Reset a encoder must start from the dictionary state");
+        pair.Decode(compressed, MaxLength).Should().Equal(frame);
     }
 
     [Theory]
-    [InlineData(0)]
     [InlineData(1000)]
     [InlineData(64 * 1024)]
     [InlineData(100_000)]
-    public void SavedDictionaryShouldLoadBack(int length)
+    public void OnlyDictionaryTailShouldMatter(int length)
     {
         // arrange
         var data = NewMessages(9, length);
-        var dictionary = Compression.CreateDictionary(data);
+        var codec = LZ4ByteCodec.Default with { DictionaryData = data };
+        var tail = LZ4ByteCodec.Default with { DictionaryData = data.AsMemory(Math.Max(0, length - 64 * 1024)) };
         var frames = Enumerable.Range(0, 20).Select(i => NewMessages(40 + i, 1000)).ToList();
 
         // act
-        var saved = Compression.SaveDictionary(dictionary);
-        var loaded = Compression.LoadDictionary(saved);
+        var expected = Encode(tail.NewEncoder(), frames);
+        var actual = Encode(codec.NewEncoder(), frames);
 
         // assert
-        // LZ4 can't reference anything beyond 64 KiB back, so that's all a dictionary keeps
-        saved.Should().Equal(data.Skip(Math.Max(0, length - 64 * 1024)));
-        var expected = Compress(Compression.NewCompressor(dictionary), frames);
-        Compress(Compression.NewCompressor(loaded), frames)
-            .Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
+        // LZ4 can't reference anything beyond 64 KiB back, so only that much of a dictionary is used
+        actual.Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
+        codec.DictionaryData.ToArray().Should().Equal(data);
     }
 
     [Fact]
-    public void ForeignDictionaryShouldBeRejected()
+    public void CompressionShouldBeImmutableRecord()
     {
-        // arrange
-        using var compressor = Compression.NewCompressor(SharedDictionary);
-
-        // act + assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => Compression.NewCompressor("not a dictionary"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => compressor.Reset(new object()));
-        Assert.Throws<ArgumentOutOfRangeException>(() => RpcCompressionFormat.NewLZ4("lz4d", new object()));
-        compressor.Dictionary.Should().BeSameAs(SharedDictionary);
-    }
-
-    [Fact]
-    public void ResetShouldSwitchDictionary()
-    {
-        // arrange
-        var other = Compression.CreateDictionary(NewMessages(5, 32 * 1024));
-        using var pair = new CodecPair(new LZ4ByteCompressor(), new LZ4ByteDecompressor());
-        var frame = NewMessages(3, 2000);
-        var expected = NewPair(other).Compress(frame);
-
         // act
-        pair.RoundTrip(NewMessages(2, 50_000));
-        pair.Compressor.Reset(other);
-        pair.Decompressor.Reset(other);
-        var compressed = pair.Compress(frame);
+        var custom = LZ4ByteCodec.Default with { ExtraBlocks = 8 };
+        var smallBlocks = LZ4ByteCodec.Default with { BlockSize = 1024 };
+        var withDictionary = custom with { DictionaryData = SharedDictionaryData };
 
         // assert
-        compressed.Should().Equal(expected);
-        pair.Decompress(compressed, MaxLength).Should().Equal(frame);
-        pair.Compressor.Dictionary.Should().BeSameAs(other);
-
-        pair.Compressor.Reset(null);
-        pair.Decompressor.Reset(null);
-        pair.Compressor.Dictionary.Should().BeNull();
-        pair.RoundTrip(frame).Should().Equal(frame);
+        LZ4ByteCodec.Default.ExtraBlocks.Should().Be(LZ4ByteCodec.DefaultExtraBlocks);
+        custom.ExtraBlocks.Should().Be(8);
+        custom.HasDictionary.Should().BeFalse();
+        withDictionary.ExtraBlocks.Should().Be(8);
+        withDictionary.HasDictionary.Should().BeTrue();
+        // Peers must match the block size and the dictionary, but not the buffer size
+        custom.DefaultName.Should().Be("lz4");
+        smallBlocks.DefaultName.Should().BeNull();
+        withDictionary.DefaultName.Should().BeNull();
+        new LZ4ByteCodec().Should().NotBe(LZ4ByteCodec.Default, "they use reference equality");
+        LZ4ByteCodec.Default.ToString().Should().Be("LZ4(16K)");
+        withDictionary.ToString().Should().Be("LZ4(16K+dict)");
+        Assert.Throws<ArgumentOutOfRangeException>(() => LZ4ByteCodec.Default with { ExtraBlocks = -1 });
     }
 
     [Fact]
-    public void DecompressorShouldNeedTheSameDictionary()
+    public void DecoderShouldNeedTheSameDictionary()
     {
         // arrange
-        using var compressor = Compression.NewCompressor(SharedDictionary);
+        using var encoder = Shared.NewEncoder();
         var frame = NewMessages(4, 2000);
         using var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
-        compressor.Compress(frame, buffer);
+        encoder.Encode(frame, buffer);
         var compressed = buffer.ToArray();
 
         // act
         byte[]? withoutDictionary = null;
         try {
-            withoutDictionary = Decompress(new LZ4ByteDecompressor(), compressed);
+            withoutDictionary = Decode(LZ4ByteCodec.Default.NewDecoder(), compressed);
         }
         catch (FormatException) { }
-        var otherDictionary = Compression.CreateDictionary(NewMessages(5, 64 * 1024));
+        var other = LZ4ByteCodec.Default with { DictionaryData = NewMessages(5, 64 * 1024) };
         byte[]? withOtherDictionary = null;
         try {
-            withOtherDictionary = Decompress(Compression.NewDecompressor(otherDictionary), compressed);
+            withOtherDictionary = Decode(other.NewDecoder(), compressed);
         }
         catch (FormatException) { }
 
         // assert
-        Decompress(Compression.NewDecompressor(SharedDictionary), compressed).Should().Equal(frame);
+        Decode(Shared.NewDecoder(), compressed).Should().Equal(frame);
         (withoutDictionary ?? []).Should().NotEqual(frame);
         (withOtherDictionary ?? []).Should().NotEqual(frame);
     }
@@ -180,24 +163,24 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
     {
         // arrange
         var frames = Enumerable.Range(0, 50).Select(i => NewMessages(20 + i, 1500)).ToList();
-        var expected = Compress(Compression.NewCompressor(SharedDictionary), frames);
+        var expected = Encode(Shared.NewEncoder(), frames);
 
         // act
         await Task.WhenAll(Enumerable.Range(0, 32).Select(i => Task.Run(() => {
-            using var pair = NewPair(SharedDictionary);
+            using var pair = NewPair(Shared);
             for (var pass = 0; pass < 3; pass++) {
                 for (var j = 0; j < 100; j++) {
                     var source = NewMessages(1000 * i + j, 1 + j * 131 % 5000);
                     pair.RoundTrip(source).Should().Equal(source);
                 }
-                pair.Compressor.Reset();
-                pair.Decompressor.Reset();
+                pair.Encoder.Reset();
+                pair.Decoder.Reset();
             }
         })));
 
         // assert
-        Compression.SaveDictionary(SharedDictionary).Should().Equal(SharedDictionaryData);
-        Compress(Compression.NewCompressor(SharedDictionary), frames)
+        Shared.DictionaryData.ToArray().Should().Equal(SharedDictionaryData);
+        Encode(Shared.NewEncoder(), frames)
             .Should().BeEquivalentTo(expected, o => o.WithStrictOrdering(), "the dictionary state must stay intact");
     }
 
@@ -206,19 +189,18 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
     {
         // arrange
         var data = NewMessages(6, 64 * 1024);
-        using var compressor = Compression.NewCompressor(SharedDictionary);
+        using var encoder = Shared.NewEncoder();
         const int iterations = 2000;
 
         // act
         var resetTime = MeasureBest(() => {
             for (var i = 0; i < iterations; i++)
-                compressor.Reset();
+                encoder.Reset();
         });
         var prepareTime = MeasureBest(() => {
             for (var i = 0; i < iterations; i++)
-                compressor.Reset(Compression.CreateDictionary(data));
+                (LZ4ByteCodec.Default with { DictionaryData = data }).NewEncoder().Dispose(); // Prepares it
         });
-        compressor.Reset(SharedDictionary);
 
         // assert
         Out.WriteLine($"Reset: {resetTime.TotalMilliseconds * 1000 / iterations:F2}us, "
@@ -231,8 +213,8 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
     {
         // arrange
         var frames = Enumerable.Range(0, 2000).Select(i => NewMessages(30 + i, 300)).ToList();
-        using var plain = new LZ4ByteCompressor();
-        using var primed = Compression.NewCompressor(SharedDictionary);
+        using var plain = LZ4ByteCodec.Default.NewEncoder();
+        using var primed = Shared.NewEncoder();
         using var buffer = new ArrayPoolBuffer<byte>(1024 * 1024, mustClear: false);
 
         // act
@@ -244,92 +226,94 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
             $"Plain: {plainTime.TotalMilliseconds:F3}ms, with dictionary: {primedTime.TotalMilliseconds:F3}ms");
         primedTime.Ticks.Should().BeLessThan(plainTime.Ticks * 2);
 
-        void CompressAll(ByteCompressor compressor)
+        void CompressAll(ByteEncoder encoder)
         {
-            compressor.Reset();
+            encoder.Reset();
             buffer.Reset();
             foreach (var frame in frames)
-                compressor.Compress(frame, buffer);
+                encoder.Encode(frame, buffer);
         }
     }
 
     [Fact]
-    public void CompressedVariantsShouldUseLiteralSuffix()
+    public void CompressedVariantsShouldTakeCompression()
     {
         // arrange
         var formats = new RpcWireFormatConfiguration();
-        var lz4d = RpcCompressionFormat.New("lz4d", Compression, SharedDictionary);
+        var bigBuffers = LZ4ByteCodec.Default with { ExtraBlocks = 8 };
 
         // act
-        formats.AddCompressedVariants("lz4d", lz4d);
-        formats.AddCompressedVariants("lz4df", lz4d, RpcCompressionMode.Full);
-        formats.AddLZ4Variants("lz4");
-        var format = formats["msgpack6c-lz4d"];
-        using var compressor = format.CompressionFormat!.CompressorFactory.Invoke();
-        using var decompressor = format.CompressionFormat.DecompressorFactory.Invoke();
-
-        // assert
-        formats["msgpack6c-lz4df"].CompressionMode.Should().Be(RpcCompressionMode.Full);
-        formats["msgpack6c-lz4"].CompressionFormat.Should().BeSameAs(RpcCompressionFormat.LZ4);
-        compressor.Dictionary.Should().BeSameAs(SharedDictionary);
-        decompressor.Dictionary.Should().BeSameAs(SharedDictionary);
-        RpcDefaultWireFormats.MessagePackV6C.WithLZ4("lz4f", compressionMode: RpcCompressionMode.Full).Key
-            .Should().Be("msgpack6c-lz4f");
-    }
-
-    [Fact]
-    public void LZ4VariantsShouldTakeSuffixAndDictionary()
-    {
-        // arrange
-        var formats = new RpcWireFormatConfiguration();
-
-        // act
-        formats.AddLZ4Variants("lz4d1", SharedDictionary);
-        formats.AddLZ4Variants("lz4d1f", SharedDictionary, RpcCompressionMode.Full);
-        formats.AddLZ4Variants("lz4x", filter: x => x.Key == "msgpack6c");
-        var single = RpcDefaultWireFormats.MessagePackV6.WithLZ4("lz4d2", SharedDictionary, RpcCompressionMode.Full);
-        using var compressor = formats["msgpack6c-lz4d1"].CompressionFormat!.CompressorFactory.Invoke();
+        formats.AddCompressedVariants("lz4d1", Shared);
+        formats.AddCompressedVariants("lz4d1f", Shared, RpcCompressionMode.Full);
+        formats.AddCompressedVariants("lz4x", LZ4ByteCodec.Default, filter: x => x.Key == "msgpack6c");
+        formats.AddCompressedVariants("lzy", x => x.Key switch {
+            "msgpack6" => Shared,
+            "msgpack6c" => bigBuffers,
+            _ => null,
+        });
+        formats.AddCompressedVariants("lz4", bigBuffers, filter: x => x.Key == "msgpack6");
+        var single = RpcDefaultWireFormats.MessagePackV6.WithCompression("lz4d2", Shared, RpcCompressionMode.Full);
 
         // assert
         formats["msgpack6c-lz4d1"].CompressionMode.Should().Be(RpcCompressionMode.ServerToClient);
         formats["msgpack6c-lz4d1f"].CompressionMode.Should().Be(RpcCompressionMode.Full);
-        compressor.Dictionary.Should().BeSameAs(SharedDictionary);
-        formats.ContainsKey("msgpack6c-lz4x").Should().BeTrue();
+        formats["msgpack6c-lz4d1f"].CompressionFormat!.Codec.Should().BeSameAs(Shared);
+        formats["msgpack6c-lz4x"].CompressionFormat.Should().BeSameAs(RpcCompressionFormat.LZ4);
         formats.ContainsKey("msgpack6-lz4x").Should().BeFalse();
-        formats["msgpack6c-lz4x"].CompressionFormat!.CompressorFactory.Invoke().Dictionary.Should().BeNull();
+        formats["msgpack6-lzy"].CompressionFormat!.Codec.Should().BeSameAs(Shared);
+        formats["msgpack6c-lzy"].CompressionFormat!.Codec.Should().BeSameAs(bigBuffers);
+        formats.ContainsKey("msgpack5-lzy").Should().BeFalse();
+        formats["msgpack6-lz4"].CompressionFormat!.Codec.Should().BeSameAs(bigBuffers);
         single.Key.Should().Be("msgpack6-lz4d2");
         single.CompressionMode.Should().Be(RpcCompressionMode.Full);
-        RpcDefaultWireFormats.MessagePackV6.WithLZ4("lz4").CompressionFormat
+        using var encoder = (LZ4ByteEncoder)formats["msgpack6c-lz4d1"].CompressionFormat!.Codec
+            .NewEncoder();
+        encoder.Codec.Should().BeSameAs(Shared);
+    }
+
+    [Fact]
+    public void ReservedSuffixesShouldMeanDefaultCompression()
+    {
+        // arrange
+        var formats = new RpcWireFormatConfiguration();
+        var msgpack6 = RpcDefaultWireFormats.MessagePackV6;
+
+        // act + assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => formats.AddCompressedVariants("lz4", Shared));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => formats.AddCompressedVariants("lz4", LZ4ByteCodec.Default, RpcCompressionMode.Full));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => formats.AddCompressedVariants("lz4f", LZ4ByteCodec.Default));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => formats.AddCompressedVariants("lz4", LZ4ByteCodec.Default with { BlockSize = 1024 }));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => msgpack6.WithCompression("lz4f", Shared, RpcCompressionMode.Full));
+        Assert.Throws<ArgumentOutOfRangeException>(() => msgpack6.WithCompression("", LZ4ByteCodec.Default));
+        formats.Keys.Should().NotContain(x => x.Contains("-lz4", StringComparison.Ordinal));
+        msgpack6.WithCompression("lz4", LZ4ByteCodec.Default).CompressionFormat
             .Should().BeSameAs(RpcCompressionFormat.LZ4);
-        Assert.Throws<ArgumentOutOfRangeException>(() => formats.AddLZ4Variants("lz4", SharedDictionary));
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => formats.AddLZ4Variants("lz4", compressionMode: RpcCompressionMode.Full));
-        Assert.Throws<ArgumentOutOfRangeException>(() => formats.AddLZ4Variants("lz4f"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => RpcDefaultWireFormats.MessagePackV6.WithLZ4(""));
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => formats.AddLZ4Variants("lz4f", SharedDictionary, RpcCompressionMode.Full));
     }
 
     // Private methods
 
-    private static CodecPair NewPair(object dictionary)
-        => new(Compression.NewCompressor(dictionary), Compression.NewDecompressor(dictionary));
+    private static CodecPair NewPair(ByteCodec codec)
+        => new(codec.NewEncoder(), codec.NewDecoder());
 
-    private static byte[] Decompress(ByteDecompressor decompressor, byte[] compressed)
+    private static byte[] Decode(ByteDecoder decoder, byte[] compressed)
     {
-        using var _ = decompressor;
+        using var _ = decoder;
         using var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
-        decompressor.Decompress(compressed, buffer, MaxLength);
+        decoder.Decode(compressed, buffer, MaxLength);
         return buffer.ToArray();
     }
 
-    private static List<byte[]> Compress(ByteCompressor compressor, List<byte[]> frames)
+    private static List<byte[]> Encode(ByteEncoder encoder, List<byte[]> frames)
     {
-        using var _ = compressor;
+        using var _ = encoder;
         var result = new List<byte[]>();
         foreach (var frame in frames) {
             using var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
-            compressor.Compress(frame, buffer);
+            encoder.Encode(frame, buffer);
             result.Add(buffer.ToArray());
         }
         return result;
@@ -350,7 +334,7 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
 
     // RPC-like messages: a few method names, small numbers, short strings - unlike NewPayload's
     // single repeated message, the first frames of these compress poorly without a dictionary
-    private static byte[] NewMessages(int seed, int length)
+    internal static byte[] NewMessages(int seed, int length)
     {
         var random = new Random(seed);
         var sb = new StringBuilder();

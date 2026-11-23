@@ -1,37 +1,39 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Compression;
+using ActualLab.Compression;
 
 namespace ActualLab.Tests.Rpc;
 
 public class RpcWireFormatConfigurationTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
-    public void AddLZ4VariantsTest()
+    public void AddCompressedVariantsTest()
     {
         var f = new RpcWireFormatConfiguration();
-        f.AddLZ4Variants("lz4");
+        f.AddCompressedVariants("lz4", LZ4ByteCodec.Default);
         f.ContainsKey("msgpack6c-lz4").Should().BeTrue();
         f.ContainsKey("msgpack6c-lz4f").Should().BeFalse();
         f.ContainsKey("json5-lz4").Should().BeFalse();
         f.ContainsKey("msgpack6c-lz4-lz4").Should().BeFalse();
 
-        f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full, filter: x => x.Key == "msgpack6");
+        f.AddCompressedVariants(
+            "lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full, filter: x => x.Key == "msgpack6");
         f.ContainsKey("msgpack6-lz4f").Should().BeTrue();
         f.ContainsKey("msgpack6c-lz4f").Should().BeFalse();
     }
 
     [Fact]
-    public void RepeatedAddLZ4VariantsShouldFailTest()
+    public void RepeatedAddCompressedVariantsShouldFailTest()
     {
         var f = new RpcWireFormatConfiguration();
-        f.AddLZ4Variants("lz4");
-        f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full);
+        f.AddCompressedVariants("lz4", LZ4ByteCodec.Default);
+        f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full);
         f.DefaultFormat = f["msgpack6c-lz4f"];
         var formats = f.ToDictionary(x => x.Key, x => x.Value);
         Assert.Throws<InvalidOperationException>(
-            () => f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full));
+            () => f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full));
         Assert.Throws<InvalidOperationException>(
-            () => f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full,
+            () => f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full,
                 filter: x => x.Key.StartsWith("msgpack6c", StringComparison.Ordinal)));
         f.Should().BeEquivalentTo(formats, "a failed call must add nothing");
         f.DefaultFormat.Should().BeSameAs(f["msgpack6c-lz4f"]);
@@ -42,22 +44,22 @@ public class RpcWireFormatConfigurationTest(ITestOutputHelper @out) : TestBase(@
     }
 
     [Fact]
-    public void AddLZ4VariantsShouldNotReplaceExistingFormatsTest()
+    public void AddCompressedVariantsShouldNotReplaceExistingFormatsTest()
     {
         var f = new RpcWireFormatConfiguration();
-        var custom = RpcDefaultWireFormats.MessagePackV6C.WithLZ4("lz4");
+        var custom = RpcDefaultWireFormats.MessagePackV6C.WithCompression("lz4", LZ4ByteCodec.Default);
         f.Add(custom);
-        Assert.Throws<InvalidOperationException>(() => f.AddLZ4Variants("lz4"));
+        Assert.Throws<InvalidOperationException>(() => f.AddCompressedVariants("lz4", LZ4ByteCodec.Default));
         f["msgpack6c-lz4"].Should().BeSameAs(custom);
         f.ContainsKey("msgpack6-lz4").Should().BeFalse();
     }
 
     [Fact]
-    public void AddLZ4VariantsShouldUseLiteralSuffixTest()
+    public void AddCompressedVariantsShouldUseLiteralSuffixTest()
     {
         var f = new RpcWireFormatConfiguration();
-        f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full);
-        f.AddLZ4Variants("x", filter: x => x.Key == "msgpack6");
+        f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full);
+        f.AddCompressedVariants("x", LZ4ByteCodec.Default, filter: x => x.Key == "msgpack6");
         f["msgpack6c-lz4f"].CompressionMode.Should().Be(RpcCompressionMode.Full);
         f["msgpack6c-lz4f"].CompressionFormat.Should().BeSameAs(RpcCompressionFormat.LZ4);
         f["msgpack6-x"].CompressionMode.Should().Be(RpcCompressionMode.ServerToClient);
@@ -83,12 +85,13 @@ public class RpcWireFormatConfigurationTest(ITestOutputHelper @out) : TestBase(@
     public void ResolverRejectsUnregisteredDefaultFormatTest()
     {
         var f = new RpcWireFormatConfiguration();
-        f.DefaultFormat = RpcDefaultWireFormats.MessagePackV6.WithLZ4("lz4");
+        f.DefaultFormat = RpcDefaultWireFormats.MessagePackV6.WithCompression("lz4", LZ4ByteCodec.Default);
         Assert.Throws<ArgumentException>(() => new RpcWireFormatResolver(f));
 
         f = new RpcWireFormatConfiguration();
-        f.AddLZ4Variants("lz4");
-        f.DefaultFormat = RpcDefaultWireFormats.MessagePackV6C.WithLZ4("lz4"); // Same key, other instance
+        f.AddCompressedVariants("lz4", LZ4ByteCodec.Default);
+        // Same key, other instance
+        f.DefaultFormat = RpcDefaultWireFormats.MessagePackV6C.WithCompression("lz4", LZ4ByteCodec.Default);
         Assert.Throws<ArgumentException>(() => new RpcWireFormatResolver(f));
     }
 
@@ -98,7 +101,7 @@ public class RpcWireFormatConfigurationTest(ITestOutputHelper @out) : TestBase(@
         var services = new ServiceCollection();
         services.AddRpc().ConfigureWireFormats(f => {
             f.Remove("msgpack5", "msgpack5c");
-            f.AddLZ4Variants("lz4");
+            f.AddCompressedVariants("lz4", LZ4ByteCodec.Default);
             f.DefaultFormat = f["msgpack6c-lz4"];
             f.BackendOnlyFormatKeys = f.BackendOnlyFormatKeys.Add("json5np");
         });

@@ -11,7 +11,7 @@ namespace ActualLab.Rpc.Compression;
 /// Only the transport's reader loop calls this, so it isn't thread-safe.
 /// </remarks>
 public sealed class RpcFrameDecoder(
-    ByteDecompressor decompressor,
+    ByteDecoder decoder,
     int bufferSize,
     int maxBufferSize
     ) : IDisposable
@@ -20,7 +20,7 @@ public sealed class RpcFrameDecoder(
 
     public void Dispose()
     {
-        decompressor.Dispose();
+        decoder.Dispose();
         _buffer.Dispose();
     }
 
@@ -30,12 +30,12 @@ public sealed class RpcFrameDecoder(
         int header, byte[] array, int offset, int end, int maxLength)
     {
         if ((header & RpcFrameCodec.ContextResetFrameFlag) != 0)
-            decompressor.Reset();
+            decoder.Reset();
         if ((header & RpcFrameCodec.CompressedFrameFlag) == 0 || offset >= end)
             return (array, offset, end);
 
         _buffer.Renew(maxBufferSize);
-        decompressor.Decompress(array.AsMemory(offset, end - offset), _buffer, maxLength);
+        decoder.Decode(array.AsMemory(offset, end - offset), _buffer, maxLength);
         return (_buffer.Array, 0, _buffer.WrittenCount);
     }
 }

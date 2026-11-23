@@ -6,14 +6,14 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Compression;
 
 /// <summary>
-/// A <see cref="ByteCompressor"/> backed by chained LZ4 blocks: every block is encoded against
+/// A <see cref="ByteEncoder"/> backed by chained LZ4 blocks: every block is encoded against
 /// the sliding window the earlier ones filled, which is what carries the dictionary across frames.
 /// </summary>
 /// <remarks>
 /// A block is written as <c>[ushort encodedLength][data]</c>, so <see cref="MaxBlockSize"/> is
 /// the largest block whose worst-case LZ4 output still fits that length prefix.
 /// </remarks>
-public sealed class LZ4ByteCompressor : ByteCompressor
+public sealed class LZ4ByteEncoder : ByteEncoder
 {
     public const int LengthSize = sizeof(ushort);
     // A frame is a batch of messages capped at RpcFrameBasedTransport's FrameSize (12,000 by
@@ -26,16 +26,15 @@ public sealed class LZ4ByteCompressor : ByteCompressor
     private readonly int _maxBlockOutputSize;
     private readonly LZ4FastChainEncoder _encoder;
 
+    public LZ4ByteCodec Codec { get; }
     // The encoder's own block size, which is what every bound here is sized for - see the ctor
     public int BlockSize { get; }
 
-    // blockSize 0 means DefaultBlockSize, MaxBlockSize is the largest value it accepts;
-    // the dictionary comes from LZ4ByteCompression and must be the peer decompressor's one
-    public LZ4ByteCompressor(int blockSize = 0, object? dictionary = null)
+    // The compression must match the peer decoder's one (block size and dictionary)
+    public LZ4ByteEncoder(LZ4ByteCodec? codec = null)
     {
-        _encoder = new LZ4FastChainEncoder(
-            ValidateBlockSize(blockSize), extraBlocks: 0, LZ4ByteCompression.ToLZ4Dictionary(dictionary));
-        Dictionary = dictionary;
+        Codec = codec ??= LZ4ByteCodec.Default;
+        _encoder = new LZ4FastChainEncoder(codec.BlockSize, codec.ExtraBlocks, codec.Dictionary);
         // K4os rounds the requested block size up to a 1 KiB multiple, so the block it actually
         // fills is not necessarily the one we asked for - and it's the real one the length prefix
         // has to hold. Reading it back is what keeps the two in step.
@@ -48,7 +47,7 @@ public sealed class LZ4ByteCompressor : ByteCompressor
     public override void Dispose()
         => _encoder.Dispose();
 
-    public override void Compress(ReadOnlySpan<byte> source, IBufferWriter<byte> target)
+    public override void Encode(ReadOnlySpan<byte> source, IBufferWriter<byte> target)
     {
         while (source.Length > 0) {
             // allowCopy: false plus a maximum-output-size target means the encoder always encodes,
@@ -68,10 +67,10 @@ public sealed class LZ4ByteCompressor : ByteCompressor
         }
     }
 
-    // Compress splits its input into ceil(sourceLength / BlockSize) blocks and never stores one,
+    // Encode splits its input into ceil(sourceLength / BlockSize) blocks and never stores one,
     // so the bound is exact rather than an allowance - and it grows as BlockSize shrinks, which a
     // fixed per-frame estimate would miss.
-    public override int GetMaxCompressedLength(int sourceLength)
+    public override int GetMaxEncodedLength(int sourceLength)
     {
         if (sourceLength <= 0)
             return 0;
@@ -81,10 +80,8 @@ public sealed class LZ4ByteCompressor : ByteCompressor
         return maxLength >= int.MaxValue ? int.MaxValue : (int)maxLength;
     }
 
-    // Protected methods
-
-    protected override void ResetCore(object? dictionary)
-        => _encoder.Reset(LZ4ByteCompression.ToLZ4Dictionary(dictionary));
+    public override void Reset()
+        => _encoder.Reset();
 
     // Internal methods
 

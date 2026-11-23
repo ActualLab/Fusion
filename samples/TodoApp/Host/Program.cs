@@ -37,6 +37,7 @@ using Samples.TodoApp.Services;
 using Samples.TodoApp.Services.Db;
 using Samples.TodoApp.UI;
 using ActualLab.Compliance;
+using ActualLab.Compression;
 
 // Constrain thread pool to 1 thread to debug possible issues with async logic
 // ThreadPool.SetMinThreads(1, 1);
@@ -163,7 +164,7 @@ void ConfigureServices()
 
     // Fusion services
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
-    fusion.Rpc.ConfigureWireFormats(f => f.AddLZ4Variants("lz4")); // Lets clients pick the "-lz4" formats
+    fusion.Rpc.ConfigureWireFormats(f => f.AddCompressedVariants("lz4", LZ4ByteCodec.Default)); // Lets clients pick the "-lz4" formats
     var fusionServer = fusion.AddWebServer(hostKind == HostKind.BackendServer);
     // The WebSocket handshake is exempt from CORS, and RPC connections here carry the session
     // cookie - so the endpoint needs its own origin check. This app serves its own client, so

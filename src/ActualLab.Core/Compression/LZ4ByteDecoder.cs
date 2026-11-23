@@ -5,31 +5,31 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Compression;
 
 /// <summary>
-/// The decoding counterpart of <see cref="LZ4ByteCompressor"/>.
+/// The decoding counterpart of <see cref="LZ4ByteEncoder"/>.
 /// </summary>
-public sealed class LZ4ByteDecompressor : ByteDecompressor
+public sealed class LZ4ByteDecoder : ByteDecoder
 {
-    private const int LengthSize = LZ4ByteCompressor.LengthSize;
+    private const int LengthSize = LZ4ByteEncoder.LengthSize;
 
     private readonly LZ4ChainDecoder _decoder;
 
+    public LZ4ByteCodec Codec { get; }
     // The decoder's own block size - K4os rounds the requested one up, and a block can decode to
     // all of it, so this is what the output span must be sized for
     public int BlockSize { get; }
 
-    // Must match the peer compressor's block size and dictionary; blockSize 0 means LZ4ByteCompressor.DefaultBlockSize
-    public LZ4ByteDecompressor(int blockSize = 0, object? dictionary = null)
+    // The compression must match the peer encoder's one (block size and dictionary)
+    public LZ4ByteDecoder(LZ4ByteCodec? codec = null)
     {
-        var blockSize1 = LZ4ByteCompressor.ValidateBlockSize(blockSize);
-        _decoder = new LZ4ChainDecoder(blockSize1, extraBlocks: 0, LZ4ByteCompression.ToLZ4Dictionary(dictionary));
-        Dictionary = dictionary;
+        Codec = codec ??= LZ4ByteCodec.Default;
+        _decoder = new LZ4ChainDecoder(codec.BlockSize, codec.ExtraBlocks, codec.Dictionary);
         BlockSize = _decoder.BlockSize;
     }
 
     public override void Dispose()
         => _decoder.Dispose();
 
-    public override void Decompress(ReadOnlyMemory<byte> source, IBufferWriter<byte> target, int maxLength)
+    public override void Decode(ReadOnlyMemory<byte> source, IBufferWriter<byte> target, int maxLength)
     {
         var span = source.Span;
         var length = 0;
@@ -61,8 +61,6 @@ public sealed class LZ4ByteDecompressor : ByteDecompressor
         }
     }
 
-    // Protected methods
-
-    protected override void ResetCore(object? dictionary)
-        => _decoder.Reset(LZ4ByteCompression.ToLZ4Dictionary(dictionary));
+    public override void Reset()
+        => _decoder.Reset();
 }

@@ -1,5 +1,6 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Compression;
+using ActualLab.Compression;
 
 namespace ActualLab.Tests.Rpc;
 
@@ -65,7 +66,10 @@ public static class RpcTestFormats
             .Where(x => x.DataFormat == DataFormat.Bytes && x.Key.Contains("6"))
             .ToList();
         foreach (var format in lz4Sources)
-            formats.AddRange([format.WithLZ4("lz4"), format.WithLZ4("lz4f", compressionMode: RpcCompressionMode.Full)]);
+            formats.AddRange([
+                format.WithCompression("lz4", LZ4ByteCodec.Default),
+                format.WithCompression("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full),
+            ]);
         return formats.ToImmutableList();
     }
 

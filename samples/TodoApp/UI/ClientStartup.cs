@@ -16,6 +16,7 @@ using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Samples.TodoApp.Abstractions;
 using Samples.TodoApp.UI.Services;
+using ActualLab.Compression;
 
 namespace Samples.TodoApp.UI;
 
@@ -57,7 +58,7 @@ public static class ClientStartup
         var fusion = services.AddFusion();
         // RPC client wire format: compact MessagePack w/ LZ4-compressed server-to-client frames
         fusion.Rpc.ConfigureWireFormats(f => {
-            f.AddLZ4Variants("lz4");
+            f.AddCompressedVariants("lz4", LZ4ByteCodec.Default);
             f.DefaultFormat = f["msgpack6c-lz4"];
         });
         fusion.AddAuthClient();

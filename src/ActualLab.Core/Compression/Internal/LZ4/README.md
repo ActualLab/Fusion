@@ -4,7 +4,7 @@ The LZ4 block codec, streaming (chained) encoder and decoder from
 [K4os.Compression.LZ4](https://github.com/MiloszKrajewski/K4os.Compression.LZ4)
 (MIT license, (c) 2017 Milosz Krajewski), copied into `ActualLab.Core`. Only the
 fast (non-HC) compressor and the decompressor are here. All types are `internal`;
-the public API is `LZ4ByteCompression`, `LZ4ByteCompressor` and `LZ4ByteDecompressor`
+the public API is `LZ4ByteCodec`, `LZ4ByteEncoder` and `LZ4ByteDecoder`
 in `ActualLab.Compression`.
 
 ## Origin
@@ -14,7 +14,7 @@ in `ActualLab.Compression`.
   `LZ4FastChainEncoder` / `LZ4ChainDecoder` constructors, `Reset()` and
   `Reset(dictionary)`): upstream PR
   [#122](https://github.com/MiloszKrajewski/K4os.Compression.LZ4/pull/122),
-  branch `feature/fast-dictionary` of `ActualLab/K4os.Compression.LZ4` at `f88a87c`.
+  branch `feature/fast-dictionary` of `ActualLab/K4os.Compression.LZ4` at `c768e61`.
   Once it's merged (or changed in review), re-sync from upstream.
 
 ## Changes made while copying

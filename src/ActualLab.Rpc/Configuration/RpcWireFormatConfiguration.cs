@@ -99,38 +99,49 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
     }
 
     // Adds the "<key>-<suffix>" variant of every format the filter accepts (all if there's no filter),
-    // compressed with LZ4 in the given mode and starting from the dictionary (made by LZ4ByteCompression):
-    // e.g. ("lz4") and ("lz4f", mode: Full) without one, ("lz4d1", dictionary) with one.
-    // A dictionary needs a suffix of its own, i.e. not "lz4" or "lz4f".
-    public void AddLZ4Variants(
-        string suffix,
-        object? dictionary = null,
-        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
-        Func<RpcWireFormat, bool>? filter = null)
-    {
-        RpcWireFormat.ValidateLZ4Suffix(suffix, compressionMode);
-        AddCompressedVariants(suffix, RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode, filter);
-    }
-
-    // Same for any compression format. Text and compressed formats are always skipped, since they can't be
-    // compressed; a variant whose key is already taken fails the whole call
+    // compressed with the compression in the given mode: e.g. ("lz4", LZ4ByteCodec.Default),
+    // ("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full), ("lz4d1", lz4WithDictionary).
+    // The "lz4" / "lz4f" / "zstd" / "zstdf" suffixes are reserved for the default codecs in these modes.
+    // Text and compressed formats are always skipped, since they can't be compressed;
+    // a variant whose key is already taken fails the whole call.
     public void AddCompressedVariants(
         string suffix,
-        RpcCompressionFormat compressionFormat,
+        ByteCodec codec,
         RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
-        Func<RpcWireFormat, bool>? filter = null)
+        Func<RpcWireFormat, bool>? filter = null,
+        RpcCompressionOptions? options = null)
+        => AddCompressedVariants(
+            suffix,
+            format => filter is null || filter.Invoke(format) ? codec : null,
+            compressionMode,
+            options);
+
+    // Same, but the factory picks the compression for each format (e.g. a dictionary per serializer);
+    // null skips the format
+    public void AddCompressedVariants(
+        string suffix,
+        Func<RpcWireFormat, ByteCodec?> codecFactory,
+        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
+        RpcCompressionOptions? options = null)
     {
         if (suffix.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(suffix));
 
+        var compressionFormats = new List<RpcCompressionFormat>();
         var variants = new List<RpcWireFormat>();
         foreach (var format in _formats.Values) {
             if (format.CompressionFormat is not null || format.DataFormat != DataFormat.Bytes)
                 continue;
-            if (filter is not null && !filter.Invoke(format))
+            if (codecFactory.Invoke(format) is not { } codec)
                 continue;
 
-            var variant = format.WithCompression($"{format.Key}-{suffix}", compressionFormat, compressionMode);
+            RpcWireFormat.ValidateSuffix(suffix, codec, compressionMode);
+            var compressionFormat = compressionFormats.FirstOrDefault(x => ReferenceEquals(x.Codec, codec));
+            if (compressionFormat is null) {
+                compressionFormat = RpcCompressionFormat.Get(suffix, codec, options);
+                compressionFormats.Add(compressionFormat);
+            }
+            var variant = format.WithCompressionFormat($"{format.Key}-{suffix}", compressionFormat, compressionMode);
             if (_formats.ContainsKey(variant.Key))
                 throw new InvalidOperationException($"Format '{variant.Key}' is already added.");
 

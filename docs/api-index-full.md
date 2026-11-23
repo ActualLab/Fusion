@@ -1517,11 +1517,11 @@ A single route generation of an `RpcRef`: carries the resolved target info for t
 
 ###### `RpcWireFormat`, `RpcDefaultWireFormats`, `RpcWireFormatResolver`
 
-Defines a named RPC wire format with its argument and message serializer factories; `WithLZ4(suffix)` makes an LZ4-compressed variant. `RpcDefaultWireFormats` holds the built-in formats (`json5`, `json5np`, `msgpack5(c)`, `msgpack6(c)`), their list `All`, the `DefaultFormat` one (`msgpack6`) and `BackendOnlyFormatKeys` (`njson5`, `njson5np`). The resolver is the format registry of a container, built from `RpcConfiguration.WireFormats`; its `BackendOnlyFormatKeys` lists the formats a client may not pin via `?f=…`.
+Defines a named RPC wire format with its argument and message serializer factories; `WithCompression(suffix, compression)` makes a compressed variant. `RpcDefaultWireFormats` holds the built-in formats (`json5`, `json5np`, `msgpack5(c)`, `msgpack6(c)`), their list `All`, the `DefaultFormat` one (`msgpack6`) and `BackendOnlyFormatKeys` (`njson5`, `njson5np`). The resolver is the format registry of a container, built from `RpcConfiguration.WireFormats`; its `BackendOnlyFormatKeys` lists the formats a client may not pin via `?f=…`.
 
 ###### `RpcWireFormatConfiguration`
 
-The format set, default format and backend-only formats of one DI container: `RpcConfiguration.WireFormats`, configured via `RpcBuilder.ConfigureWireFormats(...)` and frozen with the configuration. Format packages add `AddMemoryPack()`, `AddNewtonsoftJson()` and `AddNerdbankMessagePack()` extensions; `AddLZ4Variants(suffix, [dictionary], [mode])` adds LZ4 variants, e.g. `-lz4` / `-lz4f`.
+The format set, default format and backend-only formats of one DI container: `RpcConfiguration.WireFormats`, configured via `RpcBuilder.ConfigureWireFormats(...)` and frozen with the configuration. Format packages add `AddMemoryPack()`, `AddNewtonsoftJson()` and `AddNerdbankMessagePack()` extensions; `AddCompressedVariants(suffix, compression, [mode])` adds compressed variants, e.g. `-lz4` / `-lz4f`.
 
 ###### `RpcSerializableAttribute`
 
@@ -3406,7 +3406,7 @@ A `ByteSerialized<T>` variant that uses type-decorating Nerdbank.MessagePack ser
 
 ###### `RpcNerdbankWireFormats`
 
-The `nmsgpack6`/`nmsgpack6c` RPC wire formats backed by Nerdbank.MessagePack (add their LZ4 variants with `f.AddLZ4Variants("lz4")`). Enable them with `rpc.ConfigureWireFormats(f => f.AddNerdbankMessagePack())`.
+The `nmsgpack6`/`nmsgpack6c` RPC wire formats backed by Nerdbank.MessagePack (add their LZ4 variants with `f.AddCompressedVariants("lz4", LZ4ByteCodec.Default)`). Enable them with `rpc.ConfigureWireFormats(f => f.AddNerdbankMessagePack())`.
 
 ## ActualLab.Serialization.MemoryPack
 
@@ -3436,7 +3436,7 @@ Registers the MemoryPack formatters of ActualLab types (run by the package's mod
 
 ###### `RpcMemoryPackWireFormats`, `RpcWireFormatConfigurationExt`
 
-The `mempack5(c)` / `mempack6(c)` RPC wire formats (add their LZ4 variants with `f.AddLZ4Variants("lz4")`); enable them with `rpc.ConfigureWireFormats(f => f.AddMemoryPack())`.
+The `mempack5(c)` / `mempack6(c)` RPC wire formats (add their LZ4 variants with `f.AddCompressedVariants("lz4", LZ4ByteCodec.Default)`); enable them with `rpc.ConfigureWireFormats(f => f.AddMemoryPack())`.
 
 ###### `StringAsSymbolMemoryPackFormatterAttribute`
 

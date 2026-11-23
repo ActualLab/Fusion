@@ -9,6 +9,7 @@ using ActualLab.Trimming;
 using MemoryPack;
 using MessagePack;
 using static System.Console;
+using ActualLab.Compression;
 
 // Calls a loopback RPC service with every wire format the serializer packages provide,
 // round-tripping the types whose trimming / AOT support matters. Exit code 1 = a check failed.
@@ -46,8 +47,8 @@ ServiceProvider CreateServices(string? formatKey)
                 f.AddMemoryPack();
                 f.AddNewtonsoftJson();
                 f.AddNerdbankMessagePack();
-                f.AddLZ4Variants("lz4");
-                f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full);
+                f.AddCompressedVariants("lz4", LZ4ByteCodec.Default);
+                f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full);
                 if (formatKey is not null)
                     f.DefaultFormat = f[formatKey];
             });

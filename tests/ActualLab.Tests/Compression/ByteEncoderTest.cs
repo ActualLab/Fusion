@@ -3,15 +3,15 @@ using ActualLab.Compression;
 namespace ActualLab.Tests.Compression;
 
 /// <summary>
-/// The contract every <see cref="ByteCompressor"/>/<see cref="ByteDecompressor"/> pair must satisfy.
+/// The contract every <see cref="ByteEncoder"/>/<see cref="ByteDecoder"/> pair must satisfy.
 /// Derive one test class per codec; codec-specific cases go in the derived class.
 /// </summary>
-public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(@out)
+public abstract class ByteEncoderTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
     protected const int MaxLength = 1 << 22;
 
-    protected abstract ByteCompressor NewCompressor();
-    protected abstract ByteDecompressor NewDecompressor();
+    protected abstract ByteEncoder NewEncoder();
+    protected abstract ByteDecoder NewDecoder();
 
     [Fact]
     public void SingleFrameTest()
@@ -29,7 +29,7 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
         using var pair = NewPair();
         var source = NewPayload(0, 2000);
 
-        // Every compressed frame must be fed to the decompressor, in order - skipping one
+        // Every compressed frame must be fed to the decoder, in order - skipping one
         // desynchronizes the pair, which is exactly what the frame flag byte prevents.
         pair.RoundTrip(source).Should().Equal(source);
         var firstSize = pair.LastCompressedSize;
@@ -133,8 +133,8 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
         pair.RoundTrip(source).Should().Equal(source);
         var beforeResetSize = pair.LastCompressedSize;
 
-        pair.Compressor.Reset();
-        pair.Decompressor.Reset();
+        pair.Encoder.Reset();
+        pair.Decoder.Reset();
 
         pair.RoundTrip(source).Should().Equal(source);
         // A reset drops the dictionary, so the same frame no longer compresses to almost nothing
@@ -150,8 +150,8 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
                 var source = NewPayload(cycle, 1000 + i);
                 pair.RoundTrip(source).Should().Equal(source);
             }
-            pair.Compressor.Reset();
-            pair.Decompressor.Reset();
+            pair.Encoder.Reset();
+            pair.Decoder.Reset();
         }
     }
 
@@ -160,10 +160,10 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     {
         using var pair = NewPair();
         var source = new byte[100_000]; // All zeros - compresses to almost nothing
-        var compressed = pair.Compress(source);
+        var compressed = pair.Encode(source);
         compressed.Length.Should().BeLessThan(2000);
 
-        Assert.Throws<FormatException>(() => pair.Decompress(compressed, 10_000));
+        Assert.Throws<FormatException>(() => pair.Decode(compressed, 10_000));
     }
 
     [Fact]
@@ -171,10 +171,10 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     {
         using var pair = NewPair();
         var source = NewPayload(0, 1000);
-        var compressed = pair.Compress(source);
+        var compressed = pair.Encode(source);
 
         // Exactly at the limit is fine
-        pair.Decompress(compressed, source.Length).Should().Equal(source);
+        pair.Decode(compressed, source.Length).Should().Equal(source);
     }
 
     [Fact]
@@ -182,9 +182,9 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     {
         using var pair = NewPair();
         var source = NewPayload(0, 1000);
-        var compressed = pair.Compress(source);
+        var compressed = pair.Encode(source);
 
-        Assert.Throws<FormatException>(() => pair.Decompress(compressed, source.Length - 1));
+        Assert.Throws<FormatException>(() => pair.Decode(compressed, source.Length - 1));
     }
 
     // Whatever a codec does with a corrupted frame, it must never silently return the original
@@ -193,11 +193,11 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     {
         using var pair = NewPair();
         var source = NewPayload(0, 4000);
-        var compressed = pair.Compress(source);
+        var compressed = pair.Encode(source);
         compressed[compressed.Length / 2] ^= 0xFF;
 
         try {
-            pair.Decompress(compressed, MaxLength).Should().NotEqual(source);
+            pair.Decode(compressed, MaxLength).Should().NotEqual(source);
         }
         catch (Exception e) {
             Out.WriteLine($"Rejected with {e.GetType().Name}");
@@ -212,11 +212,11 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
         var source = NewPayload(0, 4000);
 
         pair.RoundTrip(source).Should().Equal(source);
-        pair.Compressor.Reset(); // Decompressor deliberately not reset
+        pair.Encoder.Reset(); // Decoder deliberately not reset
 
-        var compressed = pair.Compress(source);
+        var compressed = pair.Encode(source);
         try {
-            pair.Decompress(compressed, MaxLength).Should().NotEqual(source);
+            pair.Decode(compressed, MaxLength).Should().NotEqual(source);
         }
         catch (Exception e) {
             Out.WriteLine($"Rejected with {e.GetType().Name}");
@@ -226,19 +226,19 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     [Fact]
     public void DoubleDisposeIsSafeTest()
     {
-        var compressor = NewCompressor();
-        var decompressor = NewDecompressor();
+        var encoder = NewEncoder();
+        var decoder = NewDecoder();
 
-        compressor.Dispose();
-        compressor.Dispose();
-        decompressor.Dispose();
-        decompressor.Dispose();
+        encoder.Dispose();
+        encoder.Dispose();
+        decoder.Dispose();
+        decoder.Dispose();
     }
 
     // Protected methods
 
     protected CodecPair NewPair()
-        => new(NewCompressor(), NewDecompressor());
+        => new(NewEncoder(), NewDecoder());
 
     protected static byte[] NewPayload(int seed, int length)
     {
@@ -255,31 +255,31 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     // The bound the frame layer budgets on: an underestimate here means an oversized frame and a
     // dropped connection, so incompressible input - where the codec can only expand - must fit it.
     [Fact]
-    public void MaxCompressedLengthIsNeverExceededTest()
+    public void MaxEncodedLengthIsNeverExceededTest()
     {
         var random = new Random(11);
         foreach (var length in (int[])[1, 2, 100, 1000, 10_000, 100_000, 1_000_000]) {
             using var pair = NewPair();
             var source = new byte[length];
             random.NextBytes(source); // Random data is incompressible - the worst case
-            var bound = pair.Compressor.GetMaxCompressedLength(length);
+            var bound = pair.Encoder.GetMaxEncodedLength(length);
 
-            var compressed = pair.Compress(source);
+            var compressed = pair.Encode(source);
             Out.WriteLine($"{length} bytes -> {compressed.Length}, bound {bound}");
             compressed.Length.Should().BeLessThanOrEqualTo(bound);
-            pair.Decompress(compressed, MaxLength).Should().Equal(source);
+            pair.Decode(compressed, MaxLength).Should().Equal(source);
         }
     }
 
     [Fact]
-    public void MaxCompressedLengthIsMonotonicTest()
+    public void MaxEncodedLengthIsMonotonicTest()
     {
-        using var compressor = NewCompressor();
-        compressor.GetMaxCompressedLength(0).Should().Be(0);
+        using var encoder = NewEncoder();
+        encoder.GetMaxEncodedLength(0).Should().Be(0);
 
         var previous = 0;
         for (var length = 0; length <= 200_000; length += 997) {
-            var bound = compressor.GetMaxCompressedLength(length);
+            var bound = encoder.GetMaxEncodedLength(length);
             bound.Should().BeGreaterThanOrEqualTo(previous);
             bound.Should().BeGreaterThanOrEqualTo(length); // Compression is never guaranteed
             previous = bound;
@@ -291,61 +291,62 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
     [Fact]
     public void MaxSourceLengthIsExactTest()
     {
-        using var compressor = NewCompressor();
+        using var encoder = NewEncoder();
         foreach (var maxLength in (int[])[0, 1, 1000, 100_000, 16_711_680]) {
-            var sourceLength = compressor.GetMaxSourceLength(maxLength);
+            var sourceLength = encoder.GetMaxSourceLength(maxLength);
             sourceLength.Should().BeLessThanOrEqualTo(maxLength);
-            compressor.GetMaxCompressedLength(sourceLength).Should().BeLessThanOrEqualTo(maxLength);
+            encoder.GetMaxEncodedLength(sourceLength).Should().BeLessThanOrEqualTo(maxLength);
             if (sourceLength < maxLength)
-                compressor.GetMaxCompressedLength(sourceLength + 1).Should().BeGreaterThan(maxLength);
+                encoder.GetMaxEncodedLength(sourceLength + 1).Should().BeGreaterThan(maxLength);
         }
     }
 
-    protected sealed class CodecPair(ByteCompressor compressor, ByteDecompressor decompressor) : IDisposable
+    protected sealed class CodecPair(ByteEncoder encoder, ByteDecoder decoder) : IDisposable
     {
-        public ByteCompressor Compressor { get; } = compressor;
-        public ByteDecompressor Decompressor { get; } = decompressor;
+        public ByteEncoder Encoder { get; } = encoder;
+        public ByteDecoder Decoder { get; } = decoder;
         public int LastCompressedSize { get; private set; }
 
         public void Dispose()
         {
-            Compressor.Dispose();
-            Decompressor.Dispose();
+            Encoder.Dispose();
+            Decoder.Dispose();
         }
 
         public byte[] RoundTrip(byte[] source, int maxLength = MaxLength)
-            => Decompress(Compress(source), maxLength);
+            => Decode(Encode(source), maxLength);
 
-        public byte[] Compress(byte[] source)
+        public byte[] Encode(byte[] source)
         {
             using var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
-            Compressor.Compress(source, buffer);
+            Encoder.Encode(source, buffer);
             LastCompressedSize = buffer.WrittenCount;
             return buffer.ToArray();
         }
 
-        public byte[] Decompress(byte[] source, int maxLength)
+        public byte[] Decode(byte[] source, int maxLength)
         {
             using var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
-            Decompressor.Decompress(source, buffer, maxLength);
+            Decoder.Decode(source, buffer, maxLength);
             return buffer.ToArray();
         }
     }
 }
 
-public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestBase(@out)
+public class LZ4ByteEncoderTest(ITestOutputHelper @out) : ByteEncoderTestBase(@out)
 {
-    protected override ByteCompressor NewCompressor()
-        => new LZ4ByteCompressor();
-    protected override ByteDecompressor NewDecompressor()
-        => new LZ4ByteDecompressor();
+    protected override ByteEncoder NewEncoder()
+        => new LZ4ByteEncoder();
+    protected override ByteDecoder NewDecoder()
+        => new LZ4ByteDecoder();
 
     // A block size well below the frame sizes the base tests use, to exercise the multi-block
     // path far more often than the default one does
     [Fact]
     public void SmallBlockSizeTest()
     {
-        using var pair = new CodecPair(new LZ4ByteCompressor(1024), new LZ4ByteDecompressor(1024));
+        var codec = new LZ4ByteCodec { BlockSize = 1024 };
+        using var pair = new CodecPair(codec.NewEncoder(), codec.NewDecoder());
 
         for (var i = 0; i < 50; i++) {
             var source = NewPayload(i, 1 + (i * 211 % 10_000));
@@ -358,7 +359,7 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
     [Fact]
     public void MaxBlockSizeIsTheLengthPrefixBoundTest()
     {
-        var maxBlockSize = LZ4ByteCompressor.MaxBlockSize;
+        var maxBlockSize = LZ4ByteEncoder.MaxBlockSize;
         Out.WriteLine($"MaxBlockSize = {maxBlockSize}, "
             + $"MaximumOutputSize = {LZ4MaximumOutputSize(maxBlockSize)}");
 
@@ -381,7 +382,8 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
         var source = new byte[40_000]; // 40x the block size, and incompressible on its own
         random.NextBytes(source);
 
-        using var pair = new CodecPair(new LZ4ByteCompressor(blockSize), new LZ4ByteDecompressor(blockSize));
+        var codec = new LZ4ByteCodec { BlockSize = blockSize };
+        using var pair = new CodecPair(codec.NewEncoder(), codec.NewDecoder());
         pair.RoundTrip(source).Should().Equal(source);
         var firstSize = pair.LastCompressedSize;
         pair.RoundTrip(source).Should().Equal(source);
@@ -396,34 +398,34 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
     [Fact]
     public void BlockSizeValidationTest()
     {
-        new LZ4ByteCompressor().BlockSize.Should().Be(LZ4ByteCompressor.DefaultBlockSize);
-        new LZ4ByteDecompressor().BlockSize.Should().Be(LZ4ByteCompressor.DefaultBlockSize);
-        LZ4ByteCompressor.DefaultBlockSize.Should().BeLessThanOrEqualTo(LZ4ByteCompressor.MaxBlockSize);
-        new LZ4ByteCompressor(LZ4ByteCompressor.MaxBlockSize).BlockSize
-            .Should().Be(LZ4ByteCompressor.MaxBlockSize);
+        new LZ4ByteEncoder().BlockSize.Should().Be(LZ4ByteEncoder.DefaultBlockSize);
+        new LZ4ByteDecoder().BlockSize.Should().Be(LZ4ByteEncoder.DefaultBlockSize);
+        LZ4ByteEncoder.DefaultBlockSize.Should().BeLessThanOrEqualTo(LZ4ByteEncoder.MaxBlockSize);
+        new LZ4ByteEncoder(new LZ4ByteCodec { BlockSize = LZ4ByteEncoder.MaxBlockSize }).BlockSize
+            .Should().Be(LZ4ByteEncoder.MaxBlockSize);
 
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => new LZ4ByteCompressor(LZ4ByteCompressor.MaxBlockSize + 1));
+            () => new LZ4ByteEncoder(new LZ4ByteCodec { BlockSize = LZ4ByteEncoder.MaxBlockSize + 1 }));
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => new LZ4ByteDecompressor(LZ4ByteCompressor.MaxBlockSize + 1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LZ4ByteCompressor(-1));
+            () => new LZ4ByteDecoder(new LZ4ByteCodec { BlockSize = LZ4ByteEncoder.MaxBlockSize + 1 }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LZ4ByteCodec { BlockSize = -1 });
     }
 
     // Worst-case expansion is a property of the block geometry, not a constant: a small block
     // pays [ushort length] + LZ4's own per-block overhead far more often. A fixed per-frame
     // allowance sized for the default geometry is nowhere near enough for a custom one.
     [Fact]
-    public void MaxCompressedLengthTracksBlockSizeTest()
+    public void MaxEncodedLengthTracksBlockSizeTest()
     {
         const int frameSize = 16_711_680; // RpcFrameBasedTransport.DefaultMaxFrameSize
         const int fixedAllowance = 4 + 64 + (frameSize >> 6); // What a codec-agnostic estimate gave
 
-        using var small = new LZ4ByteCompressor(256);
-        using var large = new LZ4ByteCompressor();
-        var smallOverhead = small.GetMaxCompressedLength(frameSize) - frameSize;
-        var largeOverhead = large.GetMaxCompressedLength(frameSize) - frameSize;
+        using var small = new LZ4ByteEncoder(new LZ4ByteCodec { BlockSize = 256 });
+        using var large = new LZ4ByteEncoder();
+        var smallOverhead = small.GetMaxEncodedLength(frameSize) - frameSize;
+        var largeOverhead = large.GetMaxEncodedLength(frameSize) - frameSize;
         Out.WriteLine($"overhead: 256-byte blocks {smallOverhead}, "
-            + $"{LZ4ByteCompressor.MaxBlockSize}-byte blocks {largeOverhead}, fixed {fixedAllowance}");
+            + $"{LZ4ByteEncoder.MaxBlockSize}-byte blocks {largeOverhead}, fixed {fixedAllowance}");
 
         largeOverhead.Should().BeLessThan(fixedAllowance); // The default geometry it was tuned for
         smallOverhead.Should().BeGreaterThan(fixedAllowance); // ...and the one it silently broke
@@ -441,12 +443,12 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
     [InlineData(5000)]
     public void BlockSizeIsTheEffectiveOneTest(int requested)
     {
-        using var compressor = new LZ4ByteCompressor(requested);
-        using var decompressor = new LZ4ByteDecompressor(requested);
+        using var encoder = new LZ4ByteEncoder(new LZ4ByteCodec { BlockSize = requested });
+        using var decoder = new LZ4ByteDecoder(new LZ4ByteCodec { BlockSize = requested });
 
-        compressor.BlockSize.Should().Be(decompressor.BlockSize);
-        compressor.BlockSize.Should().BeGreaterThanOrEqualTo(requested);
-        LZ4MaximumOutputSize(compressor.BlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
+        encoder.BlockSize.Should().Be(decoder.BlockSize);
+        encoder.BlockSize.Should().BeGreaterThanOrEqualTo(requested);
+        LZ4MaximumOutputSize(encoder.BlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
     }
 
     // Incompressible data at exactly MaxBlockSize is the case the ushort prefix must survive
@@ -455,11 +457,11 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
     {
         // Explicitly at MaxBlockSize, so this stays the prefix's worst case whatever the default is
         using var pair = new CodecPair(
-            new LZ4ByteCompressor(LZ4ByteCompressor.MaxBlockSize),
-            new LZ4ByteDecompressor(LZ4ByteCompressor.MaxBlockSize));
+            new LZ4ByteEncoder(new LZ4ByteCodec { BlockSize = LZ4ByteEncoder.MaxBlockSize }),
+            new LZ4ByteDecoder(new LZ4ByteCodec { BlockSize = LZ4ByteEncoder.MaxBlockSize }));
         var random = new Random(7);
         for (var i = 0; i < 3; i++) {
-            var source = new byte[LZ4ByteCompressor.MaxBlockSize];
+            var source = new byte[LZ4ByteEncoder.MaxBlockSize];
             random.NextBytes(source);
             pair.RoundTrip(source).Should().Equal(source);
         }

@@ -40,12 +40,12 @@ apps only need [Step 1](#step-1-reference-the-packages-you-use) and
   is gone. The default set is slim, and everything else is opt-in
   (see [Step 4](#step-4-configure-rpc-formats-per-container)).
 - **Built-in LZ4 with preset dictionaries.** LZ4 now lives in `ActualLab.Core` itself (a vendored
-  copy of K4os.Compression.LZ4). `ByteCompression` is the codec abstraction: it creates
-  compressors, decompressors and preset dictionaries, which are prepared once and shared by all
-  compressors, so even the first frames after a compression context reset compress well.
-  `f.AddLZ4Variants(suffix, dictionary, mode)` adds the LZ4 variants of the binary formats
-  (see [LZ4 Dictionaries](../PartR-Serialization.md#lz4-dictionaries) and
-  [Step 9](#step-9-lz4-variants-take-a-suffix)).
+  copy of K4os.Compression.LZ4). `ByteCodec` is the codec: an immutable record of its settings
+  plus an optional preset dictionary (`DictionaryData`), which it prepares once and shares
+  with every encoder, so even the first frames after a compression context reset compress well.
+  `f.AddCompressedVariants(suffix, compression, mode)` adds the compressed variants of the binary
+  formats (see [Dictionaries](../PartR-Serialization.md#dictionaries) and
+  [Step 9](#step-9-compressed-variants-take-a-suffix-and-a-bytecompression)).
 - **Keyed MessagePack.** `f.AddKeyedMessagePack()` adds `msgpack6k` / `msgpack6ck`, which serialize
   your types as string-keyed maps instead of `[Key(N)]` arrays, so e.g. a TypeScript client reads
   them by member name (see [Keyed MessagePack](../PartR-Serialization.md#keyed-messagepack)).
@@ -70,7 +70,7 @@ See [Native AOT and Trimming](../PartAOT.md) for the details.
 
 - `Type.GetDefaultValue()` returns `null` for `Nullable<T>` (it returned the default of `T`), which
   also fixes a `null` `int?` RPC argument arriving as `0` over the JSON formats.
-- `LZ4ByteDecompressor` reports malformed input with `FormatException`.
+- `LZ4ByteDecoder` reports malformed input with `FormatException`.
 - .NET Framework fixes: `TypeRef` resolution of GAC and culture-specific assemblies, `TickSource`
   waiters, `EncoderExt` / `DecoderExt` on empty input, and the NetFx RPC WebSocket server rejecting
   unsupported formats with close code 4001.
@@ -159,7 +159,7 @@ including the `-lz4` variants &ndash; is opt-in via `RpcBuilder.ConfigureWireFor
 services.AddRpc().ConfigureWireFormats(f => {
     f.AddMemoryPack();     // ActualLab.Serialization.MemoryPack: mempack5(c), mempack6(c)
     f.AddNewtonsoftJson(); // ActualLab.Serialization.NewtonsoftJson: njson5, njson5np
-    f.AddLZ4Variants("lz4"); // "-lz4" variants of the formats added so far
+    f.AddCompressedVariants("lz4", LZ4ByteCodec.Default); // "-lz4" variants of the formats added so far
     f.DefaultFormat = f["msgpack6c-lz4"];
 });
 ```
@@ -175,7 +175,7 @@ services.AddRpc().ConfigureWireFormats(f => {
   `RpcNewtonsoftJsonWireFormats` and `RpcNerdbankWireFormats`.
 - `RpcSerializationFormat.All`, `RpcSerializationFormat.Default`, `RpcSerializationFormatResolver.DefaultFormats`
   and the `*_LZ4` / `*_LZ4F` format statics are gone. Configure each container with
-  `rpc.ConfigureWireFormats(f => ...)` instead: `f.Add(...)` / `f.Remove(...)`, `f.AddLZ4Variants("lz4")`,
+  `rpc.ConfigureWireFormats(f => ...)` instead: `f.Add(...)` / `f.Remove(...)`, `f.AddCompressedVariants("lz4", LZ4ByteCodec.Default)`,
   `f.DefaultFormat` (instead of assigning `RpcSerializationFormatResolver.Default`) and
   `f.BackendOnlyFormatKeys` (instead of `RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys`;
   the process-wide defaults are the read-only `RpcDefaultWireFormats.DefaultFormat` and `.BackendOnlyFormatKeys`).
@@ -245,21 +245,26 @@ worker, desktop, test projects) that used these packages through Core now need t
 `IHostedService`, `BackgroundService`, `IHostEnvironment`, `ILogger`, `IOptions<T>` and configuration
 binding keep working without them.
 
-## Step 9: LZ4 variants take a suffix
+## Step 9: Compressed variants take a suffix and a `ByteCodec`
 
-If you configured formats with 16.0.4 or earlier v16 builds: the suffix of the LZ4 variants is now
-required and used as is, and adding a variant whose key already exists fails instead of keeping
-the existing format.
+If you configured formats with 16.0.4 or earlier v16 builds: `AddLZ4Variants` and `WithLZ4` are
+replaced with `AddCompressedVariants` and `WithCompression`, which take the suffix (used as is) and a
+`ByteCodec`, and adding a variant whose key already exists fails instead of keeping the
+existing format.
 
 | Before | Now |
 |--------|-----|
-| `f.AddLZ4Variants()` | `f.AddLZ4Variants("lz4")` |
-| `f.AddLZ4Variants(RpcCompressionMode.Full)` | `f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full)` |
-| `f.AddLZ4Variants(filter, modes)` | `f.AddLZ4Variants(suffix, compressionMode: mode, filter: filter)`, once per mode |
-| `format.WithLZ4()` / `format.WithLZ4(RpcCompressionMode.Full)` | `format.WithLZ4("lz4")` / `format.WithLZ4("lz4f", compressionMode: RpcCompressionMode.Full)` |
+| `f.AddLZ4Variants()` | `f.AddCompressedVariants("lz4", LZ4ByteCodec.Default)` |
+| `f.AddLZ4Variants(RpcCompressionMode.Full)` | `f.AddCompressedVariants("lz4f", LZ4ByteCodec.Default, RpcCompressionMode.Full)` |
+| `f.AddLZ4Variants(filter, modes)` | `f.AddCompressedVariants(suffix, LZ4ByteCodec.Default, mode, filter)`, once per mode |
+| `format.WithLZ4()` | `format.WithCompression("lz4", LZ4ByteCodec.Default)` |
+| `new RpcCompressionFormat(id, compressorFactory, decompressorFactory, options)` | `new RpcCompressionFormat(id, codec, options)` |
+| `ByteCompressor` / `ByteDecompressor` | `ByteEncoder` / `ByteDecoder` (`Compress` / `Decompress` became `Encode` / `Decode`) |
+| `new LZ4ByteCompressor(blockSize)` / `new LZ4ByteDecompressor(blockSize)` | `new LZ4ByteCodec { BlockSize = blockSize }.NewEncoder()` / `.NewDecoder()` |
 
-The keys stay the same (`-lz4`, `-lz4f`), so peers on either version still agree. Variants with a
-preset dictionary need a suffix of their own, e.g. `f.AddLZ4Variants("lz4d1", dictionary)`.
+The keys stay the same (`-lz4`, `-lz4f`), so peers on either version still agree. A codec with
+a preset dictionary needs a suffix of its own, e.g.
+`f.AddCompressedVariants("lz4d1", LZ4ByteCodec.Default with { DictionaryData = typicalFrames })`.
 
 ## Other Breaking Changes
 
@@ -282,9 +287,9 @@ preset dictionary need a suffix of their own, e.g. `f.AddLZ4Variants("lz4d1", di
 - **`ActivatorExt.New<T>()`** is gone; use `Activator.CreateInstance<T>()`.
 - **Native AOT:** the `MemoryPackByteSerializer.IsEnabled` trimming switch is gone &ndash; MemoryPack
   keep-code now exists only if you reference `ActualLab.Serialization.MemoryPack`.
-- **Compression:** `ByteCompressor.Reset()` and `ByteDecompressor.Reset()` are no longer abstract;
-  a custom codec overrides `ResetCore(object? dictionary)` instead. `RpcCompressionFormat.LZ4` is
-  unchanged, and `RpcCompressionFormat.New(...)` / `NewLZ4(...)` create formats with a dictionary.
+- **Compression:** a custom codec derives from `ByteCodec` (an abstract record) and creates
+  its encoders and decoders; `RpcCompressionFormat` wraps a `ByteCodec` instead of
+  two factory delegates. `RpcCompressionFormat.LZ4` is unchanged.
 
 ## Further Reading
 

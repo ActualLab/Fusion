@@ -58,7 +58,7 @@ public static class RpcDefaultWireFormats
     public static RpcWireFormat DefaultFormat => MessagePackV6;
 
     // The formats every RpcWireFormatConfiguration starts with: rpc.ConfigureWireFormats(...) adds more,
-    // e.g. LZ4 variants (AddLZ4Variants) or the formats of the serialization packages
+    // e.g. compressed variants (AddCompressedVariants) or the formats of the serialization packages
     public static readonly ImmutableList<RpcWireFormat> All = ImmutableList.Create(
         SystemJsonV5, SystemJsonV5NP,
         MessagePackV5, MessagePackV5C,

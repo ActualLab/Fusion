@@ -123,10 +123,10 @@ public class RpcFrameCodecTest(ITestOutputHelper @out) : TestBase(@out)
     // Private methods
 
     private static RpcFrameEncoder NewEncoder(RpcCompressionOptions? settings = null)
-        => new(new LZ4ByteCompressor(), settings ?? RpcCompressionOptions.Default, 1024, MaxFrameSize);
+        => new(new LZ4ByteEncoder(), settings ?? RpcCompressionOptions.Default, 1024, MaxFrameSize);
 
     private static RpcFrameDecoder NewDecoder()
-        => new(new LZ4ByteDecompressor(), 1024, MaxFrameSize);
+        => new(new LZ4ByteDecoder(), 1024, MaxFrameSize);
 
     private static byte[] Encode(RpcFrameEncoder encoder, byte[] payload)
     {

@@ -33,18 +33,20 @@ public sealed class RpcWireFormat(
     public override string ToString()
         => $"{GetType().GetName()}({Key})";
 
-    // The "<key>-<suffix>" variant compressed with LZ4 in the given mode, starting from the dictionary
-    // (made by LZ4ByteCompression), e.g. "lz4" for ServerToClient and "lz4f" for Full without one
-    public RpcWireFormat WithLZ4(
+    // The "<key>-<suffix>" variant compressed with the compression in the given mode, e.g.
+    // ("lz4", LZ4ByteCodec.Default) or ("lz4d1f", lz4WithDictionary, RpcCompressionMode.Full)
+    public RpcWireFormat WithCompression(
         string suffix,
-        object? dictionary = null,
-        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient)
+        ByteCodec codec,
+        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
+        RpcCompressionOptions? options = null)
     {
-        ValidateLZ4Suffix(suffix, compressionMode);
-        return WithCompression($"{Key}-{suffix}", RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode);
+        ValidateSuffix(suffix, codec, compressionMode);
+        var compressionFormat = RpcCompressionFormat.Get(suffix, codec, options);
+        return WithCompressionFormat($"{Key}-{suffix}", compressionFormat, compressionMode);
     }
 
-    public RpcWireFormat WithCompression(
+    public RpcWireFormat WithCompressionFormat(
         string key, RpcCompressionFormat compressionFormat, RpcCompressionMode compressionMode)
     {
         if (DataFormat == DataFormat.Text)
@@ -58,17 +60,28 @@ public sealed class RpcWireFormat(
 
     // Internal methods
 
-    // Peers agree on a format by its key alone, so the well-known "lz4" / "lz4f" keys must always mean
-    // the same compression mode
-    internal static void ValidateLZ4Suffix(string suffix, RpcCompressionMode compressionMode)
+    // Peers agree on a format by its key alone, so the well-known "<codec>" / "<codec>f" suffixes
+    // (e.g. "lz4" / "lz4f") must always mean the codec's default configuration in the same mode
+    internal static void ValidateSuffix(string suffix, ByteCodec codec, RpcCompressionMode compressionMode)
     {
         if (suffix.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(suffix));
-        if ((suffix is "lz4" && compressionMode != RpcCompressionMode.ServerToClient)
-            || (suffix is "lz4f" && compressionMode != RpcCompressionMode.Full))
-            throw new ArgumentOutOfRangeException(nameof(compressionMode),
-                $"Suffix '{suffix}' is reserved for RpcCompressionMode."
-                + (suffix is "lz4" ? nameof(RpcCompressionMode.ServerToClient) : nameof(RpcCompressionMode.Full))
-                + ".");
+
+        foreach (var name in (string[])["lz4", "zstd"]) {
+            var expectedMode = string.Equals(suffix, name, StringComparison.Ordinal)
+                ? RpcCompressionMode.ServerToClient
+                : string.Equals(suffix, name + "f", StringComparison.Ordinal)
+                    ? RpcCompressionMode.Full
+                    : RpcCompressionMode.None;
+            if (expectedMode == RpcCompressionMode.None)
+                continue;
+
+            if (!string.Equals(codec.DefaultName, name, StringComparison.Ordinal))
+                throw new ArgumentOutOfRangeException(nameof(suffix),
+                    $"Suffix '{suffix}' is reserved for the default '{name}' codec, but got {codec}.");
+            if (compressionMode != expectedMode)
+                throw new ArgumentOutOfRangeException(nameof(compressionMode),
+                    $"Suffix '{suffix}' is reserved for RpcCompressionMode.{expectedMode}.");
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace ActualLab.Rpc.Compression;
 /// Only the transport's writer loop calls this, so it isn't thread-safe.
 /// </remarks>
 public sealed class RpcFrameEncoder(
-    ByteCompressor compressor,
+    ByteEncoder encoder,
     RpcCompressionOptions settings,
     int bufferSize,
     int maxBufferSize
@@ -30,7 +30,7 @@ public sealed class RpcFrameEncoder(
 
     public void Dispose()
     {
-        compressor.Dispose();
+        encoder.Dispose();
         _buffer.Dispose();
     }
 
@@ -44,7 +44,7 @@ public sealed class RpcFrameEncoder(
         var flags = 0;
         if (mustCompress && (_framesSinceReset >= Settings.ContextResetFrames
             || _bytesSinceReset >= Settings.ContextResetBytes)) {
-            compressor.Reset();
+            encoder.Reset();
             _bytesSinceReset = 0;
             _framesSinceReset = 0;
             flags = RpcFrameCodec.ContextResetFrameFlag;
@@ -59,7 +59,7 @@ public sealed class RpcFrameEncoder(
         _buffer.Renew(maxBufferSize);
         _buffer.GetSpan(Int32Size);
         _buffer.Advance(Int32Size);
-        compressor.Compress(payload, _buffer);
+        encoder.Encode(payload, _buffer);
         _bytesSinceReset += payload.Length;
         _framesSinceReset++;
 
@@ -72,5 +72,5 @@ public sealed class RpcFrameEncoder(
     // The bound comes from the codec: worst-case expansion is a property of its block geometry,
     // not a constant, so a fixed allowance would be wrong for any codec but one.
     public int GetMaxPayloadSize(int maxFrameSize)
-        => compressor.GetMaxSourceLength(maxFrameSize);
+        => encoder.GetMaxSourceLength(maxFrameSize);
 }

@@ -7,7 +7,7 @@ namespace ActualLab.Rpc;
 /// </summary>
 public static class RpcWireFormatConfigurationExt
 {
-    // Adds "nmsgpack6" and "nmsgpack6c"; AddLZ4Variants adds their LZ4 variants
+    // Adds "nmsgpack6" and "nmsgpack6c"; AddCompressedVariants adds their compressed variants
     public static void AddNerdbankMessagePack(this RpcWireFormatConfiguration formats)
         => formats.Add(RpcNerdbankWireFormats.All);
 }
