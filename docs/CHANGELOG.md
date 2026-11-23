@@ -11,6 +11,59 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 16.0.47+230e52097 | npm: 16.0.47
+
+Release date: 2026-11-23
+
+The first v16 release with a changelog entry; it covers 16.0.4 as well. v16 moves the optional
+serializers out of `ActualLab.Core`, makes RPC wire formats per-container, adds frame compression
+codecs and makes Fusion apps work under NativeAOT. **Read the
+[v15 &rarr; v16 migration guide](Migration/To-v16.md)**: it opens with a complete "What's new" and
+walks through every breaking change step by step.
+
+### Breaking Changes
+
+- **Serialization:** Newtonsoft.Json, MemoryPack and Nerdbank.MessagePack support moved to the
+  `ActualLab.Serialization.*` packages; `ApiOption` / `ApiNullable` / `ApiNullable8` moved with
+  MemoryPack. RPC wire formats are configured per DI container via
+  `rpc.ConfigureWireFormats(f => ...)`.
+- **RPC compression:** `AddLZ4Variants` / `WithLZ4` are replaced with
+  `AddCompressedVariants(suffix, codec, mode)` / `WithCompression(...)`; compression is configured
+  with `ByteCodec` records (`LZ4ByteCodec`, `ZstdByteCodec`, `SelectingByteCodec`). The `-lz4` /
+  `-lz4f` keys are unchanged, so v15 and v16 peers still agree.
+- **RPC streams:** a class deriving directly from `RpcStream` must implement the new
+  `OnItemDeserializationError`.
+- **Core:** `ActivatorExt.New<T>()` is removed; `Microsoft.Extensions.Hosting` and
+  `Options.DataAnnotations` are no longer referenced (reference the hosting packages you use).
+- See [Other Breaking Changes](Migration/To-v16.md#other-breaking-changes) for the rest.
+
+### Added
+
+- **NativeAOT and trimming:** source-generated serialization roots, `ACTUALLAB_NO_PROXIES`,
+  System.Text.Json source-generated metadata, and the `NativeAotFull` sample.
+- **RPC compression:** built-in LZ4 with preset dictionaries, Zstandard on .NET 11, per-frame codec
+  selection, and presets such as `SelectingByteCodec.LZ4HL16_And_Zstd_At1K`.
+- **RPC:** keyed MessagePack formats `msgpack6k` / `msgpack6ck` (`f.AddKeyedMessagePack()`).
+
+### Changed
+
+- **RPC:** `RpcCompressionOptions.MinCompressedFrameSize` defaults to 256 bytes (was 512).
+- **Core:** fewer dependencies: no CommunityToolkit.HighPerformance, System.Linq.Async, Ulid or
+  K4os.Compression.LZ4 packages.
+
+### Fixed
+
+- **RPC streams:** an item that can't be serialized or deserialized ends the stream with an error
+  instead of being resent forever (.NET and TypeScript).
+- **.NET Framework:** `EncoderExt` / `DecoderExt` null-pointer and empty-input fixes, `TypeRef`
+  resolves GAC assemblies, `TickSource` waiters resume on the thread pool, `PruningCache` works,
+  and `ActualLab.Rpc.Server.NetFx` rejects an unsupported format with a terminal close code (4001)
+  instead of HTTP 400.
+- **Operations:** `DbOperationLogReader` no longer drops entries whose change notification was missed.
+- **Fusion:** `FusionBuilder.WithServiceMode` no longer leaves `Tag` null.
+- **Blazor:** `ClientAuthHelper` ignores a disconnected circuit.
+
+
 ## 15.1.62+bbb4b64e4 | npm: 15.1.62
 
 Release date: 2026-11-19
