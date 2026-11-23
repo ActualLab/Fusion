@@ -8,7 +8,7 @@ namespace ActualLab.Serialization.Internal;
 /// A MessagePack formatter for <see cref="PropertyBagItem{TSchema}"/>.
 /// </summary>
 public sealed class PropertyBagItemMessagePackFormatter<TSchema> : IMessagePackFormatter<PropertyBagItem<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public void Serialize(
         ref MessagePackWriter writer,

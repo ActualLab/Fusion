@@ -28,7 +28,7 @@ public sealed class UniSerializedMessagePackFormatter<T> : IMessagePackFormatter
 /// </summary>
 public sealed class TypeDecoratingUniSerializedMessagePackFormatter<TSchema, T>
     : IMessagePackFormatter<TypeDecoratingUniSerialized<TSchema, T>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public void Serialize(
         ref MessagePackWriter writer,

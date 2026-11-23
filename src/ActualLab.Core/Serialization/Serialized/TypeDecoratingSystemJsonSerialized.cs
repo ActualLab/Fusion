@@ -9,12 +9,12 @@ public static class TypeDecoratingSystemJsonSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingSystemJsonSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingSystemJsonSerialized<TSchema, TValue> New<TSchema, TValue>(string data)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Data = data };
 }
 
@@ -26,7 +26,7 @@ public static class TypeDecoratingSystemJsonSerialized
 #endif
 [DataContract, MessagePackObject]
 public partial class TypeDecoratingSystemJsonSerialized<TSchema, T> : TextSerialized<T>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     private static ITextSerializer<T>? _serializer;
 

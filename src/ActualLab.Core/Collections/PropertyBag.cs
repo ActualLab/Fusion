@@ -17,7 +17,7 @@ namespace ActualLab.Collections;
 [DataContract]
 [MessagePackFormatter(typeof(PropertyBagMessagePackFormatter<>))]
 public readonly partial struct PropertyBag<TSchema> : IEquatable<PropertyBag<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public static readonly PropertyBag<TSchema> Empty;
 

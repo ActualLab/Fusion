@@ -6,7 +6,7 @@
 internal static class PropertyBagHelper
 {
     public static string GetToStringArgs<TSchema>(PropertyBagItem<TSchema>[]? items)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
     {
         const int limit = 5;
         var count = items?.Length ?? 0;

@@ -51,11 +51,11 @@ public sealed class MessagePackSerializedMemoryPackFormatter<T>
 
 public sealed class TypeDecoratingMemoryPackSerializedMemoryPackFormatter<TSchema, T>
     : ByteSerializedMemoryPackFormatterBase<TypeDecoratingMemoryPackSerialized<TSchema, T>, T>
-    where TSchema : TypeSchema, new();
+    where TSchema : TypeSchema;
 
 public sealed class TypeDecoratingMessagePackSerializedMemoryPackFormatter<TSchema, T>
     : ByteSerializedMemoryPackFormatterBase<TypeDecoratingMessagePackSerialized<TSchema, T>, T>
-    where TSchema : TypeSchema, new();
+    where TSchema : TypeSchema;
 
 public sealed class TextSerializedMemoryPackFormatter<T>
     : TextSerializedMemoryPackFormatterBase<TextSerialized<T>, T>;
@@ -68,11 +68,11 @@ public sealed class NewtonsoftJsonSerializedMemoryPackFormatter<T>
 
 public sealed class TypeDecoratingSystemJsonSerializedMemoryPackFormatter<TSchema, T>
     : TextSerializedMemoryPackFormatterBase<TypeDecoratingSystemJsonSerialized<TSchema, T>, T>
-    where TSchema : TypeSchema, new();
+    where TSchema : TypeSchema;
 
 public sealed class TypeDecoratingNewtonsoftJsonSerializedMemoryPackFormatter<TSchema, T>
     : TextSerializedMemoryPackFormatterBase<TypeDecoratingNewtonsoftJsonSerialized<TSchema, T>, T>
-    where TSchema : TypeSchema, new();
+    where TSchema : TypeSchema;
 
 /// <summary>
 /// MemoryPack formatter for <see cref="UniSerialized{T}"/>: a version-tolerant object
@@ -108,7 +108,7 @@ public sealed class UniSerializedMemoryPackFormatter<T> : MemoryPackFormatter<Un
 /// </summary>
 public sealed class TypeDecoratingUniSerializedMemoryPackFormatter<TSchema, T>
     : MemoryPackFormatter<TypeDecoratingUniSerialized<TSchema, T>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public static readonly TypeDecoratingUniSerializedMemoryPackFormatter<TSchema, T> Default = new();
 

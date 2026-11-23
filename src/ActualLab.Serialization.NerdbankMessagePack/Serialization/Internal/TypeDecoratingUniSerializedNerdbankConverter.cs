@@ -17,7 +17,7 @@ namespace ActualLab.Serialization.Internal;
 /// </summary>
 public sealed class TypeDecoratingUniSerializedNerdbankConverter<TSchema, T>
     : MessagePackConverter<TypeDecoratingUniSerialized<TSchema, T>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume serializable types are fully preserved")]
     public override TypeDecoratingUniSerialized<TSchema, T> Read(ref MessagePackReader reader, SerializationContext context)

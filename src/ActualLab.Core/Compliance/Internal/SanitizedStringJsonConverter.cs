@@ -26,7 +26,7 @@ public class SanitizedStringJsonConverter : JsonConverterFactory
 
     /// <summary>Typed converter - writes the raw value, exactly as a string would be written.</summary>
     public sealed class Converter<TSanitizer> : JsonConverter<SanitizedString<TSanitizer>>
-        where TSanitizer : Sanitizer, new()
+        where TSanitizer : Sanitizer
     {
         public override SanitizedString<TSanitizer> Read(
             ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

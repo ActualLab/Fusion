@@ -9,7 +9,7 @@ namespace ActualLab.Serialization.Internal;
 /// MemoryPack formatter for <see cref="PropertyBag{TSchema}"/>.
 /// </summary>
 public sealed class PropertyBagMemoryPackFormatter<TSchema> : VersionTolerantMemoryPackFormatter<PropertyBag<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     protected override int MemberCount => 1;
 
@@ -30,7 +30,7 @@ public sealed class PropertyBagMemoryPackFormatter<TSchema> : VersionTolerantMem
 /// </summary>
 public sealed class MutablePropertyBagMemoryPackFormatter<TSchema>
     : VersionTolerantMemoryPackFormatter<MutablePropertyBag<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     protected override int MemberCount => 1;
 
@@ -52,7 +52,7 @@ public sealed class MutablePropertyBagMemoryPackFormatter<TSchema>
 /// </summary>
 public sealed class PropertyBagItemMemoryPackFormatter<TSchema>
     : VersionTolerantMemoryPackFormatter<PropertyBagItem<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     private static MemoryPackFormatter<string> StringFormatter
         => field ??= StringAsSymbolMemoryPackFormatterAttribute.Formatter;

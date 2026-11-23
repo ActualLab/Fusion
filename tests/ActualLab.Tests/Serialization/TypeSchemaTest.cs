@@ -91,6 +91,6 @@ public sealed class TypeSchemaTest(ITestOutputHelper @out) : TestBase(@out)
         => MessagePackByteSerializer.Default.ToTyped<T>().Read(data, out _);
 
     private static PropertyBag<TSchema> PassThroughMessagePack<TSchema>(PropertyBag<TSchema> value)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => Read<PropertyBag<TSchema>>(Write(value));
 }

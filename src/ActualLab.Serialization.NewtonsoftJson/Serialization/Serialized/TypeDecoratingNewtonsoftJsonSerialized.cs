@@ -9,12 +9,12 @@ public static class TypeDecoratingNewtonsoftJsonSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingNewtonsoftJsonSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingNewtonsoftJsonSerialized<TSchema, TValue> New<TSchema, TValue>(string data)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Data = data };
 }
 
@@ -27,7 +27,7 @@ public static class TypeDecoratingNewtonsoftJsonSerialized
 [DataContract, MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TypeDecoratingNewtonsoftJsonSerialized<TSchema, T> : TextSerialized<T>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     private static ITextSerializer<T>? _serializer;
 

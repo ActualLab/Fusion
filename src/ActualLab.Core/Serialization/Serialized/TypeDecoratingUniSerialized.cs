@@ -10,7 +10,7 @@ public static class TypeDecoratingUniSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingUniSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Value = value };
 }
 
@@ -25,7 +25,7 @@ public static class TypeDecoratingUniSerialized
 [JsonConverter(typeof(UniSerializedJsonConverter))]
 [MessagePackFormatter(typeof(TypeDecoratingUniSerializedMessagePackFormatter<,>))]
 public readonly struct TypeDecoratingUniSerialized<TSchema, T>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public T Value { get; init; } = default!;
 

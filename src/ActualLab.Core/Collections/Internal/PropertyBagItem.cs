@@ -18,7 +18,7 @@ public partial record struct PropertyBagItem<TSchema>(
     [property: DataMember(Order = 0), Key(0)] string Key,
     [property: DataMember(Order = 1), Key(1)] TypeDecoratingUniSerialized<TSchema, object> Serialized
     ) : IComparable<PropertyBagItem<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public static readonly IComparer<PropertyBagItem<TSchema>> Comparer = new ComparerImpl();
 

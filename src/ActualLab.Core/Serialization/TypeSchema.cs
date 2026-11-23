@@ -36,7 +36,7 @@ public abstract class TypeSchema
 /// Resolves the <see cref="TSchema"/> singleton and the type-decorating serializers bound to it.
 /// </summary>
 public static class TypeSchema<TSchema>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     // Indexed by the SerializerKind value
     private static readonly SerializerCache[] Caches = Enumerable.Range(0, SerializerKindExt.MaxKindCount)
@@ -47,7 +47,7 @@ public static class TypeSchema<TSchema>
     private static readonly ConcurrentDictionary<IByteSerializer, IByteSerializer> BaseSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 7, ReferenceEqualityComparer<IByteSerializer>.Instance);
 
-    public static readonly TSchema Instance = new();
+    public static readonly TSchema Instance = CreateInstance();
 
     // null means "no filtering", which lets TypeSchema.Any reuse the shared default serializers as-is
     public static readonly Func<Type, bool>? TypeFilter =
@@ -70,6 +70,12 @@ public static class TypeSchema<TSchema>
         => BaseSerializerCache.GetOrAdd(baseSerializer, static s => CreateTypeDecoratingSerializer(s, TypeFilter));
 
     // Private methods
+
+    // What "new TSchema()" compiles to: the trimmer and NativeAOT resolve it for each closed TSchema,
+    // with no reflection involved
+    [UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "Resolved for each closed TSchema")]
+    private static TSchema CreateInstance()
+        => Activator.CreateInstance<TSchema>();
 
     private static IByteSerializer CreateTypeDecoratingSerializer(
         IByteSerializer baseSerializer, Func<Type, bool>? typeFilter)

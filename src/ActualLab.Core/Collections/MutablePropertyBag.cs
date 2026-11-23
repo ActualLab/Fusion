@@ -15,7 +15,7 @@ namespace ActualLab.Collections;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MessagePackObject]
 public sealed partial class MutablePropertyBag<TSchema>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();

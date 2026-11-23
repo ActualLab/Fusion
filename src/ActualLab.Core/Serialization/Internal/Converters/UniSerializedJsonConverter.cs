@@ -77,7 +77,7 @@ public class UniSerializedJsonConverter : JsonConverterFactory
     }
 
     private sealed class TypeDecoratingConverter<TSchema, T> : JsonConverter<TypeDecoratingUniSerialized<TSchema, T>>
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
     {
         public override void Write(
             Utf8JsonWriter writer, TypeDecoratingUniSerialized<TSchema, T> value, JsonSerializerOptions options)

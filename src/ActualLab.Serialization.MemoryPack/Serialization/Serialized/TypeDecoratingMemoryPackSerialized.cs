@@ -9,12 +9,12 @@ public static class TypeDecoratingMemoryPackSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingMemoryPackSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TypeDecoratingMemoryPackSerialized<TSchema, TValue> New<TSchema, TValue>(byte[] data)
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
         => new() { Data = data };
 }
 
@@ -26,7 +26,7 @@ public static class TypeDecoratingMemoryPackSerialized
 #endif
 [DataContract, MessagePackObject]
 public partial class TypeDecoratingMemoryPackSerialized<TSchema, T> : ByteSerialized<T>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     private static IByteSerializer<T>? _serializer;
 

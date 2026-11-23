@@ -10,7 +10,7 @@ namespace ActualLab.Serialization.Internal;
 /// shape.
 /// </summary>
 public sealed class PropertyBagNerdbankConverter<TSchema> : MessagePackConverter<PropertyBag<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public override PropertyBag<TSchema> Read(ref MessagePackReader reader, SerializationContext context)
     {
@@ -62,7 +62,7 @@ public sealed class PropertyBagNerdbankConverter<TSchema> : MessagePackConverter
 /// payload transcodes through the Nerdbank-owned type-decorating serializer.
 /// </summary>
 public sealed class PropertyBagItemNerdbankConverter<TSchema> : MessagePackConverter<PropertyBagItem<TSchema>>
-    where TSchema : TypeSchema, new()
+    where TSchema : TypeSchema
 {
     public override PropertyBagItem<TSchema> Read(ref MessagePackReader reader, SerializationContext context)
     {

@@ -8,7 +8,7 @@ namespace ActualLab.Serialization.Internal;
 /// value exactly as a <see cref="string"/> would be written.
 /// </summary>
 public sealed class SanitizedStringNerdbankConverter<TSanitizer> : MessagePackConverter<SanitizedString<TSanitizer>>
-    where TSanitizer : Sanitizer, new()
+    where TSanitizer : Sanitizer
 {
     public override SanitizedString<TSanitizer> Read(ref MessagePackReader reader, SerializationContext context)
         => new(reader.ReadString());

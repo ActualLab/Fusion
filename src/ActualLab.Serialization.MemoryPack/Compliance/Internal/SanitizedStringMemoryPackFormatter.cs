@@ -10,7 +10,7 @@ namespace ActualLab.Compliance.Internal;
 /// string. Hence an explicit formatter, registered for the open generic type.
 /// </remarks>
 public sealed class SanitizedStringMemoryPackFormatter<TSanitizer> : MemoryPackFormatter<SanitizedString<TSanitizer>>
-    where TSanitizer : Sanitizer, new()
+    where TSanitizer : Sanitizer
 {
     public override void Serialize<TBufferWriter>(
         ref MemoryPackWriter<TBufferWriter> writer, scoped ref SanitizedString<TSanitizer> value)
@@ -32,7 +32,7 @@ public static class SanitizedStringMemoryPackFormatter
     /// is equivalent.
     /// </summary>
     public static void Register<TSanitizer>()
-        where TSanitizer : Sanitizer, new()
+        where TSanitizer : Sanitizer
         => MemoryPackFormatterProvider.Register(new SanitizedStringMemoryPackFormatter<TSanitizer>());
 
     /// <summary>Registers the open generic, so any instantiation resolves without being touched first.</summary>

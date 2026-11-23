@@ -17,7 +17,7 @@ namespace ActualLab.Compliance;
 [TypeConverter(typeof(SanitizedStringTypeConverter))]
 public readonly struct SanitizedString<TSanitizer>(string? value)
     : ISanitizedString, IEquatable<SanitizedString<TSanitizer>>, IConvertibleTo<string>
-    where TSanitizer : Sanitizer, new()
+    where TSanitizer : Sanitizer
 {
     public static readonly SanitizedString<TSanitizer> Empty;
 

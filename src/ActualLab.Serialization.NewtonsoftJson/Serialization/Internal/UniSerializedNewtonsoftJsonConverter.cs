@@ -100,7 +100,7 @@ public class UniSerializedNewtonsoftJsonConverter : JsonConverter
     }
 
     private sealed class TypeDecoratingUniHandler<TSchema, T> : Handler
-        where TSchema : TypeSchema, new()
+        where TSchema : TypeSchema
     {
         public override string Write(object value)
             => GetSerializer().Write(((TypeDecoratingUniSerialized<TSchema, T>)value).Value, typeof(T));

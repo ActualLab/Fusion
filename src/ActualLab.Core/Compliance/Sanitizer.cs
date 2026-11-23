@@ -14,20 +14,20 @@ public abstract class Sanitizer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [return: NotNullIfNotNull(nameof(value))]
     public static string? Sanitize<TSanitizer>(string? value)
-        where TSanitizer : Sanitizer, new()
+        where TSanitizer : Sanitizer
         => Get<TSanitizer>().Apply(value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [return: NotNullIfNotNull(nameof(value))]
     public static string? MaybeSanitize<TSanitizer>(string? value)
-        where TSanitizer : Sanitizer, new()
+        where TSanitizer : Sanitizer
         => Sanitization.IsActive ? Get<TSanitizer>().Apply(value) : value;
 
     // Static Get
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TSanitizer Get<TSanitizer>()
-        where TSanitizer : Sanitizer, new()
+        where TSanitizer : Sanitizer
         => Instance<TSanitizer>.Value;
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume sanitizer code is preserved")]
@@ -61,9 +61,15 @@ public abstract class Sanitizer
     // Nested types
 
     private static class Instance<TSanitizer>
-        where TSanitizer : Sanitizer, new()
+        where TSanitizer : Sanitizer
     {
-        // Seeded through Get(Type), so both overloads hand out the same instance
-        public static readonly TSanitizer Value = (TSanitizer)Get(typeof(TSanitizer));
+        // Shares Get(Type)'s cache, so both overloads hand out the same instance. Activator.CreateInstance<T>
+        // is what "new TSanitizer()" compiles to: NativeAOT resolves it for each closed TSanitizer
+        public static readonly TSanitizer Value
+            = (TSanitizer)Cache.GetOrAdd(typeof(TSanitizer), static _ => CreateInstance());
+
+        [UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "Resolved for each closed TSanitizer")]
+        private static TSanitizer CreateInstance()
+            => Activator.CreateInstance<TSanitizer>();
     }
 }

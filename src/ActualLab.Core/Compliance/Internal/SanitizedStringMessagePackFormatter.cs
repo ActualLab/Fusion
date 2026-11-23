@@ -8,7 +8,7 @@ namespace ActualLab.Compliance.Internal;
 /// exactly as a <see cref="string"/> would be written.
 /// </summary>
 public sealed class SanitizedStringMessagePackFormatter<TSanitizer> : IMessagePackFormatter<SanitizedString<TSanitizer>>
-    where TSanitizer : Sanitizer, new()
+    where TSanitizer : Sanitizer
 {
     public void Serialize(
         ref MessagePackWriter writer, SanitizedString<TSanitizer> value, MessagePackSerializerOptions options)
