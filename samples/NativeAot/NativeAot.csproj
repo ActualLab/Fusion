@@ -46,6 +46,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Serialization.MemoryPack\ActualLab.Serialization.MemoryPack.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
   </ItemGroup>
 
   <!-- Source generators -->

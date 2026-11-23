@@ -17,7 +17,7 @@ AppDomain.CurrentDomain.FirstChanceException += (_, args) => {
     Error.Flush();
 };
 
-// E.g. "msgpack6c" (the default), "msgpack6", "mempack6c", "mempack6"
+// E.g. "msgpack6c" (the default), "msgpack6", "mempack6c", "mempack6", "json5", "json5np", "njson5", "njson5np"
 var format = args.Length > 0 ? args[0] : RpcDefaultWireFormats.MessagePackV6C.Key;
 WriteLine($"RPC wire format: {format}");
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
@@ -41,6 +41,7 @@ var services = new ServiceCollection()
     .AddFusion(fusion => {
         fusion.Rpc.ConfigureWireFormats(f => {
             f.AddMemoryPack();
+            f.AddNewtonsoftJson();
             f.DefaultFormat = f[format];
         });
         fusion.Rpc.AddWebSocketClient();
