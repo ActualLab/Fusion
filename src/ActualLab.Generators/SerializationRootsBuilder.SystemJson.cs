@@ -97,12 +97,8 @@ internal sealed partial class SerializationRootsBuilder
             return ImmutableArray<Diagnostic>.Empty;
 
         var rpcTypes = GetRpcCarriedTypes();
-        var rpcGraphTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (var (type, _) in rpcTypes)
-            Cover(type, rpcGraphTypes, 0);
-        // Primitives are listed for anything, so they don't tell a context serves RPC
         var listedTypes = GetJsonSerializableTypes();
-        if (!listedTypes.Any(t => t.SpecialType == SpecialType.None && rpcGraphTypes.Contains(t)))
+        if (!ServesRpc(rpcTypes, listedTypes))
             return ImmutableArray<Diagnostic>.Empty;
 
         var coveredTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
@@ -111,10 +107,48 @@ internal sealed partial class SerializationRootsBuilder
         var ignoredTypes = GetTypeArguments(_compilation.Assembly, _ignoreJsonCoverageAttribute).ToList();
 
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+        var reportedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
         foreach (var (type, method) in rpcTypes)
-            if (!coveredTypes.Contains(type) && !IsIgnored(type, ignoredTypes))
-                diagnostics.Add(UncoveredRpcJsonType(type, method));
+            Check(type, method, 0);
         return diagnostics.ToImmutable();
+
+        // A custom converter of a generic type serializes its data type arguments via options.GetConverter,
+        // and the source generator doesn't include them, so they must be covered too
+        void Check(ITypeSymbol type, IMethodSymbol method, int depth)
+        {
+            if (depth > MaxDepth || IsIgnored(type, ignoredTypes))
+                return;
+
+            if (!coveredTypes.Contains(type) && reportedTypes.Add(type))
+                diagnostics.Add(UncoveredRpcJsonType(type, method));
+            if (type is INamedTypeSymbol { IsGenericType: true } namedType
+                && HasAttribute(namedType.OriginalDefinition, _jsonConverterAttribute))
+                foreach (var typeArgument in GetDataTypeArguments(namedType))
+                    Check(typeArgument, method, depth + 1);
+        }
+    }
+
+    // Whether a type the contexts include is also one RPC calls carry, including through custom converters;
+    // primitives and System types are used for anything, so they don't count
+    private bool ServesRpc(List<(ITypeSymbol Type, IMethodSymbol Method)> rpcTypes, List<ITypeSymbol> listedTypes)
+    {
+        var rpcGraph = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var (type, _) in rpcTypes)
+            Cover(type, rpcGraph, 0, throughConverters: true);
+        var listedGraph = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var type in listedTypes)
+            Cover(type, listedGraph, 0, throughConverters: true);
+        return listedGraph.Any(t => rpcGraph.Contains(t) && t.SpecialType == SpecialType.None && !IsSystemType(t));
+
+        static bool IsSystemType(ITypeSymbol type)
+        {
+            var ns = type is IArrayTypeSymbol arrayType
+                ? arrayType.ElementType.ContainingNamespace
+                : type.ContainingNamespace;
+            var name = ns?.ToDisplayString() ?? "";
+            return name.Equals("System", StringComparison.Ordinal)
+                || name.StartsWith("System.", StringComparison.Ordinal);
+        }
     }
 
     // Each type the RPC methods of this assembly take or return, with the first method using it
@@ -158,7 +192,7 @@ internal sealed partial class SerializationRootsBuilder
             return null;
 
         var types = GetJsonSerializableTypes()
-            .Where(t => IsRootable(t) && _compilation.IsSymbolAccessibleWithin(t, _compilation.Assembly))
+            .Where(t => IsRootable(t) && IsAccessible(t))
             .Select(t => $"typeof({t.ToGlobalName()})")
             .Distinct(StringComparer.Ordinal)
             .ToList();
@@ -188,6 +222,9 @@ internal sealed partial class SerializationRootsBuilder
                 continue;
 
             foreach (var argument in attribute.ConstructorArguments) {
+                if (argument.IsNull)
+                    continue;
+
                 var values = argument.Kind == TypedConstantKind.Array
                     ? argument.Values
                     : ImmutableArray.Create(argument);
@@ -198,29 +235,39 @@ internal sealed partial class SerializationRootsBuilder
         }
     }
 
-    // Mirrors what System.Text.Json's source generator includes for a [JsonSerializable] type
-    private void Cover(ITypeSymbol type, HashSet<ITypeSymbol> coveredTypes, int depth)
+    // Mirrors what System.Text.Json's source generator includes for a [JsonSerializable] type;
+    // throughConverters also follows the type arguments of the types with a custom converter
+    private void Cover(ITypeSymbol type, HashSet<ITypeSymbol> coveredTypes, int depth, bool throughConverters = false)
     {
         if (depth > MaxDepth || !coveredTypes.Add(type))
             return;
 
         switch (type) {
         case IArrayTypeSymbol arrayType:
-            Cover(arrayType.ElementType, coveredTypes, depth + 1);
+            Cover(arrayType.ElementType, coveredTypes, depth + 1, throughConverters);
             break;
         case INamedTypeSymbol namedType:
             // A custom converter serializes the type itself, so the generator includes neither
             // its type arguments nor its members
-            if (HasAttribute(namedType.OriginalDefinition, _jsonConverterAttribute))
+            var hasConverter = HasAttribute(namedType.OriginalDefinition, _jsonConverterAttribute);
+            if (hasConverter && !throughConverters)
                 break;
 
-            foreach (var typeArgument in namedType.TypeArguments)
-                Cover(typeArgument, coveredTypes, depth + 1);
+            foreach (var typeArgument in hasConverter ? GetDataTypeArguments(namedType) : namedType.TypeArguments)
+                Cover(typeArgument, coveredTypes, depth + 1, throughConverters);
+            if (hasConverter)
+                break;
+
             foreach (var memberType in GetPublicDataMemberTypes(namedType))
-                Cover(memberType, coveredTypes, depth + 1);
+                Cover(memberType, coveredTypes, depth + 1, throughConverters);
             break;
         }
     }
+
+    // A type parameter with a type constraint, like SanitizedString<TSanitizer>'s or PropertyBag<TSchema>'s,
+    // selects a policy rather than the type of the data the converter serializes
+    private static IEnumerable<ITypeSymbol> GetDataTypeArguments(INamedTypeSymbol type)
+        => type.TypeArguments.Where((_, i) => type.TypeParameters[i].ConstraintTypes.Length == 0);
 
     private static IEnumerable<ITypeSymbol> GetPublicDataMemberTypes(INamedTypeSymbol type)
     {
@@ -233,7 +280,7 @@ internal sealed partial class SerializationRootsBuilder
             }
     }
 
-    private static bool SatisfiesConstraints(INamedTypeSymbol genericType, ImmutableArray<ITypeSymbol> typeArguments)
+    private bool SatisfiesConstraints(INamedTypeSymbol genericType, ImmutableArray<ITypeSymbol> typeArguments)
     {
         for (var i = 0; i < typeArguments.Length; i++) {
             var parameter = genericType.TypeParameters[i];
@@ -247,9 +294,15 @@ internal sealed partial class SerializationRootsBuilder
                 return false;
             if (parameter.HasReferenceTypeConstraint && !argument.IsReferenceType)
                 return false;
-            // Type constraints aren't checked, so a converter with one isn't rooted
-            if (parameter.ConstraintTypes.Length != 0)
+            if (parameter.HasConstructorConstraint && argument is INamedTypeSymbol { IsValueType: false } classType
+                && (classType.IsAbstract || !classType.InstanceConstructors.Any(
+                    c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public)))
                 return false;
+            // A constraint referring to type parameters isn't substituted, so a converter with one isn't rooted
+            foreach (var constraintType in parameter.ConstraintTypes)
+                if (ContainsTypeParameters(constraintType)
+                    || !_compilation.HasImplicitConversion(argument, constraintType))
+                    return false;
         }
         return true;
     }

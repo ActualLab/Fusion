@@ -29,7 +29,9 @@ internal sealed partial class SerializationRootsBuilder
 
     private readonly Compilation _compilation;
     private readonly CancellationToken _cancellationToken;
-    private readonly HashSet<ITypeSymbol> _visitedTypes = new(SymbolEqualityComparer.Default);
+    // The shallowest depth each type was visited at: one first reached deep, where the depth limit
+    // cut its members off, is visited again when it's reached shallower
+    private readonly Dictionary<ITypeSymbol, int> _visitedTypes = new(SymbolEqualityComparer.Default);
     private readonly List<ITypeSymbol> _closedTypes = new();
     private readonly ImmutableArray<Diagnostic>.Builder _diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
     private readonly INamedTypeSymbol? _messagePackObjectAttribute;
@@ -154,8 +156,12 @@ internal sealed partial class SerializationRootsBuilder
 
     private void Visit(ITypeSymbol? type, int depth)
     {
-        if (type is null || depth > MaxDepth || !_visitedTypes.Add(type))
+        if (type is null || depth > MaxDepth)
             return;
+        if (_visitedTypes.TryGetValue(type, out var visitedDepth) && visitedDepth <= depth)
+            return;
+
+        _visitedTypes[type] = depth;
 
         _cancellationToken.ThrowIfCancellationRequested();
         switch (type) {
@@ -185,14 +191,13 @@ internal sealed partial class SerializationRootsBuilder
         => HasAttribute(type.OriginalDefinition, _messagePackObjectAttribute)
             || HasAttribute(type.OriginalDefinition, _dataContractAttribute);
 
-    // Generated code can name only well-formed, visible types: not dynamic, pointers, types
-    // another generator produces (error types here), file-local or obsolete ones
+    // Generated code can root only well-formed types: not dynamic, pointers, types another generator
+    // produces (error types here) or file-local ones
     private bool IsRootable(ITypeSymbol type)
         => type switch {
             IArrayTypeSymbol arrayType => IsRootable(arrayType.ElementType),
             INamedTypeSymbol namedType => namedType.TypeKind != TypeKind.Error
                 && namedType.MetadataName.IndexOf('<') < 0 // File-local types have mangled names
-                && !HasAttribute(namedType.OriginalDefinition, _obsoleteAttribute)
                 && namedType.TypeArguments.All(IsRootable)
                 && (namedType.ContainingType is null || IsRootable(namedType.ContainingType)),
             _ => false,
@@ -253,11 +258,14 @@ internal sealed partial class SerializationRootsBuilder
             statements.Add($"{CodeKeeperTypeName}.Keep(\"{GetReflectionName(type, qualify: true)}\");");
     }
 
+    // Whether the generated code can name the type: [Obsolete(error: true)] ones are rooted by name instead
     private bool IsAccessible(ITypeSymbol type)
         => type switch {
             IArrayTypeSymbol arrayType => IsAccessible(arrayType.ElementType),
             INamedTypeSymbol namedType
                 => _compilation.IsSymbolAccessibleWithin(namedType.OriginalDefinition, _compilation.Assembly)
+                && GetAttribute(namedType.OriginalDefinition, _obsoleteAttribute)?.ConstructorArguments
+                    is not [_, { Value: true }]
                 && namedType.TypeArguments.All(IsAccessible)
                 && (namedType.ContainingType is null || IsAccessible(namedType.ContainingType)),
             _ => false,

@@ -145,6 +145,193 @@ public class SerializationRootsGeneratorTest
     }
 
     [Fact]
+    public void ConverterTypeArgumentsShouldBeCovered()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Api;
+            using ActualLab.Compliance;
+            using ActualLab.Rpc;
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<ApiArray<Foo>> Get();
+                Task<SanitizedString<Sanitizers.Hidden>> GetSecret();
+            }
+
+            public class Foo;
+
+            [JsonSerializable(typeof(ApiArray<Foo>))]
+            [JsonSerializable(typeof(SanitizedString<Sanitizers.Hidden>))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // Act
+        var (_, result) = Run(compilation);
+
+        // Assert
+        // ApiArray<Foo>'s converter serializes Foo, which the context doesn't include;
+        // SanitizedString's type argument is a constrained policy type, not data
+        GetUncoveredTypes(result).Should().BeEquivalentTo("Demo.Foo");
+    }
+
+    [Fact]
+    public void ContextServingRpcThroughConverterShouldTriggerALG0004()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Api;
+            using ActualLab.Rpc;
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<ApiArray<Dto>> Get(Other other);
+            }
+
+            public class Dto;
+
+            public class Other;
+
+            [JsonSerializable(typeof(Dto))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // Act
+        var (_, result) = Run(compilation);
+
+        // Assert
+        GetUncoveredTypes(result).Should().BeEquivalentTo("ActualLab.Api.ApiArray<Demo.Dto>", "Demo.Other");
+    }
+
+    [Fact]
+    public void NullIgnoreJsonCoverageShouldNotBreakGenerator()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Rpc;
+            using ActualLab.Serialization;
+
+            [assembly: IgnoreJsonCoverage(null!)]
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<Dto> Get(Other other);
+            }
+
+            public class Dto;
+
+            public class Other;
+
+            [JsonSerializable(typeof(Dto))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // Act
+        var (_, result) = Run(compilation);
+
+        // Assert
+        result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        GetUncoveredTypes(result).Should().BeEquivalentTo("Demo.Other");
+    }
+
+    [Fact]
+    public void ObsoleteTypesShouldBeRooted()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System;
+            using System.Collections.Generic;
+            using System.Threading.Tasks;
+
+            namespace Demo;
+
+            public interface IService
+            {
+                Task<List<LegacyDto>> Get();
+                [Obsolete("Use Get", true)]
+                Task<List<RemovedDto>> GetRemoved();
+            }
+
+            [Obsolete]
+            public class LegacyDto { }
+
+            [Obsolete("Removed", true)]
+            public class RemovedDto { }
+            """);
+
+        // Act
+        var (outputCompilation, result) = Run(compilation);
+
+        // Assert
+        AssertNoErrors(outputCompilation, result);
+        var code = GetGeneratedCode(result);
+        code.Should().Contain("Keep<global::MessagePack.Formatters.ListFormatter<global::Demo.LegacyDto>>();");
+        // An [Obsolete(error: true)] type can't be named, so it's rooted by name
+        code.Should().Contain("Keep(\"MessagePack.Formatters.ListFormatter`1[[Demo.RemovedDto, ");
+    }
+
+    [Fact]
+    public void ConverterWithSatisfiedConstraintShouldBeRooted()
+    {
+        // Arrange
+        var compilation = CreateCompilation("""
+            using System;
+            using System.Text.Json;
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+
+            namespace Demo;
+
+            public interface IService
+            {
+                Task<Box<int>> Get();
+            }
+
+            [JsonConverter(typeof(BoxConverterFactory))]
+            public readonly struct Box<T> where T : IComparable
+            {
+                public T Value { get; init; }
+            }
+
+            public class BoxConverterFactory : JsonConverterFactory
+            {
+                public override bool CanConvert(Type typeToConvert) => true;
+
+                public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+                    => null!;
+
+                public class Converter<T> : JsonConverter<Box<T>> where T : IComparable
+                {
+                    public override Box<T> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+                        => default;
+
+                    public override void Write(Utf8JsonWriter writer, Box<T> value, JsonSerializerOptions options)
+                    { }
+                }
+            }
+            """);
+
+        // Act
+        var (outputCompilation, result) = Run(compilation);
+
+        // Assert
+        AssertNoErrors(outputCompilation, result);
+        GetGeneratedCode(result).Should().Contain("BoxConverterFactory.Converter<global::System.Int32>>();");
+    }
+
+    [Fact]
     public void IgnoreJsonCoverageShouldSuppressALG0004()
     {
         // Arrange
@@ -255,8 +442,9 @@ public class SerializationRootsGeneratorTest
             .Where(d => d.Location.SourceTree?.FilePath.EndsWith(SerializationRootsGenerator.HintName) == true)
             .Should().BeEmpty();
         var code = GetGeneratedCode(result);
-        code.Should().NotContain("dynamic").And.NotContain("Old").And.NotContain("ClassConverter")
-            .And.NotContain("GeneratedElsewhere");
+        code.Should().NotContain("dynamic").And.NotContain("ClassConverter").And.NotContain("GeneratedElsewhere");
+        // [Obsolete] without error: true doesn't stop the generated code from naming the type
+        code.Should().Contain("ListFormatter<global::Demo.Old>>();");
         code.Should().Contain("WrapperConverter.StructConverter<global::System.Int32>");
         result.Diagnostics.Should().Contain(d => d.Id == "ALG0005");
     }
@@ -338,6 +526,12 @@ public class SerializationRootsGeneratorTest
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
         return (outputCompilation, driver.GetRunResult());
     }
+
+    private static List<string> GetUncoveredTypes(GeneratorDriverRunResult result)
+        => result.Diagnostics
+            .Where(d => d.Id == "ALG0004")
+            .Select(d => d.GetMessage().Split('\'')[1])
+            .ToList();
 
     private static string GetGeneratedCode(GeneratorDriverRunResult result)
         => result.Results.Single().GeneratedSources.Single().SourceText.ToString();

@@ -36,8 +36,17 @@ public sealed class MemoryPackCodeKeeperExtension(CodeKeeper.IExtension? next) :
         CodeKeeper.Keep<MemoryPackSerializedMemoryPackFormatter<T>>();
         CodeKeeper.Keep<UniSerializedMemoryPackFormatter<T>>();
         CodeKeeper.Keep<OptionMemoryPackFormatter<T>>();
-        // MemoryPackSerialization.Register installs the closed formatter of T via MakeGenericMethod
+        CodeKeeper.Keep<ApiOptionMemoryPackFormatter<T>>();
+        CodeKeeper.Keep<ResultMemoryPackFormatter<T>>();
+        // MemoryPackSerialization.Register installs the closed formatters via MakeGenericMethod, closing it
+        // over T and over the generic types it registers formatters for. A struct one needs its own
+        // instantiation per value type argument, so the wrappers of T are rooted here; any other closed
+        // generic type the app serializes needs its own KeepSerializable call.
         MemoryPackSerialization.RegisterClosedFormatter<T>(null!);
+        MemoryPackSerialization.RegisterClosedFormatter<Option<T>>(null!);
+        MemoryPackSerialization.RegisterClosedFormatter<ApiOption<T>>(null!);
+        MemoryPackSerialization.RegisterClosedFormatter<Result<T>>(null!);
+        MemoryPackSerialization.RegisterClosedFormatter<UniSerialized<T>>(null!);
         MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty);
         MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty);
         MemoryPackSerializer.Serialize<T>(default);

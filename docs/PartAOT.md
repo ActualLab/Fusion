@@ -76,7 +76,9 @@ public static class CodeKeeper
 switch (see [Feature Switches](#feature-switches)). Serializer packages add their own keep-code
 through a `CodeKeeper.IExtension`: `ActualLab.Serialization.MemoryPack` installs
 `MemoryPackCodeKeeperExtension`, so MemoryPack code is preserved only in apps that reference that
-package.
+package. For a `T` it keeps the MemoryPack formatters of `T`, `Option<T>`, `ApiOption<T>`,
+`Result<T>` and `UniSerialized<T>`; any other closed generic type the app serializes with
+MemoryPack, e.g. `PropertyBag<TSchema>` or `ApiNullable<T>`, needs its own `KeepSerializable` call.
 
 ### Extension Architecture
 
@@ -289,8 +291,8 @@ What isn't covered:
   with `CodeKeeper.Keep<TFormatter>()`;
 - a nested generic `[MessagePackObject]` type: MessagePack names its formatter differently, so
   warning `ALG0005` asks you to move it out or keep its formatter yourself;
-- types the generated code can't name: `dynamic`, pointers, file-local and obsolete types, and
-  the types of other source generators.
+- types the generated code can't root: `dynamic`, pointers, file-local types, and the types of
+  other source generators. `[Obsolete(error: true)]` types are rooted by name.
 
 The roots are opt-in: only an app needs them, and only in the assemblies that declare its contracts
 and serializable types. Define `ACTUALLAB_SERIALIZATION_ROOTS` there; ActualLab's own libraries do.
