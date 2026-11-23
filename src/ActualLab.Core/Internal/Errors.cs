@@ -142,8 +142,6 @@ public static class Errors
     public static Exception ProviderAlreadyRegistered<T>()
         => new InvalidOperationException($"The provider for {typeof(T).GetName()} is already registered.");
 
-    public static Exception NoDefaultConstructor(Type type)
-        => new InvalidOperationException($"Type '{type}' doesn't have a default constructor.");
     public static Exception NotSupported(string message)
         => new NotSupportedException(message);
 

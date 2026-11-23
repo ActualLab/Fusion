@@ -38,11 +38,10 @@ public class ValueTypeConstructorTest(ITestOutputHelper @out)
     }
 
     [Fact]
-    public void ActualLabPathsProduceTheDefault()
+    public void CreateInstanceProducesTheDefault()
     {
-        // Both of ours are consistent with default(T), not with new S()
+        // Consistent with default(T), not with new S()
         ((S)typeof(S).CreateInstance()).A.Should().Be(0);
-        ActivatorExt.New<S>().A.Should().Be(0);
     }
 
     // Nested types

@@ -4,8 +4,6 @@ namespace ActualLab.Tests.Reflection;
 
 public class ActivatorExtTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    public class SimpleClass;
-
     [Fact]
     public void CreateInstanceTest()
     {
@@ -21,21 +19,6 @@ public class ActivatorExtTest(ITestOutputHelper @out) : TestBase(@out)
             .Should().BeOfType<R4>();
         typeof(R5).CreateInstance(1, false, default(Unit), "1", 1.0d)
             .Should().BeOfType<R5>();
-    }
-
-    [Fact]
-    public void NewTest()
-    {
-        ActivatorExt.New<int>().Should().Be(0);
-        ActivatorExt.New<int>(false).Should().Be(0);
-        ActivatorExt.New<Unit>().Should().Be(default(Unit));
-        ActivatorExt.New<Unit>(false).Should().Be(default(Unit));
-        ActivatorExt.New<SimpleClass>().Should().BeOfType(typeof(SimpleClass));
-        ActivatorExt.New<SimpleClass>(false).Should().BeOfType(typeof(SimpleClass));
-
-        ((Func<string>) (() => ActivatorExt.New<string>()))
-            .Should().Throw<InvalidOperationException>();
-        ActivatorExt.New<string>(false).Should().Be(null);
     }
 
     [Fact]

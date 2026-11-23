@@ -11,36 +11,15 @@ namespace ActualLab.Reflection;
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume all used constructors are preserved")]
-[UnconditionalSuppressMessage("Trimming", "IL2087", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used constructors are preserved")]
 public static class ActivatorExt
 {
-    private static readonly ConcurrentDictionary<object, bool> HasDefaultCtorCache = new();
     private static readonly ConcurrentDictionary<object, object?> CtorDelegate0Cache = new();
     private static readonly ConcurrentDictionary<(object, object), object?> CtorDelegate1Cache = new();
     private static readonly ConcurrentDictionary<(object, object, object), object?> CtorDelegate2Cache = new();
     private static readonly ConcurrentDictionary<(object, object, object, object), object?> CtorDelegate3Cache = new();
     private static readonly ConcurrentDictionary<(object, object, object, object, object), object?> CtorDelegate4Cache = new();
     private static readonly ConcurrentDictionary<(object, object, object, object, object, object), object?> CtorDelegate5Cache = new();
-
-    // An alternative to "new()" constraint
-    public static T New<
-        [DynamicallyAccessedMembers(
-            DynamicallyAccessedMemberTypes.PublicConstructors |
-            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(
-        bool failIfNoDefaultConstructor = true)
-    {
-        var type = typeof(T);
-        if (type.IsValueType)
-            return default!;
-        var hasDefaultCtor = HasDefaultCtorCache.GetOrAdd(type,
-            key => ((Type)key).GetConstructor(Type.EmptyTypes) is not null);
-        if (hasDefaultCtor)
-            return (T)type.CreateInstance();
-        if (failIfNoDefaultConstructor)
-            throw Errors.NoDefaultConstructor(type);
-        return default!;
-    }
 
     public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] this Type type)
