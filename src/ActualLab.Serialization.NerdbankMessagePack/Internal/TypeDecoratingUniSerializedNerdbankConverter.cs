@@ -19,6 +19,7 @@ public sealed class TypeDecoratingUniSerializedNerdbankConverter<TSchema, T>
     : MessagePackConverter<TypeDecoratingUniSerialized<TSchema, T>>
     where TSchema : TypeSchema, new()
 {
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume serializable types are fully preserved")]
     public override TypeDecoratingUniSerialized<TSchema, T> Read(ref MessagePackReader reader, SerializationContext context)
     {
         if (reader.TryReadNil())
@@ -37,9 +38,7 @@ public sealed class TypeDecoratingUniSerializedNerdbankConverter<TSchema, T>
         if (actualTypeRef == default)
             return new TypeDecoratingUniSerialized<TSchema, T> { Value = default! };
 
-#pragma warning disable IL2026
         var actualType = actualTypeRef.Resolve();
-#pragma warning restore IL2026
         if (!typeof(T).IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
         if (TypeSchema<TSchema>.TypeFilter is { } typeFilter && !typeFilter.Invoke(actualType))

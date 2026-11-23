@@ -42,6 +42,8 @@ public sealed class DeferredInvalidationModeAttribute(DeferredInvalidationMode m
 
     // Private methods
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "We assume all command invalidation handling code is preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2070",
         Justification = "We assume all command invalidation handling code is preserved")]
     private static DeferredInvalidationModeAttribute? GetForType(Type type)

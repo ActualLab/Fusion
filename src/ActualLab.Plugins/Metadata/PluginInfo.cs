@@ -2,12 +2,13 @@ using Errors = ActualLab.Plugins.Internal.Errors;
 
 namespace ActualLab.Plugins.Metadata;
 
-#pragma warning disable IL2026, IL2067, IL2070
-
 /// <summary>
 /// Contains metadata about a single plugin, including its type hierarchy,
 /// capabilities, and dependency information.
 /// </summary>
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume plugin types are fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume plugin types are fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume plugin types are fully preserved")]
 public class PluginInfo
 {
     public TypeRef Type { get; protected set; }

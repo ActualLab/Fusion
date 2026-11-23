@@ -4,7 +4,7 @@ using MessagePack;
 
 namespace ActualLab.CommandR.Operations;
 
-#pragma warning disable IL2080, MsgPack017
+#pragma warning disable MsgPack017
 
 /// <summary>
 /// A recorded call to a service method: everything needed to reproduce it on this or another host.

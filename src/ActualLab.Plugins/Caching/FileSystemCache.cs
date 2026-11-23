@@ -108,7 +108,6 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
         fileStream.SetLength(fileStream.Position);
     }
 
-#pragma warning disable IL2026
     protected virtual Dictionary<TKey, TValue>? Deserialize(string? source)
         => source is null
             ? null
@@ -118,7 +117,6 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
         => source is null || source.Count == 0
             ? null
             : SystemJsonSerializer.Default.Write(source);
-#pragma warning restore IL2026
 }
 
 /// <summary>

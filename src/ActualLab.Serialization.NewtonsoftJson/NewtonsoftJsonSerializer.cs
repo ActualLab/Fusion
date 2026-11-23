@@ -6,7 +6,6 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 namespace ActualLab.Serialization;
 
 #pragma warning disable CA2326, CA2327, CA2328
-#pragma warning disable IL2026, IL2116
 
 /// <summary>
 /// An <see cref="ITextSerializer"/> implementation backed by Newtonsoft.Json (JSON.NET).
@@ -77,6 +76,8 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
 
     public JsonSerializerSettings Settings { get; }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Newtonsoft.Json is used by explicit opt-in")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Newtonsoft.Json is used by explicit opt-in")]
     public NewtonsoftJsonSerializer(JsonSerializerSettings? settings = null)
     {
         Settings = settings ??= DefaultSettings;

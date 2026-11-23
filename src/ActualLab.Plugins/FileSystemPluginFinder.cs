@@ -10,11 +10,10 @@ using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins;
 
-#pragma warning disable IL2026
-
 /// <summary>
 /// Discovers plugins by scanning assemblies in a file system directory for types marked with <see cref="PluginAttribute"/>.
 /// </summary>
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume plugin types are fully preserved")]
 public class FileSystemPluginFinder : CachingPluginFinderBase
 {
     /// <summary>

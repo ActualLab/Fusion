@@ -8,13 +8,13 @@ using StjJsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribut
 
 namespace ActualLab.Serialization;
 
-#pragma warning disable IL2026, IL2070, IL2072, IL2075
-
 /// <summary>
 /// A <see cref="DefaultContractResolver"/> that reads the System.Text.Json attributes
 /// of ActualLab types the way it reads its own, and supplies their converters.
 /// Types from other assemblies get the stock Newtonsoft.Json contracts.
 /// </summary>
+[UnconditionalSuppressMessage("Trimming", "IL2109", Justification = "Newtonsoft.Json is used by explicit opt-in")]
+[UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume serializable types are fully preserved")]
 public class NewtonsoftJsonContractResolver : DefaultContractResolver
 {
     private static readonly NewtonsoftJsonConverter[] FrameworkConverters = [
@@ -58,6 +58,11 @@ public class NewtonsoftJsonContractResolver : DefaultContractResolver
         "ActualLab.Serialization.NerdbankMessagePack",
         "ActualLab.Serialization.NewtonsoftJson",
     };
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Newtonsoft.Json is used by explicit opt-in")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Newtonsoft.Json is used by explicit opt-in")]
+    public NewtonsoftJsonContractResolver()
+    { }
 
     protected virtual bool IsFrameworkType(Type type)
         => type.Assembly.GetName().Name is { } assemblyName && FrameworkAssemblyNames.Contains(assemblyName);

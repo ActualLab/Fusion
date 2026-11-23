@@ -54,15 +54,14 @@ public class PluginInfoProvider : IPluginInfoProvider
             : PropertyBag.Empty;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume plugin types are fully preserved")]
     protected virtual object? GetPlugin(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType)
         => _pluginCache.GetOrAdd(pluginType, static pluginType1 => {
-#pragma warning disable IL2070
             var ctor = pluginType1.GetConstructor([typeof(IPluginInfoProvider.Query)]);
             if (ctor is not null)
                 return ctor.Invoke([IPluginInfoProvider.Query.Instance]);
             ctor = pluginType1.GetConstructor(Type.EmptyTypes);
             return ctor?.Invoke([]);
-#pragma warning restore IL2070
         });
 }

@@ -11,6 +11,7 @@ namespace ActualLab.Reflection;
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume all used constructors are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2087", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used constructors are preserved")]
 public static class ActivatorExt
 {
@@ -35,9 +36,7 @@ public static class ActivatorExt
         var hasDefaultCtor = HasDefaultCtorCache.GetOrAdd(type,
             key => ((Type)key).GetConstructor(Type.EmptyTypes) is not null);
         if (hasDefaultCtor)
-#pragma warning disable IL2087
             return (T)type.CreateInstance();
-#pragma warning restore IL2087
         if (failIfNoDefaultConstructor)
             throw Errors.NoDefaultConstructor(type);
         return default!;

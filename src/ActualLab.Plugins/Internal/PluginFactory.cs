@@ -15,9 +15,8 @@ public class PluginFactory(IServiceProvider services) : IPluginFactory
 {
     protected IServiceProvider Services { get; } = services;
 
-#pragma warning disable IL2092
+    [UnconditionalSuppressMessage("Trimming", "IL2092", Justification = "We assume plugin types are fully preserved")]
     public virtual object? Create(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType)
         => Services.CreateInstance(pluginType);
-#pragma warning restore IL2092
 }

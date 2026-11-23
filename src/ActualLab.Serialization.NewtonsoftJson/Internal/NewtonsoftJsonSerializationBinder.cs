@@ -3,8 +3,6 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Serialization.Internal;
 
-#pragma warning disable IL2026
-
 /// <summary>
 /// Provides access to the default Newtonsoft.Json serialization binder for type resolution.
 /// </summary>

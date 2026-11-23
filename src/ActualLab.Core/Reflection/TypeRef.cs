@@ -297,6 +297,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     // Payloads written before v16 name these types with their old assembly (ActualLab.Core), and a type
     // forwarder can't point from ActualLab.Core to the packages depending on it
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     private static Type? ResolveType(Assembly? assembly, string typeName, bool ignoreCase)
     {
         var type = assembly is null

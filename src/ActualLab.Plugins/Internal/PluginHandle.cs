@@ -2,7 +2,7 @@ using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins.Internal;
 
-#pragma warning disable CA1721, IL2026
+#pragma warning disable CA1721
 
 /// <summary>
 /// Provides access to all plugin instances that implement a given base type.
@@ -49,6 +49,7 @@ public class PluginHandle<TPlugin> : IPluginHandle<TPlugin>
         => GetInstances(predicate);
     IEnumerable<TPlugin> IPluginHandle<TPlugin>.GetInstances(Func<PluginInfo, bool> predicate)
         => GetInstances(predicate).Cast<TPlugin>();
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume plugin types are fully preserved")]
     protected IEnumerable<object> GetInstances(Func<PluginInfo, bool> predicate)
     {
         var requestedType = typeof(TPlugin);

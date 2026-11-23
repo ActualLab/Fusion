@@ -108,9 +108,8 @@ public class OperationCompletionHandler(IServiceProvider services)
 
     // Private methods
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
     private static Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => Invokers.GetOrAdd(method,
-#pragma warning disable IL2026
             static m => ArgumentListType.Get(m).Factory.Invoke().GetInvoker(m));
-#pragma warning restore IL2026
 }

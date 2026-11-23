@@ -34,6 +34,6 @@ public class ComponentFor : ComponentBase
             foreach (var (key, value) in Attributes)
                 builder.AddAttribute(i++, key, value);
         builder.CloseComponent();
-#pragma warning restore IL2072, MA0123
+#pragma warning restore MA0123
     }
 }

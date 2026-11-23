@@ -2,11 +2,10 @@ using Errors = ActualLab.Plugins.Internal.Errors;
 
 namespace ActualLab.Plugins.Metadata;
 
-#pragma warning disable IL2026
-
 /// <summary>
 /// Immutable snapshot of all discovered plugins, indexed by type and ordered by dependency.
 /// </summary>
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume plugin types are fully preserved")]
 public class PluginSetInfo
 {
     public static readonly PluginSetInfo Empty = new(
