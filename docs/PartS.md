@@ -427,6 +427,12 @@ nested `"$type"` markers, which a public endpoint shouldn't accept.
 `ActualLab.Serialization.NerdbankMessagePack` provides `NerdbankMessagePackByteSerializer` and
 `NerdbankMessagePackSerialized<T>`, plus converters for ActualLab types. It targets .NET 8+.
 
+::: info Experimental
+Nerdbank.MessagePack support is experimental: it may change in minor versions, and
+`ActualLab.Generators` doesn't generate its NativeAOT roots &ndash; the `NativeAotFull` sample shows
+what to add by hand.
+:::
+
 ### MemoryPack
 
 `ActualLab.Serialization.MemoryPack` provides `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`
@@ -435,6 +441,8 @@ package produces the same bytes they did, so `mempack*` peers on v15 and v16 sti
 
 ::: warning We don't recommend MemoryPack
 Use MessagePack or System.Text.Json instead, unless you need wire compatibility with pre-v16 peers.
+MemoryPack support is being retired: it's kept for compatibility, but gets no new features (e.g.
+`ActualLab.Generators` doesn't generate its NativeAOT roots).
 MemoryPack serializes unmanaged structs as raw memory, which is both a security issue and a
 correctness one &ndash; see [MemoryPack and Unmanaged Structs](#memorypack-and-unmanaged-structs).
 :::

@@ -11,6 +11,68 @@ defaults and how you opt in. Most
 apps only need [Step 1](#step-1-reference-the-packages-you-use) and
 [Step 4](#step-4-configure-rpc-formats-per-container).
 
+## What's New in v16
+
+### Serialization
+
+- **Lighter `ActualLab.Core`.** System.Text.Json and MessagePack are built in; MemoryPack,
+  Newtonsoft.Json and Nerdbank.MessagePack support come from separate packages
+  (`ActualLab.Serialization.MemoryPack`, `.NewtonsoftJson`, `.NerdbankMessagePack`). Core also no
+  longer depends on `Ulid`, `System.Linq.Async`, `CommunityToolkit.HighPerformance`,
+  `K4os.Compression.LZ4`, `Microsoft.Extensions.Hosting` (only its abstractions) and
+  `Microsoft.Extensions.Options.DataAnnotations` &ndash; see [Step 8](#step-8-reference-the-hosting-packages-you-use).
+- **MessagePack is the default** binary serializer, and `msgpack6` is the default RPC format
+  (was `mempack6`).
+- **Nerdbank.MessagePack support is experimental**, and **MemoryPack is on its way out**: it stays
+  for compatibility with v15 peers, but gets no new features (e.g. no NativeAOT source generation
+  support). Prefer MessagePack or System.Text.Json for new contracts.
+- **Newtonsoft.Json without attributes.** ActualLab types carry only System.Text.Json and
+  `[DataContract]` attributes; `NewtonsoftJsonContractResolver` maps them for Newtonsoft.Json
+  (see [Step 5](#step-5-custom-newtonsoft-json-settings-need-newtonsoftjsoncontractresolver)).
+- **`UniSerialized<T>` and the type-decorating wrappers** are plain wrappers serialized by whatever
+  serializer is running, and `IByteSerializer` / `ITextSerializer` got scoped `Read` / `Write`
+  (see [Other Breaking Changes](#other-breaking-changes)).
+
+### RPC
+
+- **Per-container wire formats.** Each DI container configures its own format set, default format
+  and backend-only formats with `RpcBuilder.ConfigureWireFormats(...)`; the process-wide registry
+  is gone. The default set is slim, and everything else is opt-in
+  (see [Step 4](#step-4-configure-rpc-formats-per-container)).
+- **Built-in LZ4 with preset dictionaries.** LZ4 now lives in `ActualLab.Core` itself (a vendored
+  copy of K4os.Compression.LZ4). `ByteCompression` is the codec abstraction: it creates
+  compressors, decompressors and preset dictionaries, which are prepared once and shared by all
+  compressors, so even the first frames after a compression context reset compress well.
+  `f.AddLZ4Variants(suffix, dictionary, mode)` adds the LZ4 variants of the binary formats
+  (see [LZ4 Dictionaries](../PartR-Serialization.md#lz4-dictionaries) and
+  [Step 9](#step-9-lz4-variants-take-a-suffix)).
+
+### NativeAOT and Trimming
+
+- **Every serializer works under NativeAOT.** The `NativeAot` sample shows the built-in formats,
+  and `NativeAotFull` every serializer package, with one file per serializer listing what it needs.
+- **Opt-in serialization roots.** Define `ACTUALLAB_SERIALIZATION_ROOTS` in an assembly, and
+  `ActualLab.Generators` roots the closed generic MessagePack formatters and System.Text.Json
+  converters its contracts need, and checks its RPC contracts against its `JsonSerializerContext`s
+  (warnings `ALG0004`, `ALG0005`; `[assembly: IgnoreJsonCoverage(...)]` excludes a type).
+  `ACTUALLAB_NO_PROXIES` turns proxy generation off for an assembly that doesn't need it.
+- **Source-generated System.Text.Json metadata.** Add your `JsonSerializerContext` to
+  `SystemJsonSerializer.TypeInfoResolver` before its types are first serialized.
+- **No false-positive warnings.** Registering Fusion services, compute methods, RPC clients or
+  serializer packages no longer produces trimming / AOT warnings from ActualLab code.
+
+See [Native AOT and Trimming](../PartAOT.md) for the details.
+
+### Other Changes
+
+- `Type.GetDefaultValue()` returns `null` for `Nullable<T>` (it returned the default of `T`), which
+  also fixes a `null` `int?` RPC argument arriving as `0` over the JSON formats.
+- `LZ4ByteDecompressor` reports malformed input with `FormatException`.
+- .NET Framework fixes: `TypeRef` resolution of GAC and culture-specific assemblies, `TickSource`
+  waiters, `EncoderExt` / `DecoderExt` on empty input, and the NetFx RPC WebSocket server rejecting
+  unsupported formats with close code 4001.
+- `RpcStream` no longer resends an item it can't serialize or deserialize forever: the stream fails.
+
 ## Upgrade Constraints
 
 - **Hosts that share the operation log or backend RPC upgrade together.** `IAuthBackend`,
@@ -163,6 +225,39 @@ These types exist only for MemoryPack contracts &ndash; see
 - Payloads that name them with their old assembly (`ActualLab.Core`) still resolve via
   `TypeRef.MovedTypes`.
 
+## Step 8: Reference the hosting packages you use
+
+`ActualLab.Core` references `Microsoft.Extensions.Hosting.Abstractions` instead of
+`Microsoft.Extensions.Hosting`, and no longer references `Microsoft.Extensions.Options.DataAnnotations`.
+ASP.NET Core apps aren't affected: the shared framework includes all of them. Other apps (console,
+worker, desktop, test projects) that used these packages through Core now need their own references:
+
+| If you use | Reference |
+|------------|-----------|
+| `Host.CreateDefaultBuilder`, `HostBuilder`, `Host.CreateApplicationBuilder` | `Microsoft.Extensions.Hosting` |
+| `AddConsole()`, `AddDebug()` and other logging providers | `Microsoft.Extensions.Logging.Console`, `.Debug`, ... |
+| JSON / environment variable / command line configuration providers | `Microsoft.Extensions.Configuration.Json`, ... |
+| `ValidateDataAnnotations()` on options | `Microsoft.Extensions.Options.DataAnnotations` |
+
+`IHostedService`, `BackgroundService`, `IHostEnvironment`, `ILogger`, `IOptions<T>` and configuration
+binding keep working without them.
+
+## Step 9: LZ4 variants take a suffix
+
+If you configured formats with 16.0.4 or earlier v16 builds: the suffix of the LZ4 variants is now
+required and used as is, and adding a variant whose key already exists fails instead of keeping
+the existing format.
+
+| Before | Now |
+|--------|-----|
+| `f.AddLZ4Variants()` | `f.AddLZ4Variants("lz4")` |
+| `f.AddLZ4Variants(RpcCompressionMode.Full)` | `f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full)` |
+| `f.AddLZ4Variants(filter, modes)` | `f.AddLZ4Variants(suffix, compressionMode: mode, filter: filter)`, once per mode |
+| `format.WithLZ4()` / `format.WithLZ4(RpcCompressionMode.Full)` | `format.WithLZ4("lz4")` / `format.WithLZ4("lz4f", compressionMode: RpcCompressionMode.Full)` |
+
+The keys stay the same (`-lz4`, `-lz4f`), so peers on either version still agree. Variants with a
+preset dictionary need a suffix of their own, e.g. `f.AddLZ4Variants("lz4d1", dictionary)`.
+
 ## Other Breaking Changes
 
 - **Serializer API.** `IByteSerializer` / `ITextSerializer` expose `ReadUnscoped` / `WriteUnscoped`;
@@ -184,10 +279,14 @@ These types exist only for MemoryPack contracts &ndash; see
 - **`ActivatorExt.New<T>()`** is gone; use `Activator.CreateInstance<T>()`.
 - **Native AOT:** the `MemoryPackByteSerializer.IsEnabled` trimming switch is gone &ndash; MemoryPack
   keep-code now exists only if you reference `ActualLab.Serialization.MemoryPack`.
+- **Compression:** `ByteCompressor.Reset()` and `ByteDecompressor.Reset()` are no longer abstract;
+  a custom codec overrides `ResetCore(object? dictionary)` instead. `RpcCompressionFormat.LZ4` is
+  unchanged, and `RpcCompressionFormat.New(...)` / `NewLZ4(...)` create formats with a dictionary.
 
 ## Further Reading
 
 - [Unified Serialization](../PartS.md) &ndash; serializers, wrappers and the optional packages
+- [Native AOT and Trimming](../PartAOT.md) &ndash; serialization roots, source-generated JSON metadata
 - [RPC Wire Formats](../PartR-Serialization.md) &ndash; the wire formats and their configuration
 - [NuGet Packages](../NuGet-Packages.md) &ndash; what each package contains
 - [Changelog](../CHANGELOG.md)
