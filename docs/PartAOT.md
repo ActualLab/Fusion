@@ -258,6 +258,40 @@ blocks. This ensures ILC traces through the entire extension chain and preserves
 **Important**: The source generator requires types to be in a namespace. Types declared at the top level
 (without a namespace) will be silently skipped.
 
+To skip proxy generation for an assembly, e.g. one that references `ActualLab.Generators` only for
+other reasons, define `ACTUALLAB_NO_PROXIES`. It saves the build time the generator spends
+inspecting its types; such an assembly gets no generated proxies.
+
+### Serialization Roots
+
+Serializers create the formatter of a closed generic type like `Option<int>`, `List<Moment>` or
+`PageRef<long>` with `MakeGenericType`. NativeAOT can do that only for instantiations it compiled,
+and it compiles none of them for value-type arguments on its own. So `ActualLab.Generators` also
+emits one `[ModuleInitializer]` per assembly, `ActualLabSerializationRoots`, that keeps the closed
+formatters of every closed generic type the assembly uses:
+
+- in the signatures of its non-private methods, which include RPC service methods;
+- in the data members of its serializable types, and of the serializable types those reference.
+
+For MessagePack, these are the formatters named by `[MessagePackFormatter]`, the ones MessagePack's
+source generator creates for generic `[MessagePackObject]` types, and MessagePack's own array,
+`List<T>`, `Dictionary<TKey, TValue>` and `Nullable<T>` formatters. The same initializer suppresses
+IL3050 on the resolver MessagePack's source generator creates, since its `MakeGenericType` calls
+are what these roots cover.
+
+A closed generic type that is serialized but appears in neither place, e.g. one passed to a
+serializer directly, isn't covered: use it in a signature or data member, or keep its formatter
+with `CodeKeeper.Keep<TFormatter>()`.
+
+The roots are generated for every assembly that references `ActualLab.Generators`. To turn them
+off for an assembly, define `ACTUALLAB_NO_SERIALIZATION_ROOTS`. Both symbols go to `DefineConstants`:
+
+```xml
+<PropertyGroup>
+  <DefineConstants>$(DefineConstants);ACTUALLAB_NO_PROXIES;ACTUALLAB_NO_SERIALIZATION_ROOTS</DefineConstants>
+</PropertyGroup>
+```
+
 
 ## Project Configuration
 
@@ -381,7 +415,8 @@ public void KeepArgumentListArgument<T>()
    Only create a custom extension if you need to add application-specific types.
 
 3. **Test in AOT mode**: Run `dotnet publish -c Release` and test the AOT binary regularly
-   during development to catch trimming issues early.
+   during development to catch trimming issues early. The `NativeAotFull` sample does this for
+   Fusion itself: it round-trips the types that are sensitive to trimming over every wire format.
 
 4. **Annotate serializable types**: Use `[DynamicallyAccessedMembers]` or serialization attributes
    on all types that may be serialized/deserialized.

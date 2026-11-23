@@ -1,6 +1,7 @@
 using System.Runtime.Serialization;
 using ActualLab.Api;
 using ActualLab.Compliance;
+using ActualLab.Fusion.Extensions;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Compression;
 using ActualLab.Trimming;
@@ -95,6 +96,22 @@ async Task<int> TestFormat(string formatKey)
         var copy = await client.EchoCustomSanitized(value);
         return copy.Value == "secret" && Sanitizer.Get<CustomSanitizer>().Apply("x") == "<custom>";
     });
+    await Check("Option<int>", async ()
+        => await client.EchoOption(Option.Some(5)) == Option.Some(5) && !(await client.EchoOption(default)).HasValue);
+    await Check("int? (5)", async () => await client.EchoNullable(5) == 5);
+    await Check("int? (null)", async () => await client.EchoNullable(null) is null);
+    await Check("List<int>", async () => (await client.EchoList([1, 2])).SequenceEqual([1, 2]));
+    var moment = Moment.Now;
+    await Check("Moment?", async () => await client.EchoNullableMoment(moment) == moment);
+    await Check("Moment[]", async () => (await client.EchoMomentArray([moment])).SequenceEqual([moment]));
+    await Check("List<Moment>", async () => (await client.EchoMomentList([moment])).SequenceEqual([moment]));
+    await Check("Dictionary<string, Moment>", async ()
+        => (await client.EchoMomentMap(new() { ["a"] = moment }))["a"] == moment);
+    await Check("ApiArray<int>", async ()
+        => (await client.EchoApiArray(ApiArray.New(1, 2))).SequenceEqual([1, 2]));
+    // PageRef<TKey> isn't [MemoryPackable]
+    if (!formatKey.StartsWith("mempack", StringComparison.Ordinal))
+        await Check("PageRef<long>", async () => await client.EchoPageRef(PageRef.New(10, 5L)) == PageRef.New(10, 5L));
     if (hasApiTypes) {
         await Check("ApiOption<int>", async ()
             => await client.EchoApiOption(ApiOption.Some(5)) == ApiOption.Some(5)
@@ -151,6 +168,16 @@ public interface ITestService : IComputeService
         SanitizedString<Sanitizers.Hidden> value, CancellationToken cancellationToken = default);
     public Task<SanitizedString<CustomSanitizer>> EchoCustomSanitized(
         SanitizedString<CustomSanitizer> value, CancellationToken cancellationToken = default);
+    public Task<Option<int>> EchoOption(Option<int> value, CancellationToken cancellationToken = default);
+    public Task<int?> EchoNullable(int? value, CancellationToken cancellationToken = default);
+    public Task<List<int>> EchoList(List<int> value, CancellationToken cancellationToken = default);
+    public Task<Moment?> EchoNullableMoment(Moment? value, CancellationToken cancellationToken = default);
+    public Task<Moment[]> EchoMomentArray(Moment[] value, CancellationToken cancellationToken = default);
+    public Task<List<Moment>> EchoMomentList(List<Moment> value, CancellationToken cancellationToken = default);
+    public Task<Dictionary<string, Moment>> EchoMomentMap(
+        Dictionary<string, Moment> value, CancellationToken cancellationToken = default);
+    public Task<ApiArray<int>> EchoApiArray(ApiArray<int> value, CancellationToken cancellationToken = default);
+    public Task<PageRef<long>> EchoPageRef(PageRef<long> value, CancellationToken cancellationToken = default);
     public Task<ApiOption<int>> EchoApiOption(ApiOption<int> value, CancellationToken cancellationToken = default);
     public Task<ApiNullable<int>> EchoApiNullable(ApiNullable<int> value, CancellationToken cancellationToken = default);
     public Task<ApiNullable8<long>> EchoApiNullable8(
@@ -216,6 +243,34 @@ public class TestService : ITestService
 
     public virtual Task<SanitizedString<CustomSanitizer>> EchoCustomSanitized(
         SanitizedString<CustomSanitizer> value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<Option<int>> EchoOption(Option<int> value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<int?> EchoNullable(int? value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<List<int>> EchoList(List<int> value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<Moment?> EchoNullableMoment(Moment? value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<Moment[]> EchoMomentArray(Moment[] value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<List<Moment>> EchoMomentList(List<Moment> value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<Dictionary<string, Moment>> EchoMomentMap(
+        Dictionary<string, Moment> value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<ApiArray<int>> EchoApiArray(ApiArray<int> value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
+
+    public virtual Task<PageRef<long>> EchoPageRef(PageRef<long> value, CancellationToken cancellationToken = default)
         => Task.FromResult(value);
 
     public virtual Task<ApiOption<int>> EchoApiOption(ApiOption<int> value, CancellationToken cancellationToken = default)

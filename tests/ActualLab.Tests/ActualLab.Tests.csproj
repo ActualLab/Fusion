@@ -68,6 +68,7 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Compile Remove="Generators\ProxyGeneratorTest.cs" />
     <Compile Remove="Generators\ProxyGeneratorAuditRegressionTest.cs" />
+    <Compile Remove="Generators\SerializationRootsGeneratorTest.cs" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="IndexRange" />
