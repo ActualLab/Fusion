@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Samples.NativeAotFull</AssemblyName>
+    <RootNamespace>Samples.NativeAotFull</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPublishable>true</IsPublishable>
+    <PublishAot>true</PublishAot>
+    <TrimMode>full</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
+    <IlcDisableReflection>false</IlcDisableReflection>
+    <IlcTrimMetadata>true</IlcTrimMetadata>
+    <!-- Lets the json5 formats use reflection-based System.Text.Json (off by default under NativeAOT) -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- MsgPack006: false positive on the open generic [MessagePackFormatter] types of the Api* structs -->
+    <NoWarn>$(NoWarn);MsgPack006</NoWarn>
+  </PropertyGroup>
+
+  <!-- Ensures ArgumentList variants with generics are trimmed in Native AOT -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="ArgumentList.AllowGenerics" Value="false" Trim="true" />
+  </ItemGroup>
+
+  <!-- Fusion packages: unlike NativeAot, this sample references every serializer package -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.MemoryPack\ActualLab.Serialization.MemoryPack.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Serialization.NerdbankMessagePack\ActualLab.Serialization.NerdbankMessagePack.csproj" />
+  </ItemGroup>
+
+  <!-- Source generators -->
+  <ItemGroup>
+    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
