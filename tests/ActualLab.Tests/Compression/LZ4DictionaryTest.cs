@@ -264,7 +264,7 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteEncoderTestBase(@ou
         formats["msgpack6c-lzy"].CompressionFormat!.Codec.Should().BeSameAs(bigBuffers);
         formats.ContainsKey("msgpack5-lzy").Should().BeFalse();
         formats["msgpack6-lz4"].CompressionFormat!.Codec.Should().BeSameAs(bigBuffers);
-        RpcCompressionFormat.LZ4.ToString().Should().Be("RpcCompressionFormat(LZ4(16K), min 512, reset 128K/512)");
+        RpcCompressionFormat.LZ4.ToString().Should().Be("RpcCompressionFormat(LZ4(16K), min 256, reset 128K/512)");
         new RpcCompressionFormat(Shared, new RpcCompressionOptions { MinCompressedFrameSize = 100 })
             .ToString().Should().Be("RpcCompressionFormat(LZ4(16K+dict), min 100, reset 128K/512)");
         single.Key.Should().Be("msgpack6-lz4d2");

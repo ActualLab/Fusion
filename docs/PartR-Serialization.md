@@ -375,10 +375,10 @@ compression context (and its own dictionary), so it sees only the frames routed 
 `Reset` resets all of them.
 
 In RPC, the selector never sees the smallest frames: a frame shorter than
-`RpcCompressionOptions.MinCompressedFrameSize` (512 bytes by default) is sent stored, before any
+`RpcCompressionOptions.MinCompressedFrameSize` (256 bytes by default) is sent stored, before any
 codec sees it, with no index byte and no copy. So "uncompressed" is not a choice the selector needs
 to offer, and its thresholds only matter above `MinCompressedFrameSize` &ndash; in the example above,
-LZ4 gets the frames of 512..2047 bytes, and Zstandard the larger ones. To route smaller frames to a
+LZ4 gets the frames of 256..2047 bytes, and Zstandard the larger ones. To route smaller frames to a
 codec too, lower `MinCompressedFrameSize` in the options passed to `AddCompressedVariants`.
 
 
