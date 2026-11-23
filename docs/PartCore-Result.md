@@ -238,7 +238,7 @@ public readonly partial struct Result<T> { ... }
 - MemoryPack support comes from `ActualLab.Serialization.MemoryPack`, which registers formatters for
   both types. A `[MemoryPackable]` type of yours needs `[MemoryPackAllowSerialize]` on a
   `Result<T>` member, and on an `Option<T>` member unless `T` is unmanaged &ndash; see
-  [Upgrading to v16](./PartS.md#upgrading-to-v16).
+  [Migrating to v16](./Migration/To-v16.md#step-2-fix-mempack019-in-your-memorypackable-types).
 
 
 ## Best Practices

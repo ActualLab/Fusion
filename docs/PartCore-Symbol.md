@@ -120,7 +120,7 @@ public partial class MyEntity
 
 Serialized as plain strings, but interned on deserialization. If `MyEntity` is also
 `[MemoryPackable]`, add `[MemoryPackAllowSerialize]` to its `Symbol` members &ndash; see
-[Upgrading to v16](./PartS.md#upgrading-to-v16).
+[Migrating to v16](./Migration/To-v16.md#step-2-fix-mempack019-in-your-memorypackable-types).
 
 
 ## Common Patterns

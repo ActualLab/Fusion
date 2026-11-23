@@ -60,7 +60,9 @@ with `f.AddLZ4Variants()`.
 | `MemoryPackV6C` | `mempack6c` | Compact variant of V6 |
 
 The package produces the same bytes earlier Fusion versions did, so `mempack5` and `mempack6`
-peers on v15 and v16 still talk to each other.
+peers on v15 and v16 still talk to each other. Beyond that, we don't recommend these formats:
+MemoryPack serializes unmanaged structs as raw memory &ndash; see
+[MemoryPack and Unmanaged Structs](./PartS.md#memorypack-and-unmanaged-structs).
 
 ### Text Formats (Newtonsoft.Json)
 

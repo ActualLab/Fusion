@@ -57,12 +57,12 @@ You should reference these packages based on your project type:
 
 ### Optional Serialization Packages
 
-`ActualLab.Core` supports System.Text.Json and MessagePack. Since v16, other serializers come from
-separate packages (see [Upgrading to v16](./PartS.md#upgrading-to-v16)):
+`ActualLab.Core` supports System.Text.Json and MessagePack. Other serializers come from separate
+packages &ndash; see [Serializer Packages](./PartS.md#serializer-packages):
 
-- [ActualLab.Serialization.MemoryPack](https://www.nuget.org/packages/ActualLab.Serialization.MemoryPack/) &ndash; MemoryPack serialization support (`MemoryPackByteSerializer`, formatters for ActualLab types, `mempack*` RPC formats via `AddFormats(f => f.AddMemoryPack())`)
-- [ActualLab.Serialization.NewtonsoftJson](https://www.nuget.org/packages/ActualLab.Serialization.NewtonsoftJson/) &ndash; Newtonsoft.Json serialization support (`NewtonsoftJsonSerializer`, `njson*` RPC formats via `AddFormats(f => f.AddNewtonsoftJson())`); `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Contracts` and `ActualLab.Fusion.Ext.Services` reference it
-- [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) &ndash; Nerdbank.MessagePack serialization support (`nmsgpack*` RPC formats via `AddFormats(f => f.AddNerdbankMessagePack())`)
+- [ActualLab.Serialization.NewtonsoftJson](https://www.nuget.org/packages/ActualLab.Serialization.NewtonsoftJson/) &ndash; Newtonsoft.Json support: `NewtonsoftJsonSerializer` and the `njson*` RPC formats. `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Contracts` and `ActualLab.Fusion.Ext.Services` reference it. See [Newtonsoft.Json](./PartS.md#newtonsoft-json).
+- [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) &ndash; Nerdbank.MessagePack support: `NerdbankMessagePackByteSerializer` and the `nmsgpack*` RPC formats (.NET 8+). See [Nerdbank.MessagePack](./PartS.md#nerdbank-messagepack).
+- [ActualLab.Serialization.MemoryPack](https://www.nuget.org/packages/ActualLab.Serialization.MemoryPack/) &ndash; MemoryPack support: `MemoryPackByteSerializer`, `ApiOption<T>` / `ApiNullable<T>` and the `mempack*` RPC formats. Not recommended outside of compatibility with pre-v16 peers. See [MemoryPack](./PartS.md#memorypack).
 
 <br />
 

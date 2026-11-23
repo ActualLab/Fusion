@@ -437,7 +437,7 @@ then removed by the trimmer on age, so nothing older than `MaxEntryAge` survives
 
 ### Documentation
 
-- [Migrating to 15.0](./MigrationTo15.md) no longer tells you to drain `_Events` to zero before
+- [Migrating to 15.0](./Migration/To-v15.md) no longer tells you to drain `_Events` to zero before
   upgrading. That isn't something a deployment can always do &mdash; a delayed event won't clear
   before it's due &mdash; and it was never needed for the payload to survive: 15.0 reads whichever
   column holds it, and its text path is the same `NewtonsoftJsonSerializer` on the same
@@ -456,7 +456,7 @@ changed.** A handler declares its invalidations with `Invalidation.Defer(...)`, 
 `[DeferredInvalidationMode]` on it says how far they have to reach. **Every app with an Operations
 Framework command handler has to change**, and `_Operations` / `_Events` need a migration that
 requires draining both tables first &mdash;
-**[Migrating to 15.0](./MigrationTo15.md) is the guide, and worth reading before you upgrade.**
+**[Migrating to 15.0](./Migration/To-v15.md) is the guide, and worth reading before you upgrade.**
 This is a NuGet-only release, npm stays at `14.4.14`.
 
 The goal was to simplify, and replay was the ugly part of the old design. To learn what a handler
@@ -556,7 +556,7 @@ possible. Replay fit `Replicated` naturally and `Distributed` badly; this is the
 
 ### Breaking Changes
 
-[Migrating to 15.0](./MigrationTo15.md) has the ordered procedure, the schema migration and the
+[Migrating to 15.0](./Migration/To-v15.md) has the ordered procedure, the schema migration and the
 before/after handler; this is the inventory.
 
 - **Replay is gone.** A command handler that mutates state must call `Invalidation.Defer(...)` and

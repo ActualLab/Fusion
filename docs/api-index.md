@@ -78,7 +78,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `NewtonsoftJsonSerializer` — JSON.NET implementation (in `ActualLab.Serialization.NewtonsoftJson`)
 - `NerdbankMessagePackByteSerializer` — Nerdbank.MessagePack binary serializer (in `ActualLab.Serialization.NerdbankMessagePack`)
 
-### Serialization packages — [PartS.md](PartS.md#upgrading-to-v16)
+### Serialization packages — [PartS.md](PartS.md#serializer-packages)
 - `ActualLab.Serialization.MemoryPack` — `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`, formatters for ActualLab types; `MemoryPackSerialization.Register()` / `Register<T>()`; `RpcMemoryPackWireFormats`, `AddMemoryPack()`
 - `ActualLab.Serialization.NewtonsoftJson` — `NewtonsoftJsonSerializer`, `NewtonsoftJsonContractResolver`, `NewtonsoftJsonSerialized<T>`; `NewtonsoftJsonSerialization.Register()`; `RpcNewtonsoftJsonWireFormats`, `AddNewtonsoftJson()`
 - `ActualLab.Serialization.NerdbankMessagePack` — `NerdbankMessagePackByteSerializer`; `RpcNerdbankWireFormats`, `AddNerdbankMessagePack()`

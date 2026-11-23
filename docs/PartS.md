@@ -9,22 +9,16 @@ wrappers, and how to configure serialization globally.
 | Package | Purpose |
 |---------|---------|
 | [ActualLab.Core](https://www.nuget.org/packages/ActualLab.Core/) | Core serialization infrastructure, System.Text.Json and MessagePack serializers |
-| [ActualLab.Serialization.MemoryPack](https://www.nuget.org/packages/ActualLab.Serialization.MemoryPack/) | Optional: MemoryPack serializer, formatters for ActualLab types, `mempack*` RPC formats |
-| [ActualLab.Serialization.NewtonsoftJson](https://www.nuget.org/packages/ActualLab.Serialization.NewtonsoftJson/) | Optional: Newtonsoft.Json serializer, its contract resolver and converters, `njson*` RPC formats |
-| [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) | Optional: Nerdbank.MessagePack serializer and `nmsgpack*` RPC formats |
 
-Since v16, `ActualLab.Core`, `ActualLab.Rpc`, `ActualLab.Fusion` and most other Fusion packages
-don't depend on MemoryPack or Newtonsoft.Json. The exceptions are the packages that persist data
-with Newtonsoft.Json (`ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Contracts`,
-`ActualLab.Fusion.Ext.Services`): they reference `ActualLab.Serialization.NewtonsoftJson`.
-See [Upgrading to v16](#upgrading-to-v16) if you used either serializer.
+Newtonsoft.Json, Nerdbank.MessagePack and MemoryPack come from optional packages &ndash; see
+[Serializer Packages](#serializer-packages).
 
 ## Overview
 
 The serialization infrastructure provides:
 
 - **Multiple format support**: System.Text.Json and MessagePack out of the box; Newtonsoft.Json,
-  MemoryPack and Nerdbank.MessagePack via their packages
+  Nerdbank.MessagePack and MemoryPack via [their packages](#serializer-packages)
 - **Type-decorated serialization**: Preserves type information for polymorphic deserialization
 - **Lazy serialization wrappers**: Defer serialization/deserialization until needed
 - **Multi-format types**: Single type that works with any serializer (for cross-format scenarios)
@@ -94,11 +88,9 @@ TextSerializer.Default = new SystemJsonSerializer(new JsonSerializerOptions { Wr
 |-------|--------|------|---------|-------|
 | `MessagePackByteSerializer` | MessagePack | Binary | `ActualLab.Core` | Default binary serializer |
 | `SystemJsonSerializer` | System.Text.Json | Text | `ActualLab.Core` | Default text serializer |
-| `MemoryPackByteSerializer` | MemoryPack | Binary | `ActualLab.Serialization.MemoryPack` | No .NET Framework / .NET Standard 2.0 support |
-| `NewtonsoftJsonSerializer` | Newtonsoft.Json | Text | `ActualLab.Serialization.NewtonsoftJson` | Flexible JSON with polymorphism support |
 
-Before v16, `ByteSerializer.Default` was MemoryPack on .NET 6+; now it's MessagePack on every
-target.
+The serializer packages add `NewtonsoftJsonSerializer`, `NerdbankMessagePackByteSerializer` and
+`MemoryPackByteSerializer` &ndash; see [Serializer Packages](#serializer-packages).
 
 Each has a static `Default` property and options for customization:
 
@@ -219,11 +211,10 @@ MyObject value = wrapper.Value; // Deserialize on access
 |------|------------|---------|
 | `MessagePackSerialized<T>` | MessagePack binary | `ActualLab.Core` |
 | `SystemJsonSerialized<T>` | System.Text.Json | `ActualLab.Core` |
-| `MemoryPackSerialized<T>` | MemoryPack binary | `ActualLab.Serialization.MemoryPack` |
-| `NewtonsoftJsonSerialized<T>` | Newtonsoft.Json | `ActualLab.Serialization.NewtonsoftJson` |
 
 The type-decorating variants (`TypeDecoratingMessagePackSerialized<TSchema, T>`,
-`TypeDecoratingMemoryPackSerialized<TSchema, T>`, etc.) live next to them.
+`TypeDecoratingSystemJsonSerialized<TSchema, T>`) live next to them; the serializer packages add
+their own (`NewtonsoftJsonSerialized<T>`, `MemoryPackSerialized<T>`, ...).
 
 
 ## Multi-Format Types: UniSerialized\<T>
@@ -336,8 +327,8 @@ public sealed partial record MyRecord(
 | `[JsonConstructor]` | System.Text.Json constructor |
 | `[SerializationConstructor]` | MessagePack constructor |
 
-If you use MemoryPack (`ActualLab.Serialization.MemoryPack`), annotate your types with its attributes
-as well; [Upgrading to v16](#upgrading-to-v16) lists what ActualLab types need there.
+If you use MemoryPack, annotate your types with its attributes as well &ndash; see
+[MemoryPack](#memorypack).
 
 
 ## SerializerKind Enum
@@ -381,6 +372,82 @@ SystemJsonSerializer.DefaultOptions = new JsonSerializerOptions {
 <!-- endSnippet -->
 
 
+## Serializer Packages
+
+`ActualLab.Core` ships System.Text.Json and MessagePack. Other serializers plug in via separate
+packages; each one registers its formatters, converters and `SerializerKind` entry from a module
+initializer when its assembly loads (on .NET 5+). If nothing in your app touches the package
+before the first serialization, or you target .NET Core 3.1 / .NET Standard 2.1, call its
+`Register()` method at startup.
+
+| Package | Serializer | RPC formats | Targets |
+|---------|------------|-------------|---------|
+| `ActualLab.Serialization.NewtonsoftJson` | `NewtonsoftJsonSerializer` | `njson5`, `njson5np` | All |
+| `ActualLab.Serialization.NerdbankMessagePack` | `NerdbankMessagePackByteSerializer` | `nmsgpack6`, `nmsgpack6c` | .NET 8+ |
+| `ActualLab.Serialization.MemoryPack` | `MemoryPackByteSerializer` | `mempack5(c)`, `mempack6(c)` | .NET Core 3.1+, .NET Standard 2.1 |
+
+The RPC formats of a package are opt-in per container &ndash; see
+[RPC Wire Formats](./PartR-Serialization.md#configuring-formats).
+
+### Newtonsoft.Json
+
+`ActualLab.Serialization.NewtonsoftJson` provides `NewtonsoftJsonSerializer`,
+`NewtonsoftJsonSerialized<T>` and `NewtonsoftJsonContractResolver`. ActualLab types carry no
+Newtonsoft.Json attributes; the contract resolver reads their System.Text.Json and `[DataContract]`
+attributes and supplies their converters, so set it in any `JsonSerializerSettings` you create.
+
+The packages that persist data with Newtonsoft.Json reference it themselves:
+`ActualLab.Fusion.EntityFramework` (the operation log), `ActualLab.Fusion.Ext.Contracts` and
+`ActualLab.Fusion.Ext.Services`. The `njson*` RPC formats are backend-only by default: they honor
+nested `"$type"` markers, which a public endpoint shouldn't accept.
+
+### Nerdbank.MessagePack
+
+`ActualLab.Serialization.NerdbankMessagePack` provides `NerdbankMessagePackByteSerializer` and
+`NerdbankMessagePackSerialized<T>`, plus converters for ActualLab types. It targets .NET 8+.
+
+### MemoryPack
+
+`ActualLab.Serialization.MemoryPack` provides `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`
+and formatters for ActualLab types. Fusion versions before v16 used MemoryPack by default, and the
+package produces the same bytes they did, so `mempack*` peers on v15 and v16 still talk to each other.
+
+::: warning We don't recommend MemoryPack
+Use MessagePack or System.Text.Json instead, unless you need wire compatibility with pre-v16 peers.
+MemoryPack serializes unmanaged structs as raw memory, which is both a security issue and a
+correctness one &ndash; see [MemoryPack and Unmanaged Structs](#memorypack-and-unmanaged-structs).
+:::
+
+A `[MemoryPackable]` type needs `[MemoryPackAllowSerialize]` on its members of ActualLab types
+(e.g. `Session`, `Symbol`, `PropertyBag`, `Result<T>`): their formatters are registered at runtime,
+and MemoryPack's source generator rejects member types it can't see a `[MemoryPackable]` annotation
+on (**MEMPACK019**) &ndash; see
+[Migrating to v16](./Migration/To-v16.md#step-2-fix-mempack019-in-your-memorypackable-types).
+
+#### MemoryPack and Unmanaged Structs
+
+MemoryPack copies an unmanaged struct &ndash; e.g. an `Option<int>`, an `int?` or a struct of
+yours &ndash; as raw memory, padding bytes included. Padding holds whatever was in that memory
+before, so:
+
+- **It leaks memory contents.** Fragments of unrelated data end up in the serialized output.
+- **Equal values serialize to different bytes.** Anything that compares or hashes serialized
+  results misbehaves &ndash; e.g. the client-side computed cache treats an unchanged result as
+  changed.
+
+`ActualLab.Serialization.MemoryPack` provides padding-free alternatives for MemoryPack contracts:
+
+| Instead of | Use | Why it's padding-free |
+|------------|-----|-----------------------|
+| `Option<T>` | `ApiOption<T>` | Packed (`Pack = 1`) |
+| `T?` | `ApiNullable<T>` | Packed (`Pack = 1`) |
+| `T?` with an 8-byte `T` (e.g. `Moment`) | `ApiNullable8<T>` | A `long` flag; byte-compatible with `T?` |
+
+`ApiNullable8<T>` keeps the `T?` layout on purpose, so it's padding-free only for an 8-byte `T`.
+Your own unmanaged structs need the same care: avoid gaps between their fields, or give them
+`[StructLayout(LayoutKind.Sequential, Pack = 1)]`.
+
+
 ## Best Practices
 
 1. **Use consistent annotations**: Apply all serialization attributes to types that may cross serialization boundaries
@@ -388,155 +455,3 @@ SystemJsonSerializer.DefaultOptions = new JsonSerializerOptions {
 3. **Test cross-format scenarios**: If data might be serialized with one format and deserialized with another, test explicitly
 4. **Use TypeDecorating for polymorphism**: When storing/sending base types that may contain derived instances
 5. **Consider version tolerance**: With MessagePack, add members with new `Key` values and never reuse a key
-
-
-## Upgrading to v16
-
-v16 moves MemoryPack and Newtonsoft.Json support out of `ActualLab.Core` into separate packages.
-The wire formats themselves don't change: `mempack*`, `njson*` and the persisted Newtonsoft.Json
-data are byte-for-byte the same as in v15. What changes is the defaults and how you opt in.
-
-### 1. Reference the packages you use
-
-| If you use | Reference |
-|------------|-----------|
-| `MemoryPackByteSerializer`, `MemoryPackSerialized<T>`, `[MemoryPackable]` types with ActualLab members, `mempack*` RPC formats | `ActualLab.Serialization.MemoryPack` |
-| `ApiOption<T>`, `ApiNullable<T>`, `ApiNullable8<T>` | `ActualLab.Serialization.MemoryPack` |
-| `NewtonsoftJsonSerializer`, `NewtonsoftJsonSerialized<T>`, `njson*` RPC formats | `ActualLab.Serialization.NewtonsoftJson` |
-| `nmsgpack*` RPC formats | `ActualLab.Serialization.NerdbankMessagePack` |
-| `OptionSet`, `ImmutableOptionSet` (obsolete) | `ActualLab.Core.Legacy` |
-| `IAuthBackend`, `IKeyValueStore` and their commands without `ActualLab.Fusion.Ext.Services` | `ActualLab.Fusion.Ext.Backend.Contracts` |
-
-`ActualLab.Serialization.MemoryPack` targets .NET Core 3.1+ and .NET Standard 2.1; it has no
-.NET Framework or .NET Standard 2.0 build.
-
-The packages register their formatters, converters and `SerializerKind` entries from a module
-initializer when their assembly loads (on .NET 5+). If nothing in your app touches the package
-before the first serialization (e.g. you only use `[MemoryPackable]` types), or you target
-.NET Core 3.1 / .NET Standard 2.1, call `MemoryPackSerialization.Register()` /
-`NewtonsoftJsonSerialization.Register()` at startup.
-
-`IAuthBackend`, `IKeyValueStore` and their commands moved to `ActualLab.Fusion.Ext.Backend.Contracts`;
-`ActualLab.Fusion.Ext.Services` type-forwards them, so code compiles unchanged. Their assembly
-name is part of the type name they're serialized with, so upgrade all hosts that exchange these
-commands together.
-
-### 2. Fix MEMPACK019 in your `[MemoryPackable]` types
-
-ActualLab types no longer carry `[MemoryPackable]`; the package serializes them with hand-written
-formatters registered at runtime. The MemoryPack source generator can't see those formatters, so
-a `[MemoryPackable]` type with a member like `Session`, `Symbol`, `TypeRef`, `PropertyBag`,
-`Option<string>`, `Result<T>` or `User` fails to compile with **MEMPACK019**. Add
-`[MemoryPackAllowSerialize]` to each such member:
-
-```cs
-[DataContract, MessagePackObject, MemoryPackable(GenerateType.VersionTolerant)]
-[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor, MemoryPackConstructor]
-public sealed partial record Note(
-    // ActualLab types: [MemoryPackAllowSerialize] is required since v16
-    [property: DataMember(Order = 0), Key(0), MemoryPackOrder(0), MemoryPackAllowSerialize] Session Session,
-    [property: DataMember(Order = 1), Key(1), MemoryPackOrder(1), MemoryPackAllowSerialize] Symbol Tag,
-    [property: DataMember(Order = 2), Key(2), MemoryPackOrder(2), MemoryPackAllowSerialize] Option<string> Title,
-    // Not needed for ApiArray/ApiList/ApiSet/ApiMap, unmanaged structs
-    // and ApiOption/ApiNullable over an unmanaged T
-    [property: DataMember(Order = 3), Key(3), MemoryPackOrder(3)] ApiArray<string> Lines,
-    [property: DataMember(Order = 4), Key(4), MemoryPackOrder(4)] ApiOption<int> Priority);
-```
-
-You don't need it for `ApiArray<T>`, `ApiList<T>`, `ApiSet<T>`, `ApiMap<TKey, TValue>`, unmanaged
-structs (e.g. `Moment`, `CpuTimestamp`), and `ApiOption<T>` / `ApiNullable<T>` over an
-unmanaged `T`. Rebuild every assembly that declares such types: code the generator produced for
-v15 calls MemoryPack members ActualLab types no longer have.
-
-If a `[MemoryPackable]` type of yours nests a generic ActualLab type inside another generic
-(e.g. a `Dictionary<string, Option<MyStruct>>` member), call `MemoryPackSerialization.Register<T>()`
-for that type at startup, so the nested type is serialized the same way as in v15.
-
-### 3. Drop MemoryPack and Newtonsoft.Json attributes you don't need
-
-Your API records no longer need MemoryPack or Newtonsoft.Json attributes unless you use those
-serializers: `[DataContract]`, MessagePack's `[MessagePackObject]` / `[Key]` and the System.Text.Json
-attributes are the baseline (see [Annotating Types](#annotating-types-for-serialization)).
-
-### 4. Configure RPC formats per container
-
-The default RPC format is now `msgpack6` (was `mempack6`), and the default format set is slim:
-`json5`, `json5np`, `msgpack5`, `msgpack5c`, `msgpack6`, `msgpack6c`. Everything else &ndash;
-including the `-lz4` variants &ndash; is opt-in via `RpcBuilder.ConfigureWireFormats`:
-
-```cs
-services.AddRpc().ConfigureWireFormats(f => {
-    f.AddMemoryPack();     // ActualLab.Serialization.MemoryPack: mempack5(c), mempack6(c)
-    f.AddNewtonsoftJson(); // ActualLab.Serialization.NewtonsoftJson: njson5, njson5np
-    f.AddLZ4Variants(); // "-lz4" variants of the formats added so far
-    f.DefaultFormat = f["msgpack6c-lz4"];
-});
-```
-
-- A client that pins a format (e.g. `f.DefaultFormat = f["msgpack6c-lz4"]`) needs a server that serves it,
-  so add the same formats on the server.
-- To keep v15 clients (which default to `mempack6`) working during a rolling upgrade, the server
-  must serve `mempack6`: add `f.AddMemoryPack()` there.
-- `RpcNerdbankSerializationFormat.Register()` is gone; use `f.AddNerdbankMessagePack()`.
-- RPC formats are now "wire formats": `RpcSerializationFormat` became `RpcWireFormat`,
-  `RpcSerializationFormatResolver` became `RpcWireFormatResolver`, and `RpcHub.SerializationFormats`,
-  `RpcPeer.SerializationFormat` and `RpcRef.SerializationFormat` became `WireFormats` / `WireFormat`.
-- The built-in formats (`SystemJsonV5`, `MessagePackV6`, ...) moved from `RpcSerializationFormat` to
-  `RpcDefaultWireFormats`; the package ones are in `RpcMemoryPackWireFormats`,
-  `RpcNewtonsoftJsonWireFormats` and `RpcNerdbankWireFormats`.
-- `RpcSerializationFormat.All`, `RpcSerializationFormat.Default`, `RpcSerializationFormatResolver.DefaultFormats`
-  and the `*_LZ4` / `*_LZ4F` format statics are gone. Configure each container with
-  `rpc.ConfigureWireFormats(f => ...)` instead: `f.Add(...)` / `f.Remove(...)`, `f.AddLZ4Variants()`,
-  `f.DefaultFormat` (instead of assigning `RpcSerializationFormatResolver.Default`) and
-  `f.BackendOnlyFormatKeys` (instead of `RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys`;
-  the process-wide defaults are the read-only `RpcDefaultWireFormats.DefaultFormat` and `.BackendOnlyFormatKeys`).
-
-See [RPC Wire Formats](./PartR-Serialization.md#configuring-formats) for the builder API.
-
-### 5. Custom Newtonsoft.Json settings need `NewtonsoftJsonContractResolver`
-
-ActualLab types no longer carry Newtonsoft.Json attributes or `[JsonConverter]`s. The default
-`NewtonsoftJsonSerializer.DefaultSettings` use `NewtonsoftJsonContractResolver`, which reads their
-System.Text.Json and `[DataContract]` attributes and supplies their converters. If you create
-`JsonSerializerSettings` yourself, set `ContractResolver = new NewtonsoftJsonContractResolver()` (or a
-subclass of it) &ndash; with the stock `DefaultContractResolver`, types like `Symbol`, `Moment` or
-`Session` serialize differently.
-
-Persisted data written by Fusion (the EF operation log, the key-value store and auth data of
-`ActualLab.Fusion.Ext.Services`) still uses Newtonsoft.Json, in the same format as before; these
-packages reference `ActualLab.Serialization.NewtonsoftJson` themselves.
-
-### 6. `Ulid` needs its own MessagePack resolver
-
-`ActualLab.Core` no longer references the `Ulid` and `Ulid.MessagePack` packages, and its MessagePack
-resolver no longer knows `Ulid`. `UlidUuidGenerator` still produces ULID strings without them.
-
-- Code that used `Ulid` through Core's reference must now reference the `Ulid` package itself.
-- To send `Ulid` with MessagePack (the default RPC format is `msgpack6`), reference `Ulid.MessagePack`
-  and prepend its resolver at startup, before the first `Ulid` is serialized &ndash;
-  `DefaultMessagePackResolver` caches the formatter of each type on first use:
-
-```cs
-// using ActualLab.Serialization.Internal; using Cysharp.Serialization.MessagePack;
-DefaultMessagePackResolver.Resolvers = [UlidMessagePackResolver.Instance, .. DefaultMessagePackResolver.Resolvers];
-```
-
-  Without it, the first call that carries a `Ulid` fails with a MessagePack serialization error.
-
-### 7. `ApiOption`, `ApiNullable` and `ApiNullable8` moved to `ActualLab.Serialization.MemoryPack`
-
-These types exist for MemoryPack contracts. MemoryPack copies an unmanaged struct as raw memory,
-padding included, so `Option<T>` and `T?` members leak whatever the padding bytes held: the output
-isn't deterministic (equal values may serialize to different bytes, which breaks anything that
-compares or hashes serialized results, such as the client-side computed cache) and may expose
-unrelated memory. `ApiOption<T>` and `ApiNullable<T>` are packed, so they have no padding;
-`ApiNullable8<T>` has a `long` flag, which makes it byte-compatible with `T?` and padding-free
-for an 8-byte `T` (e.g. `Moment`).
-
-- Reference `ActualLab.Serialization.MemoryPack` wherever you use them; namespaces are unchanged.
-- `Option<T>.ToApiOption()` is now an extension method in that package, and `Option<T>` no longer
-  implements `IConvertibleTo<ApiOption<T>>`. `ApiOption<T>.ToOption()` is unchanged.
-- `ActualLab.Serialization.NerdbankMessagePack` no longer has converters for them.
-- Payloads that name them with their old assembly (`ActualLab.Core`) still resolve via
-  `TypeRef.MovedTypes`.
-- In `[MemoryPackable]` types, prefer `ApiOption<T>` / `ApiNullable<T>` to `Option<T>` / `T?`.

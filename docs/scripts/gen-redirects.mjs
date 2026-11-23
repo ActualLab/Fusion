@@ -59,6 +59,7 @@ for (const rel of htmlFiles) {
 }
 // Pages that moved: the old clean URL keeps working.
 pageRules.push("/Posts  /posts/  301");
+pageRules.push("/MigrationTo15  /Migration/To-v15  301");
 pageRules.sort();
 
 // SPA fallbacks: a bare-deck -> trailing-slash 301 plus a splat rewrite that

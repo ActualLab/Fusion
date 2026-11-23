@@ -1,7 +1,7 @@
-# Migrating to 15.0
+# Migrating from v14 to v15
 
 15.0 replaces the Operations Framework's replay-based invalidation with
-[deferred invalidation](./PartO-IM.md). Two things follow from that and need action now, and one
+[deferred invalidation](../PartO-IM.md). Two things follow from that and need action now, and one
 changes how you deploy from here on &ndash; see [Why this changed](#why-this-changed) for the last
 one:
 
@@ -41,7 +41,7 @@ arguments. That is a reference to something the receiving host has to still have
 shape. While two versions coexist, invalidation only works if the methods being invalidated still
 exist on both and their signatures still match &ndash; otherwise a recorded call is dropped on the
 host that can't resolve it, and dependent caches there stay stale until something else invalidates
-them. [Deployment Compatibility Contract](./PartO-Serialization.md#deployment-compatibility-contract)
+them. [Deployment Compatibility Contract](../PartO-Serialization.md#deployment-compatibility-contract)
 spells out the rules and the failure mode.
 
 **So the trade is explicit: a simpler invalidation block, paid for with upgrades that need more
@@ -229,7 +229,7 @@ regardless. Mind the direction of the format argument in general &ndash; passing
 because you "always used JSON", while the serializer still has its default `Bytes`, unmaps the
 column your writer is using. The overload above avoids that by construction.
 
-[Operations Framework Serialization](./PartO-Serialization.md) covers the format switch, the
+[Operations Framework Serialization](../PartO-Serialization.md) covers the format switch, the
 serializers behind each column, and the deployment compatibility contract in full.
 
 ## Step 4: Rewrite the handlers
@@ -296,7 +296,7 @@ Put it on the **interface** instead when clients share that contract. The resolu
 method, then the implementation the container maps the service type to, then the method's declaring
 type, then the interface &ndash; first one found wins &ndash; so a method-level attribute stays
 available for the odd handler that genuinely differs from its service. See
-[Declaring the Mode](./PartO-IM.md#declaring-the-mode).
+[Declaring the Mode](../PartO-IM.md#declaring-the-mode).
 
 Three quirks that bite during this rewrite:
 
@@ -320,7 +320,7 @@ rather than three. `Invalidation.IsActive` remains meaningful only in code a *bl
 as a compute method deciding whether it is being invalidated.
 
 Which mode to declare is the one real decision here;
-[Choosing a Mode](./PartO-IM.md#choosing-a-mode) is the short version, and
+[Choosing a Mode](../PartO-IM.md#choosing-a-mode) is the short version, and
 `Local` is the one that always works if you're unsure. Note that `Replicated` and `Distributed` both
 require a **stored** operation &ndash; they throw on a transient one, because the row is what carries
 the calls to the other hosts.
@@ -406,9 +406,9 @@ run below `DbOperationScopeProvider` at, say, priority 500 still does.
 
 ## Further Reading
 
-- [Operations Framework: Invalidation Modes](./PartO-IM.md) &ndash; the three modes, declaring them,
+- [Operations Framework: Invalidation Modes](../PartO-IM.md) &ndash; the three modes, declaring them,
   nested commands
-- [Operations Framework Serialization](./PartO-Serialization.md) &ndash; formats, serializers, schema
+- [Operations Framework Serialization](../PartO-Serialization.md) &ndash; formats, serializers, schema
   evolution
-- [Operations Framework](./PartO.md) &ndash; the framework these belong to
-- [Changelog](./CHANGELOG.md) &ndash; the full 15.0 entry
+- [Operations Framework](../PartO.md) &ndash; the framework these belong to
+- [Changelog](../CHANGELOG.md) &ndash; the full 15.0 entry
