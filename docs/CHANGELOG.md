@@ -17,7 +17,7 @@ Release date: 2026-11-23
 
 The first v16 release with a changelog entry; it covers 16.0.4 as well. v16 moves the optional
 serializers out of `ActualLab.Core`, makes RPC wire formats per-container, adds frame compression
-codecs and makes Fusion apps work under NativeAOT. **Read the
+codecs and lets the source generator root what serializers need under NativeAOT. **Read the
 [v15 &rarr; v16 migration guide](Migration/To-v16.md)**: it opens with a complete "What's new" and
 walks through every breaking change step by step.
 
@@ -39,8 +39,10 @@ walks through every breaking change step by step.
 
 ### Added
 
-- **NativeAOT and trimming:** source-generated serialization roots, `ACTUALLAB_NO_PROXIES`,
-  System.Text.Json source-generated metadata, and the `NativeAotFull` sample.
+- **NativeAOT and trimming:** with `ACTUALLAB_SERIALIZATION_ROOTS` defined, `ActualLab.Generators`
+  roots the closed generic MessagePack formatters and System.Text.Json converters RPC contracts
+  need, and checks contracts against `JsonSerializerContext`s; also `ACTUALLAB_NO_PROXIES` and the
+  `NativeAotFull` sample.
 - **RPC compression:** built-in LZ4 with preset dictionaries, Zstandard on .NET 11, per-frame codec
   selection, and presets such as `SelectingByteCodec.LZ4HL16_And_Zstd_At1K`.
 - **RPC:** keyed MessagePack formats `msgpack6k` / `msgpack6ck` (`f.AddKeyedMessagePack()`).
@@ -48,8 +50,10 @@ walks through every breaking change step by step.
 ### Changed
 
 - **RPC:** `RpcCompressionOptions.MinCompressedFrameSize` defaults to 256 bytes (was 512).
-- **Core:** fewer dependencies: no CommunityToolkit.HighPerformance, System.Linq.Async, Ulid or
-  K4os.Compression.LZ4 packages.
+- **Core:** fewer dependencies (Rpc and everything above inherit them): no Newtonsoft.Json,
+  MemoryPack.Core, K4os.Compression.LZ4, CommunityToolkit.HighPerformance, System.Linq.Async,
+  Ulid / Ulid.MessagePack, Microsoft.Extensions.Hosting (now `.Hosting.Abstractions`) or
+  Microsoft.Extensions.Options.DataAnnotations packages.
 
 ### Fixed
 
