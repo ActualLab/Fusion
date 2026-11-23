@@ -12,13 +12,30 @@ namespace ActualLab.Compression;
 /// </remarks>
 public abstract class ByteCompressor : IDisposable
 {
+    // The dictionary the context starts from (null = none): an opaque object made by the codec's
+    // ByteCompression, prepared once and shared, so starting from it costs almost nothing
+    public object? Dictionary { get; protected set; }
+
     // The largest output Compress can produce for a source this long. It must never underestimate!
     public abstract int GetMaxCompressedLength(int sourceLength);
     public abstract void Compress(ReadOnlySpan<byte> source, IBufferWriter<byte> target);
-    public abstract void Reset();
+
+    public void Reset()
+        => Reset(Dictionary);
+
+    // Starts over from the given dictionary, which subsequent Reset() calls use too
+    public void Reset(object? dictionary)
+    {
+        ResetCore(dictionary);
+        Dictionary = dictionary;
+    }
 
     public virtual void Dispose()
     { }
+
+    // Protected methods
+
+    protected abstract void ResetCore(object? dictionary);
 
     // The inverse: the longest source whose worst-case output still fits maxLength.
     public int GetMaxSourceLength(int maxLength)

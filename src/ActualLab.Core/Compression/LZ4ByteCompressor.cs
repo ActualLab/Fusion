@@ -1,6 +1,6 @@
 using System.Buffers;
-using K4os.Compression.LZ4;
-using K4os.Compression.LZ4.Encoders;
+using ActualLab.Compression.Internal.LZ4;
+using ActualLab.Compression.Internal.LZ4.Engine;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Compression;
@@ -24,22 +24,25 @@ public sealed class LZ4ByteCompressor : ByteCompressor
     public static readonly int MaxBlockSize = ComputeMaxBlockSize();
 
     private readonly int _maxBlockOutputSize;
-    private ILZ4Encoder _encoder;
+    private readonly LZ4FastChainEncoder _encoder;
 
     // The encoder's own block size, which is what every bound here is sized for - see the ctor
     public int BlockSize { get; }
 
-    // blockSize 0 means DefaultBlockSize; MaxBlockSize is the largest value it accepts
-    public LZ4ByteCompressor(int blockSize = 0)
+    // blockSize 0 means DefaultBlockSize, MaxBlockSize is the largest value it accepts;
+    // the dictionary comes from LZ4ByteCompression and must be the peer decompressor's one
+    public LZ4ByteCompressor(int blockSize = 0, object? dictionary = null)
     {
-        _encoder = new LZ4FastChainEncoder(ValidateBlockSize(blockSize), extraBlocks: 0);
+        _encoder = new LZ4FastChainEncoder(
+            ValidateBlockSize(blockSize), extraBlocks: 0, LZ4ByteCompression.ToLZ4Dictionary(dictionary));
+        Dictionary = dictionary;
         // K4os rounds the requested block size up to a 1 KiB multiple, so the block it actually
         // fills is not necessarily the one we asked for - and it's the real one the length prefix
         // has to hold. Reading it back is what keeps the two in step.
         // Block size doesn't bound the match window: that's LZ4's own 64 KiB, and it spans blocks,
         // so a smaller block costs flush points rather than dictionary reach.
         BlockSize = _encoder.BlockSize;
-        _maxBlockOutputSize = LZ4Codec.MaximumOutputSize(BlockSize);
+        _maxBlockOutputSize = LL.LZ4_compressBound(BlockSize);
     }
 
     public override void Dispose()
@@ -78,11 +81,10 @@ public sealed class LZ4ByteCompressor : ByteCompressor
         return maxLength >= int.MaxValue ? int.MaxValue : (int)maxLength;
     }
 
-    public override void Reset()
-    {
-        _encoder.Dispose();
-        _encoder = new LZ4FastChainEncoder(BlockSize, extraBlocks: 0);
-    }
+    // Protected methods
+
+    protected override void ResetCore(object? dictionary)
+        => _encoder.Reset(LZ4ByteCompression.ToLZ4Dictionary(dictionary));
 
     // Internal methods
 
@@ -121,7 +123,7 @@ public sealed class LZ4ByteCompressor : ByteCompressor
         static int GetMaxOutputSize(int blockSize)
         {
             using var encoder = new LZ4FastChainEncoder(blockSize, extraBlocks: 0);
-            return LZ4Codec.MaximumOutputSize(encoder.BlockSize);
+            return LL.LZ4_compressBound(encoder.BlockSize);
         }
     }
 }

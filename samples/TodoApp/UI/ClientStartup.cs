@@ -57,7 +57,7 @@ public static class ClientStartup
         var fusion = services.AddFusion();
         // RPC client wire format: compact MessagePack w/ LZ4-compressed server-to-client frames
         fusion.Rpc.ConfigureWireFormats(f => {
-            f.AddLZ4Variants();
+            f.AddLZ4Variants("lz4");
             f.DefaultFormat = f["msgpack6c-lz4"];
         });
         fusion.AddAuthClient();

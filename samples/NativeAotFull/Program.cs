@@ -46,7 +46,8 @@ ServiceProvider CreateServices(string? formatKey)
                 f.AddMemoryPack();
                 f.AddNewtonsoftJson();
                 f.AddNerdbankMessagePack();
-                f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full);
+                f.AddLZ4Variants("lz4");
+                f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full);
                 if (formatKey is not null)
                     f.DefaultFormat = f[formatKey];
             });

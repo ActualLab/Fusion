@@ -1,3 +1,4 @@
+using ActualLab.Compression;
 using ActualLab.Interception.Serialization;
 using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Serialization;
@@ -32,16 +33,13 @@ public sealed class RpcWireFormat(
     public override string ToString()
         => $"{GetType().GetName()}({Key})";
 
-    // "-lz4" compresses server-to-client frames only, "-lz4f" compresses both directions
-    public RpcWireFormat WithLZ4(RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient)
-    {
-        var suffix = compressionMode switch {
-            RpcCompressionMode.ServerToClient => "-lz4",
-            RpcCompressionMode.Full => "-lz4f",
-            _ => throw new ArgumentOutOfRangeException(nameof(compressionMode)),
-        };
-        return WithCompression(Key + suffix, RpcCompressionFormat.LZ4, compressionMode);
-    }
+    // The "<key>-<suffix>" variant compressed with LZ4 in the given mode, starting from the dictionary
+    // (made by LZ4ByteCompression), e.g. "lz4" for ServerToClient and "lz4f" for Full without one
+    public RpcWireFormat WithLZ4(
+        string suffix,
+        object? dictionary = null,
+        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient)
+        => WithCompression($"{Key}-{suffix}", RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode);
 
     public RpcWireFormat WithCompression(
         string key, RpcCompressionFormat compressionFormat, RpcCompressionMode compressionMode)
@@ -54,4 +52,5 @@ public sealed class RpcWireFormat(
         return new(key, argumentSerializerFactory, messageSerializerFactory, DataFormat,
             compressionFormat, compressionMode);
     }
+
 }

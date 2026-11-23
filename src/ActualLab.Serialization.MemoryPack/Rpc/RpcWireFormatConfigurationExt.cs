@@ -7,7 +7,7 @@ namespace ActualLab.Rpc;
 /// </summary>
 public static class RpcWireFormatConfigurationExt
 {
-    // Adds "mempack5", "mempack5c", "mempack6" and "mempack6c"; call AddLZ4Variants to add their LZ4 variants
+    // Adds "mempack5", "mempack5c", "mempack6" and "mempack6c"; AddLZ4Variants adds their LZ4 variants
     public static void AddMemoryPack(this RpcWireFormatConfiguration formats)
         => formats.Add(RpcMemoryPackWireFormats.All);
 }

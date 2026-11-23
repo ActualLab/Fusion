@@ -43,14 +43,14 @@ The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper e
 
 These are static members of `RpcDefaultWireFormats`, and its `All` lists them:
 every container starts with this set. Their LZ4 variants (`msgpack6-lz4`, `msgpack6c-lz4`,
-`msgpack6-lz4f`, `msgpack6c-lz4f`, ...) aren't static members; add them with `f.AddLZ4Variants()`.
+`msgpack6-lz4f`, `msgpack6c-lz4f`, ...) aren't static members; add them with `f.AddLZ4Variants("lz4")`.
 
 ### Binary Formats (MemoryPack)
 
 These formats require the `ActualLab.Serialization.MemoryPack` package (.NET Core 3.1+ /
 .NET Standard 2.1+, no .NET Framework). They are static members of
 `RpcMemoryPackWireFormats`; add them with `f.AddMemoryPack()`, and their LZ4 variants
-with `f.AddLZ4Variants()`.
+with `f.AddLZ4Variants("lz4")`.
 
 | Format          | Key | Description           |
 |-----------------|-----|-----------------------|
@@ -230,13 +230,15 @@ bytes a compression context may span before it's reset. Resetting bounds both th
 connection pins and how far a BREACH-style probe can correlate across frames &mdash; it does
 **not** make compressing a secret alongside attacker-controlled data within one frame safe.
 
-Since v16 the LZ4 variants are not in the default set. `f.AddLZ4Variants()` adds the `-lz4`
-(`RpcCompressionMode.ServerToClient`) variant of every uncompressed binary format added so far.
-Pass compression modes to choose the variants, e.g. `RpcCompressionMode.Full` for `-lz4f`, and a
-filter first to cover only some formats, e.g. `f.AddLZ4Variants(x => x.Key.StartsWith("msgpack6"))`. Text formats are always skipped, since they
-can't be compressed. `RpcWireFormat.WithLZ4(...)` makes the LZ4 variant of a
-single format. A client can use a `-lz4` format only if the server serves it, so add the variants
-on both sides.
+Since v16 the LZ4 variants are not in the default set. `f.AddLZ4Variants(suffix)` adds the
+`<key>-<suffix>` variant of every uncompressed binary format added so far: `"lz4"` is the
+conventional suffix for `RpcCompressionMode.ServerToClient` (the default mode), and
+`f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full)` adds the `-lz4f` ones. The
+suffix is always yours to choose: nothing is appended to it. Pass `filter:` to cover only some
+formats, e.g. `f.AddLZ4Variants("lz4", filter: x => x.Key.StartsWith("msgpack6"))`. Text formats
+are always skipped, since they can't be compressed, and a key that's already taken fails the call.
+`format.WithLZ4(suffix)` makes the LZ4 variant of a single format. A client can use a `-lz4`
+format only if the server serves it, so add the variants on both sides.
 
 To compress with different settings, add a format of your own:
 
@@ -255,6 +257,42 @@ services.AddRpc().ConfigureWireFormats(f => f.Add(format));
 ```
 <!-- endSnippet -->
 
+### LZ4 Dictionaries
+
+A compression context starts empty, and it's reset every few frames
+(`RpcCompressionOptions`), so the first frames after each reset compress poorly: there is
+nothing yet to reference. A preset dictionary fixes that. It's built from a sample of typical
+frames (LZ4 uses its last 64 KB), and every compressor and decompressor starts from it, so even
+the first frame can reference the method names, type names and headers it holds.
+
+`ByteCompression` is the codec: it creates compressors, decompressors and dictionaries
+(`CreateDictionary`, `LoadDictionary`, `SaveDictionary`). A dictionary is an opaque object only
+its codec understands. It's prepared once and never changes afterwards, so creating or resetting a
+compressor with it costs about as much as without it, and one instance should be shared by the
+whole app. Both peers must use the same dictionary, so the variants that use it need a key
+suffix of their own: `f.AddLZ4Variants(suffix, dictionary, mode)` adds the `<key>-<suffix>`
+variant of every binary format, compressed in that one mode.
+
+<!-- snippet: PartRSerialization_Lz4Dictionary -->
+```cs
+// Create it once and share it: it's prepared on creation and never changes afterwards
+var dictionary = LZ4ByteCompression.Default.CreateDictionary(typicalFrames);
+services.AddRpc().ConfigureWireFormats(f => {
+    f.AddLZ4Variants("lz4d1", dictionary); // "msgpack6c-lz4d1", ...
+    f.AddLZ4Variants("lz4d1f", dictionary, RpcCompressionMode.Full); // "msgpack6c-lz4d1f", ...
+    f.DefaultFormat = f["msgpack6c-lz4d1"];
+});
+```
+<!-- endSnippet -->
+
+`ByteCompressor.Reset(dictionary)` and `ByteDecompressor.Reset(dictionary)` switch a compressor or
+decompressor to another dictionary (or to none) without recreating it.
+`format.WithLZ4(suffix, dictionary, mode)` makes a single format's variant, and
+`RpcCompressionFormat.NewLZ4(id, dictionary)` the compression format behind it; for other codecs,
+use `RpcCompressionFormat.New(id, compression, dictionary)` with
+`f.AddCompressedVariants(suffix, compressionFormat, mode)`. All these methods fail if a key they
+would add is already taken, and add nothing then.
+
 
 ## Configuring Formats
 
@@ -270,7 +308,7 @@ so it can't change after that.
 | `Add(params ReadOnlySpan<RpcWireFormat>)` | Adds formats; a format with the same key replaces the existing one (and becomes the default if the replaced one was) |
 | `Remove(params ReadOnlySpan<string> keys)` / `Clear()` | Removes formats by key / removes all of them |
 | `Reset()` | Restores the formats, the default format and the backend-only formats of `RpcDefaultWireFormats` |
-| `AddLZ4Variants([filter], params modes)` | Adds the LZ4 variants of every uncompressed binary format the filter accepts (all of them if there's no filter): `-lz4` for `ServerToClient` (the default), `-lz4f` for `Full`; keys already present are kept |
+| `AddLZ4Variants(suffix, [dictionary], [mode], [filter])` | Adds the `<key>-<suffix>` LZ4 variant of every uncompressed binary format the filter accepts (all of them if there's no filter), compressed in the given mode (`ServerToClient` by default); fails if a key is already taken |
 | `DefaultFormat` | The default format (the one a client requests); it must be one of the added formats |
 | `BackendOnlyFormatKeys` | The formats clients can't select |
 | `AddMemoryPack()` | `mempack5`, `mempack5c`, `mempack6`, `mempack6c` (`ActualLab.Serialization.MemoryPack`) |
@@ -289,7 +327,7 @@ services.AddRpc().ConfigureWireFormats(f => {
 ```
 <!-- endSnippet -->
 
-Call `AddLZ4Variants()` after the `Add*` calls: it only sees the formats added before it.
+Call `AddLZ4Variants(...)` after the `Add*` calls: it only sees the formats added before it.
 
 ### Registering Custom Formats
 

@@ -1,5 +1,4 @@
 using ActualLab.Compression;
-using K4os.Compression.LZ4;
 
 namespace ActualLab.Tests.Compression;
 
@@ -361,15 +360,15 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
     {
         var maxBlockSize = LZ4ByteCompressor.MaxBlockSize;
         Out.WriteLine($"MaxBlockSize = {maxBlockSize}, "
-            + $"MaximumOutputSize = {LZ4Codec.MaximumOutputSize(maxBlockSize)}");
+            + $"MaximumOutputSize = {LZ4MaximumOutputSize(maxBlockSize)}");
 
         maxBlockSize.Should().BeLessThanOrEqualTo(64 * 1024);
-        LZ4Codec.MaximumOutputSize(maxBlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
+        LZ4MaximumOutputSize(maxBlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
         // The bound is the largest block K4os will actually use, not the largest integer whose
         // output fits: it rounds a request up to a 1 KiB multiple, so the next candidate is one
         // step up - and that one overflows the prefix, which is why the limit sits here.
         (maxBlockSize % 1024).Should().Be(0);
-        LZ4Codec.MaximumOutputSize(maxBlockSize + 1024).Should().BeGreaterThan(ushort.MaxValue);
+        LZ4MaximumOutputSize(maxBlockSize + 1024).Should().BeGreaterThan(ushort.MaxValue);
     }
 
     // Block size doesn't cap the match window - LZ4's own 64 KiB one spans blocks. That's what
@@ -447,7 +446,7 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
 
         compressor.BlockSize.Should().Be(decompressor.BlockSize);
         compressor.BlockSize.Should().BeGreaterThanOrEqualTo(requested);
-        LZ4Codec.MaximumOutputSize(compressor.BlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
+        LZ4MaximumOutputSize(compressor.BlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
     }
 
     // Incompressible data at exactly MaxBlockSize is the case the ushort prefix must survive
@@ -465,4 +464,8 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
             pair.RoundTrip(source).Should().Equal(source);
         }
     }
+
+    // LZ4's worst-case output size for a block (LZ4_compressBound)
+    private static int LZ4MaximumOutputSize(int length)
+        => length + length / 255 + 16;
 }

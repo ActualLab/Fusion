@@ -94,7 +94,7 @@ including the `-lz4` variants &ndash; is opt-in via `RpcBuilder.ConfigureWireFor
 services.AddRpc().ConfigureWireFormats(f => {
     f.AddMemoryPack();     // ActualLab.Serialization.MemoryPack: mempack5(c), mempack6(c)
     f.AddNewtonsoftJson(); // ActualLab.Serialization.NewtonsoftJson: njson5, njson5np
-    f.AddLZ4Variants(); // "-lz4" variants of the formats added so far
+    f.AddLZ4Variants("lz4"); // "-lz4" variants of the formats added so far
     f.DefaultFormat = f["msgpack6c-lz4"];
 });
 ```
@@ -110,7 +110,7 @@ services.AddRpc().ConfigureWireFormats(f => {
   `RpcNewtonsoftJsonWireFormats` and `RpcNerdbankWireFormats`.
 - `RpcSerializationFormat.All`, `RpcSerializationFormat.Default`, `RpcSerializationFormatResolver.DefaultFormats`
   and the `*_LZ4` / `*_LZ4F` format statics are gone. Configure each container with
-  `rpc.ConfigureWireFormats(f => ...)` instead: `f.Add(...)` / `f.Remove(...)`, `f.AddLZ4Variants()`,
+  `rpc.ConfigureWireFormats(f => ...)` instead: `f.Add(...)` / `f.Remove(...)`, `f.AddLZ4Variants("lz4")`,
   `f.DefaultFormat` (instead of assigning `RpcSerializationFormatResolver.Default`) and
   `f.BackendOnlyFormatKeys` (instead of `RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys`;
   the process-wide defaults are the read-only `RpcDefaultWireFormats.DefaultFormat` and `.BackendOnlyFormatKeys`).

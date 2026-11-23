@@ -62,7 +62,7 @@ public static class DefaultFormat
         #region PartRSerialization_UseDefault
         // Compact MessagePack with LZ4-compressed server-to-client frames
         services.AddRpc().ConfigureWireFormats(f => {
-            f.AddLZ4Variants();
+            f.AddLZ4Variants("lz4");
             f.DefaultFormat = f["msgpack6c-lz4"];
         });
         #endregion
@@ -126,12 +126,26 @@ public static class ConfiguringFormats
         #endregion
     }
 
+    public static void Lz4Dictionary(IServiceCollection services, byte[] typicalFrames)
+    {
+        #region PartRSerialization_Lz4Dictionary
+        // Create it once and share it: it's prepared on creation and never changes afterwards
+        var dictionary = LZ4ByteCompression.Default.CreateDictionary(typicalFrames);
+        services.AddRpc().ConfigureWireFormats(f => {
+            f.AddLZ4Variants("lz4d1", dictionary); // "msgpack6c-lz4d1", ...
+            f.AddLZ4Variants("lz4d1f", dictionary, RpcCompressionMode.Full); // "msgpack6c-lz4d1f", ...
+            f.DefaultFormat = f["msgpack6c-lz4d1"];
+        });
+        #endregion
+    }
+
     public static void AddFormats(IServiceCollection services)
     {
         #region PartRSerialization_AddFormats
         services.AddRpc().ConfigureWireFormats(f => {
             f.AddNerdbankMessagePack(); // nmsgpack6, nmsgpack6c
-            f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full); // "-lz4" and "-lz4f"
+            f.AddLZ4Variants("lz4"); // "msgpack6c-lz4", ...
+            f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full); // "msgpack6c-lz4f", ...
             f.DefaultFormat = f["msgpack6c-lz4"];
         });
         #endregion
@@ -222,7 +236,7 @@ public class PartRSerialization : DocPart
         var msgpack6 = formats.First(f => f.Key == "msgpack6");
         var msgpack5c = formats.First(f => f.Key == "msgpack5c");
         var msgpack5 = formats.First(f => f.Key == "msgpack5");
-        var msgpack6cLz4 = msgpack6c.WithLZ4(); // LZ4 variants come from f.AddLZ4Variants()
+        var msgpack6cLz4 = msgpack6c.WithLZ4("lz4"); // LZ4 variants come from f.AddLZ4Variants("lz4")
 
         // Package-provided formats
         _ = RpcNerdbankWireFormats.NerdbankMessagePackV6C;

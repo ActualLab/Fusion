@@ -64,7 +64,7 @@ public static class RpcTestFormats
             .Where(x => x.DataFormat == DataFormat.Bytes && x.Key.Contains("6"))
             .ToList();
         foreach (var format in lz4Sources)
-            formats.AddRange([format.WithLZ4(), format.WithLZ4(RpcCompressionMode.Full)]);
+            formats.AddRange([format.WithLZ4("lz4"), format.WithLZ4("lz4f", compressionMode: RpcCompressionMode.Full)]);
         return formats.ToImmutableList();
     }
 

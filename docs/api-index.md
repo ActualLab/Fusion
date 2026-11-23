@@ -140,7 +140,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcLimits` (record) — timeout/periodic limits for connections and keep-alive, plus the per-peer `CallCountLimit` / `ObjectCountLimit` backstops
 - `RpcCallTimeouts` (record) — connect/run/delay timeouts and the cache fallback delay for outbound calls
 - `RpcServiceMode` (enum) — local, server, client, or distributed
-- `RpcWireFormat` — named argument + message serializer pair (`msgpack6`, `json5`, ...); `WithLZ4()` makes a compressed variant; `RpcDefaultWireFormats.All` is the built-in catalog and `RpcDefaultWireFormats.DefaultFormat` the default one — [PartR-Serialization.md](PartR-Serialization.md)
+- `RpcWireFormat` — named argument + message serializer pair (`msgpack6`, `json5`, ...); `WithLZ4(suffix)` makes a compressed variant; `RpcDefaultWireFormats.All` is the built-in catalog and `RpcDefaultWireFormats.DefaultFormat` the default one — [PartR-Serialization.md](PartR-Serialization.md)
 - `RpcWireFormatConfiguration` — per-container format set, default format and backend-only formats (`RpcConfiguration.WireFormats`); configure it via `RpcBuilder.ConfigureWireFormats(...)`
 - `RpcWireFormatResolver` — the format registry a container uses, built from `RpcConfiguration.WireFormats`
 

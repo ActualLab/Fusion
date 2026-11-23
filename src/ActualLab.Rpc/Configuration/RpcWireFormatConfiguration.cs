@@ -1,3 +1,4 @@
+using ActualLab.Compression;
 using ActualLab.Internal;
 using ActualLab.Rpc.Compression;
 
@@ -97,30 +98,40 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
         _formats = formats;
     }
 
-    // Adds the LZ4 variants of every format:
-    // "-lz4" for RpcCompressionMode.ServerToClient (the default when no mode is passed)
-    // "-lz4f" for RpcCompressionMode.Full
-    public void AddLZ4Variants(params ReadOnlySpan<RpcCompressionMode> compressionModes)
-        => AddLZ4Variants(static _ => true, compressionModes);
-
-    // Same, but only for the formats the filter accepts; text and compressed formats are always skipped,
-    // since they can't be compressed
+    // Adds the "<key>-<suffix>" variant of every format the filter accepts (all if there's no filter),
+    // compressed with LZ4 in the given mode and starting from the dictionary (made by LZ4ByteCompression):
+    // e.g. ("lz4") and ("lz4f", mode: Full) without one, ("lz4d1", dictionary) with one.
+    // A dictionary needs a suffix of its own, i.e. not "lz4" or "lz4f".
     public void AddLZ4Variants(
-        Func<RpcWireFormat, bool> filter,
-        params ReadOnlySpan<RpcCompressionMode> compressionModes)
+        string suffix,
+        object? dictionary = null,
+        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
+        Func<RpcWireFormat, bool>? filter = null)
+        => AddCompressedVariants(suffix, RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode, filter);
+
+    // Same for any compression format. Text and compressed formats are always skipped, since they can't be
+    // compressed; a variant whose key is already taken fails the whole call
+    public void AddCompressedVariants(
+        string suffix,
+        RpcCompressionFormat compressionFormat,
+        RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
+        Func<RpcWireFormat, bool>? filter = null)
     {
-        if (compressionModes.IsEmpty)
-            compressionModes = [RpcCompressionMode.ServerToClient];
+        if (suffix.IsNullOrEmpty())
+            throw new ArgumentOutOfRangeException(nameof(suffix));
+
         var variants = new List<RpcWireFormat>();
         foreach (var format in _formats.Values) {
-            if (format.CompressionFormat is not null || format.DataFormat != DataFormat.Bytes || !filter.Invoke(format))
+            if (format.CompressionFormat is not null || format.DataFormat != DataFormat.Bytes)
+                continue;
+            if (filter is not null && !filter.Invoke(format))
                 continue;
 
-            foreach (var compressionMode in compressionModes) {
-                var variant = format.WithLZ4(compressionMode);
-                if (!_formats.ContainsKey(variant.Key))
-                    variants.Add(variant);
-            }
+            var variant = format.WithCompression($"{format.Key}-{suffix}", compressionFormat, compressionMode);
+            if (_formats.ContainsKey(variant.Key))
+                throw new InvalidOperationException($"Format '{variant.Key}' is already added.");
+
+            variants.Add(variant);
         }
         Add(variants);
     }
