@@ -16,8 +16,8 @@
     <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
     <IlcDisableReflection>false</IlcDisableReflection>
     <IlcTrimMetadata>true</IlcTrimMetadata>
-    <!-- Lets the json5 formats use reflection-based System.Text.Json (off by default under NativeAOT) -->
-    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- ActualLab.Generators' NativeAOT serialization roots are opt-in -->
+    <DefineConstants>$(DefineConstants);ACTUALLAB_SERIALIZATION_ROOTS</DefineConstants>
   </PropertyGroup>
 
   <!-- Required by SizoScope tool -->
@@ -45,7 +45,6 @@
   <!-- Fusion packages -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
-    <ProjectReference Include="..\..\src\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
   </ItemGroup>
 
   <!-- Source generators -->
