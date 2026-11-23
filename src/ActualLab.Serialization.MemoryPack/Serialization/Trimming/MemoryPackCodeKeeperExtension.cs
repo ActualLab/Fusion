@@ -36,6 +36,8 @@ public sealed class MemoryPackCodeKeeperExtension(CodeKeeper.IExtension? next) :
         CodeKeeper.Keep<MemoryPackSerializedMemoryPackFormatter<T>>();
         CodeKeeper.Keep<UniSerializedMemoryPackFormatter<T>>();
         CodeKeeper.Keep<OptionMemoryPackFormatter<T>>();
+        // MemoryPackSerialization.Register installs the closed formatter of T via MakeGenericMethod
+        MemoryPackSerialization.RegisterClosedFormatter<T>(null!);
         MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty);
         MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty);
         MemoryPackSerializer.Serialize<T>(default);

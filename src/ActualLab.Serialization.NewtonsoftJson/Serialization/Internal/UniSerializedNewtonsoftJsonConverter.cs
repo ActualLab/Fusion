@@ -70,9 +70,10 @@ public class UniSerializedNewtonsoftJsonConverter : JsonConverter
             var handlerType = genericType == typeof(UniSerialized<>) ? typeof(UniHandler<>)
                 : genericType == typeof(TypeDecoratingUniSerialized<,>) ? typeof(TypeDecoratingUniHandler<,>)
                 : null;
+            // Not ActivatorExt.CreateInstance: NativeAOT can't build a constructor delegate for a new closed type
             return handlerType is null
                 ? null
-                : (Handler)handlerType.MakeGenericType(t.GetGenericArguments()).CreateInstance();
+                : (Handler)Activator.CreateInstance(handlerType.MakeGenericType(t.GetGenericArguments()))!;
         });
 
     // Nested types

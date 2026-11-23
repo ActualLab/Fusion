@@ -34,12 +34,13 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
 
             if (isNullable) {
                 var tNArg = t.GetGenericArguments()[0].GetGenericArguments()[0];
+                // Not ActivatorExt.CreateInstance: NativeAOT can't build a constructor delegate for a new closed type
                 var tNConverter = typeof(NullableConverter<>).MakeGenericType(tNArg);
-                return (JsonConverter)tNConverter.CreateInstance();
+                return (JsonConverter)Activator.CreateInstance(tNConverter)!;
             }
             var tArg = t.GetGenericArguments()[0];
             var tConverter = typeof(Converter<>).MakeGenericType(tArg);
-            return (JsonConverter)tConverter.CreateInstance();
+            return (JsonConverter)Activator.CreateInstance(tConverter)!;
         });
 
     private static bool IsApiArray(Type type)

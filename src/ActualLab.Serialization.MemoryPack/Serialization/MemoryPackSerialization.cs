@@ -219,7 +219,8 @@ public static class MemoryPackSerialization
         };
     }
 
-    private static void RegisterClosedFormatter<T>(object formatter)
+    // Internal for MemoryPackCodeKeeperExtension: Register closes it via MakeGenericMethod
+    internal static void RegisterClosedFormatter<T>(object formatter)
     {
         // Keeps a formatter the app or an earlier walk registered, but replaces the one MemoryPack resolved
         // on its own, e.g. the raw-bytes formatter it picks for an unmanaged Option<int>

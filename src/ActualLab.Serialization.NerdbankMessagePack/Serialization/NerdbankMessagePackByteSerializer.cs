@@ -130,11 +130,13 @@ public class NerdbankMessagePackByteSerializer : IByteSerializer
 
     // Private methods
 
+    // Activator.CreateInstance, not ActivatorExt.CreateInstance: created once per type, and NativeAOT
+    // can't build ActivatorExt's constructor delegate for a new closed type
     private NerdbankMessagePackByteSerializer GetTypedSerializer(Type serializedType)
         => _typedSerializerCache.GetOrAdd(serializedType,
-            static (type1, self) => (NerdbankMessagePackByteSerializer)typeof(NerdbankMessagePackByteSerializer<>)
-                .MakeGenericType(type1)
-                .CreateInstance(self.Serializer, self.TypeShapeProvider, type1, self.Root),
+            static (type1, self) => (NerdbankMessagePackByteSerializer)Activator.CreateInstance(
+                typeof(NerdbankMessagePackByteSerializer<>).MakeGenericType(type1),
+                self.Serializer, self.TypeShapeProvider, type1, self.Root)!,
             this);
 
     private static NerdbankSerializer CreateDefaultSerializer()

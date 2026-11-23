@@ -57,7 +57,8 @@ public sealed class NewtonsoftJsonSerializedNerdbankConverterFactory : IMessageP
             return null;
 
         var valueType = type.GetGenericArguments()[0];
+        // Not ActivatorExt.CreateInstance: NativeAOT can't build a constructor delegate for a new closed type
         var converterType = typeof(TextSerializedNerdbankConverter<,>).MakeGenericType(valueType, type);
-        return (MessagePackConverter)converterType.CreateInstance();
+        return (MessagePackConverter)Activator.CreateInstance(converterType)!;
     }
 }
