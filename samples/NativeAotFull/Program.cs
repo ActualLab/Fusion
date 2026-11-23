@@ -10,33 +10,27 @@ using MemoryPack;
 using MessagePack;
 using static System.Console;
 
-#pragma warning disable IL3050
-
 // Calls a loopback RPC service with every wire format the serializer packages provide,
 // round-tripping the types whose trimming / AOT support matters. Exit code 1 = a check failed.
 
-KeepSerializableTypes();
-SystemJsonSerializer.TypeInfoResolver.Add(AppJsonContext.Default);
+// What each serializer needs under NativeAOT - one file per serializer in the Roots folder.
+// ActualLab.Generators emits the MessagePack and System.Text.Json roots (ACTUALLAB_SERIALIZATION_ROOTS
+// in the project file), so their Keep calls stay commented out; the rest have no generator support.
+SerializableTypeRoots.Keep();
+// MessagePackRoots.Keep();
+// SystemJsonRoots.Keep();
+SystemJsonRoots.Register();
+MemoryPackRoots.Keep();
+NerdbankRoots.Keep();
+NerdbankRoots.Register();
+NewtonsoftJsonRoots.Keep();
+
 var formatKeys = args.Length > 0 ? args : GetAllFormatKeys();
 var failureCount = 0;
 foreach (var formatKey in formatKeys)
     failureCount += await TestFormat(formatKey);
 WriteLine(failureCount == 0 ? "All checks passed." : $"{failureCount} check(s) failed.");
 return failureCount == 0 ? 0 : 1;
-
-// What a NativeAOT app does for its contract types: KeepSerializable never runs its body,
-// it only makes the AOT compiler generate the serialization code
-static void KeepSerializableTypes()
-{
-    CodeKeeper.KeepSerializable<SayHelloCommand>();
-    CodeKeeper.KeepSerializable<ApiDto>();
-    CodeKeeper.KeepSerializable<PropertyBag<CustomSchema>>();
-    CodeKeeper.KeepSerializable<SanitizedString<Sanitizers.Hidden>>();
-    CodeKeeper.KeepSerializable<SanitizedString<CustomSanitizer>>();
-    CodeKeeper.KeepSerializable<ApiOption<int>>();
-    CodeKeeper.KeepSerializable<ApiNullable<int>>();
-    CodeKeeper.KeepSerializable<ApiNullable8<long>>();
-}
 
 string[] GetAllFormatKeys()
 {
@@ -150,163 +144,4 @@ async Task<int> TestFormat(string formatKey)
             failureCount++;
         WriteLine($"  {name}: {result}");
     }
-}
-
-public interface ITestService : IComputeService
-{
-    public Task<Moment> GetTime(CancellationToken cancellationToken = default);
-
-    [ComputeMethod(AutoInvalidationDelay = 1)]
-    public Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default);
-
-    [CommandHandler]
-    public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
-
-    public Task<PropertyBag<TypeSchema.Any>> EchoBag(
-        PropertyBag<TypeSchema.Any> value, CancellationToken cancellationToken = default);
-    public Task<PropertyBag<CustomSchema>> EchoCustomBag(
-        PropertyBag<CustomSchema> value, CancellationToken cancellationToken = default);
-    public Task<SanitizedString<Sanitizers.Hidden>> EchoSanitized(
-        SanitizedString<Sanitizers.Hidden> value, CancellationToken cancellationToken = default);
-    public Task<SanitizedString<CustomSanitizer>> EchoCustomSanitized(
-        SanitizedString<CustomSanitizer> value, CancellationToken cancellationToken = default);
-    public Task<Option<int>> EchoOption(Option<int> value, CancellationToken cancellationToken = default);
-    public Task<int?> EchoNullable(int? value, CancellationToken cancellationToken = default);
-    public Task<List<int>> EchoList(List<int> value, CancellationToken cancellationToken = default);
-    public Task<Moment?> EchoNullableMoment(Moment? value, CancellationToken cancellationToken = default);
-    public Task<Moment[]> EchoMomentArray(Moment[] value, CancellationToken cancellationToken = default);
-    public Task<List<Moment>> EchoMomentList(List<Moment> value, CancellationToken cancellationToken = default);
-    public Task<Dictionary<string, Moment>> EchoMomentMap(
-        Dictionary<string, Moment> value, CancellationToken cancellationToken = default);
-    public Task<ApiArray<int>> EchoApiArray(ApiArray<int> value, CancellationToken cancellationToken = default);
-    public Task<PageRef<long>> EchoPageRef(PageRef<long> value, CancellationToken cancellationToken = default);
-    public Task<ApiOption<int>> EchoApiOption(ApiOption<int> value, CancellationToken cancellationToken = default);
-    public Task<ApiNullable<int>> EchoApiNullable(ApiNullable<int> value, CancellationToken cancellationToken = default);
-    public Task<ApiNullable8<long>> EchoApiNullable8(
-        ApiNullable8<long> value, CancellationToken cancellationToken = default);
-    public Task<ApiDto> EchoDto(ApiDto value, CancellationToken cancellationToken = default);
-}
-
-[DataContract, MessagePackObject, MemoryPackable(GenerateType.VersionTolerant)]
-[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor, MemoryPackConstructor]
-public sealed partial record SayHelloCommand(
-    [property: DataMember(Order = 0), Key(0), MemoryPackOrder(0)] string Name
-) : ICommand<string>;
-
-[DataContract, MessagePackObject, MemoryPackable(GenerateType.VersionTolerant)]
-[method: System.Text.Json.Serialization.JsonConstructor, SerializationConstructor, MemoryPackConstructor]
-public sealed partial record ApiDto(
-    [property: DataMember(Order = 0), Key(0), MemoryPackOrder(0)] ApiOption<int> Option,
-    [property: DataMember(Order = 1), Key(1), MemoryPackOrder(1)] ApiNullable<int> Nullable,
-    [property: DataMember(Order = 2), Key(2), MemoryPackOrder(2)] ApiNullable8<long> Nullable8,
-    [property: DataMember(Order = 3), Key(3), MemoryPackOrder(3), MemoryPackAllowSerialize]
-    PropertyBag<TypeSchema.Any> Bag,
-    [property: DataMember(Order = 4), Key(4), MemoryPackOrder(4), MemoryPackAllowSerialize]
-    SanitizedString<Sanitizers.Hidden> Secret);
-
-// NativeAOT has no reflection-based System.Text.Json, so the json5 formats need the metadata
-// of every type the RPC calls carry; ActualLab's own types and primitives are covered already
-[JsonSerializable(typeof(SayHelloCommand))]
-[JsonSerializable(typeof(ApiDto))]
-[JsonSerializable(typeof(PropertyBag<CustomSchema>))]
-[JsonSerializable(typeof(SanitizedString<Sanitizers.Hidden>))]
-[JsonSerializable(typeof(SanitizedString<CustomSanitizer>))]
-[JsonSerializable(typeof(Option<int>))]
-[JsonSerializable(typeof(int?))]
-[JsonSerializable(typeof(List<int>))]
-[JsonSerializable(typeof(Moment?))]
-[JsonSerializable(typeof(Moment[]))]
-[JsonSerializable(typeof(List<Moment>))]
-[JsonSerializable(typeof(Dictionary<string, Moment>))]
-[JsonSerializable(typeof(ApiArray<int>))]
-[JsonSerializable(typeof(PageRef<long>))]
-[JsonSerializable(typeof(ApiOption<int>))]
-[JsonSerializable(typeof(ApiNullable<int>))]
-[JsonSerializable(typeof(ApiNullable8<long>))]
-public sealed partial class AppJsonContext : JsonSerializerContext;
-
-public sealed class CustomSchema : TypeSchema
-{
-    // Keeps the parameterless constructor in trimmed apps
-    static CustomSchema() => CodeKeeper.Keep<CustomSchema>();
-
-    public override bool IsAllowed(Type type) => true;
-}
-
-public sealed class CustomSanitizer : Sanitizer
-{
-    // Keeps the parameterless constructor in trimmed apps
-    static CustomSanitizer() => CodeKeeper.Keep<CustomSanitizer>();
-
-    protected override string Sanitize(string value) => "<custom>";
-}
-
-public class TestService : ITestService
-{
-    public virtual Task<Moment> GetTime(CancellationToken cancellationToken = default)
-        => Task.FromResult(Moment.Now);
-
-    public virtual Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default)
-        => Task.FromResult(Moment.Now);
-
-    public virtual Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default)
-        => Task.FromResult($"Hello, {command.Name}");
-
-    public virtual Task<PropertyBag<TypeSchema.Any>> EchoBag(
-        PropertyBag<TypeSchema.Any> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<PropertyBag<CustomSchema>> EchoCustomBag(
-        PropertyBag<CustomSchema> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<SanitizedString<Sanitizers.Hidden>> EchoSanitized(
-        SanitizedString<Sanitizers.Hidden> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<SanitizedString<CustomSanitizer>> EchoCustomSanitized(
-        SanitizedString<CustomSanitizer> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<Option<int>> EchoOption(Option<int> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<int?> EchoNullable(int? value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<List<int>> EchoList(List<int> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<Moment?> EchoNullableMoment(Moment? value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<Moment[]> EchoMomentArray(Moment[] value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<List<Moment>> EchoMomentList(List<Moment> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<Dictionary<string, Moment>> EchoMomentMap(
-        Dictionary<string, Moment> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<ApiArray<int>> EchoApiArray(ApiArray<int> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<PageRef<long>> EchoPageRef(PageRef<long> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<ApiOption<int>> EchoApiOption(ApiOption<int> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<ApiNullable<int>> EchoApiNullable(
-        ApiNullable<int> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<ApiNullable8<long>> EchoApiNullable8(
-        ApiNullable8<long> value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
-
-    public virtual Task<ApiDto> EchoDto(ApiDto value, CancellationToken cancellationToken = default)
-        => Task.FromResult(value);
 }

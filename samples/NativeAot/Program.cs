@@ -6,8 +6,6 @@ using System.Text.Json.Serialization;
 using static System.Console;
 using ActualLab.Compliance;
 
-#pragma warning disable IL3050
-
 AppDomain.CurrentDomain.UnhandledException += (_, args) => {
     Error.WriteLine($"UNHANDLED: {args.ExceptionObject}");
     Error.Flush();
