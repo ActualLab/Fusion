@@ -156,18 +156,18 @@ internal sealed partial class SerializationRootsBuilder
 
     private void Visit(ITypeSymbol? type, int depth)
     {
-        if (type is null || depth > MaxDepth)
-            return;
-        if (_visitedTypes.TryGetValue(type, out var visitedDepth) && visitedDepth <= depth)
+        if (type is null)
             return;
 
-        _visitedTypes[type] = depth;
+        var isFirstVisit = !_visitedTypes.ContainsKey(type);
+        if (!TryVisit(_visitedTypes, type, depth))
+            return;
 
         _cancellationToken.ThrowIfCancellationRequested();
         switch (type) {
         case IArrayTypeSymbol arrayType:
             Visit(arrayType.ElementType, depth + 1);
-            if (!ContainsTypeParameters(arrayType) && IsRootable(arrayType))
+            if (isFirstVisit && !ContainsTypeParameters(arrayType) && IsRootable(arrayType))
                 _closedTypes.Add(arrayType);
             break;
         case INamedTypeSymbol namedType:
@@ -175,7 +175,7 @@ internal sealed partial class SerializationRootsBuilder
             if (namedType.IsGenericType) {
                 foreach (var typeArgument in namedType.TypeArguments)
                     Visit(typeArgument, depth + 1);
-                if (!ContainsTypeParameters(namedType) && IsRootable(namedType))
+                if (isFirstVisit && !ContainsTypeParameters(namedType) && IsRootable(namedType))
                     _closedTypes.Add(namedType);
             }
             // The members of a closed generic serializable type, or of one declared elsewhere,

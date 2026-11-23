@@ -4,6 +4,7 @@ namespace ActualLab.Compression;
 /// A compression codec: creates its <see cref="ByteCompressor"/>s and <see cref="ByteDecompressor"/>s,
 /// and the preset dictionaries they start from. A dictionary is an opaque object only this codec
 /// understands; it's prepared once, never changes, and is meant to be shared by all compressors.
+/// Its memory is released when it's garbage-collected, so keep a few long-lived ones rather than many.
 /// </summary>
 public abstract class ByteCompression
 {

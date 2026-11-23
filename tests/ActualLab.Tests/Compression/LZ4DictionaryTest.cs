@@ -116,6 +116,7 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
         // act + assert
         Assert.Throws<ArgumentOutOfRangeException>(() => Compression.NewCompressor("not a dictionary"));
         Assert.Throws<ArgumentOutOfRangeException>(() => compressor.Reset(new object()));
+        Assert.Throws<ArgumentOutOfRangeException>(() => RpcCompressionFormat.NewLZ4("lz4d", new object()));
         compressor.Dictionary.Should().BeSameAs(SharedDictionary);
     }
 
@@ -301,6 +302,10 @@ public class LZ4DictionaryTest(ITestOutputHelper @out) : ByteCompressorTestBase(
         RpcDefaultWireFormats.MessagePackV6.WithLZ4("lz4").CompressionFormat
             .Should().BeSameAs(RpcCompressionFormat.LZ4);
         Assert.Throws<ArgumentOutOfRangeException>(() => formats.AddLZ4Variants("lz4", SharedDictionary));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => formats.AddLZ4Variants("lz4", compressionMode: RpcCompressionMode.Full));
+        Assert.Throws<ArgumentOutOfRangeException>(() => formats.AddLZ4Variants("lz4f"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => RpcDefaultWireFormats.MessagePackV6.WithLZ4(""));
         Assert.Throws<ArgumentOutOfRangeException>(
             () => formats.AddLZ4Variants("lz4f", SharedDictionary, RpcCompressionMode.Full));
     }

@@ -107,7 +107,10 @@ public sealed class RpcWireFormatConfiguration : IReadOnlyDictionary<string, Rpc
         object? dictionary = null,
         RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient,
         Func<RpcWireFormat, bool>? filter = null)
-        => AddCompressedVariants(suffix, RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode, filter);
+    {
+        RpcWireFormat.ValidateLZ4Suffix(suffix, compressionMode);
+        AddCompressedVariants(suffix, RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode, filter);
+    }
 
     // Same for any compression format. Text and compressed formats are always skipped, since they can't be
     // compressed; a variant whose key is already taken fails the whole call

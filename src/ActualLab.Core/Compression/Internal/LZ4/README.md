@@ -14,7 +14,7 @@ in `ActualLab.Compression`.
   `LZ4FastChainEncoder` / `LZ4ChainDecoder` constructors, `Reset()` and
   `Reset(dictionary)`): upstream PR
   [#122](https://github.com/MiloszKrajewski/K4os.Compression.LZ4/pull/122),
-  branch `feature/fast-dictionary` of `ActualLab/K4os.Compression.LZ4` at `81555b8`.
+  branch `feature/fast-dictionary` of `ActualLab/K4os.Compression.LZ4` at `f88a87c`.
   Once it's merged (or changed in review), re-sync from upstream.
 
 ## Changes made while copying

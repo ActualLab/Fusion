@@ -180,6 +180,102 @@ public class SerializationRootsGeneratorTest
     }
 
     [Fact]
+    public void ConverterTypeArgumentsInsideDtosShouldBeCovered()
+    {
+        // arrange
+        var compilation = CreateCompilation("""
+            using System.Collections.Generic;
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+            using ActualLab.Api;
+            using ActualLab.Rpc;
+
+            namespace Demo;
+
+            public interface IService : IRpcService
+            {
+                Task<Dto> Get();
+                Task<List<ApiArray<Bar>>> List();
+            }
+
+            public class Dto
+            {
+                public ApiArray<Foo> Items { get; set; }
+            }
+
+            public class Foo;
+
+            public class Bar;
+
+            [JsonSerializable(typeof(Dto))]
+            [JsonSerializable(typeof(List<ApiArray<Bar>>))]
+            internal partial class AppJsonContext : JsonSerializerContext;
+            """);
+
+        // act
+        var (_, result) = Run(compilation);
+
+        // assert
+        // ApiArray's converter serializes Foo and Bar, which the context doesn't include
+        GetUncoveredTypes(result).Should().BeEquivalentTo("Demo.Foo", "Demo.Bar");
+    }
+
+    [Fact]
+    public void ConverterWithUnsatisfiedConstraintShouldNotBeRooted()
+    {
+        // arrange
+        var compilation = CreateCompilation("""
+            using System;
+            using System.Text.Json;
+            using System.Text.Json.Serialization;
+            using System.Threading.Tasks;
+
+            namespace Demo;
+
+            public interface IService
+            {
+                Task<Box<int>> Get();
+            }
+
+            public class Base
+            {
+                // An implicit conversion doesn't satisfy a type constraint
+                public static implicit operator Base(int value) => new();
+            }
+
+            [JsonConverter(typeof(BoxConverterFactory))]
+            public readonly struct Box<T>
+            {
+                public T Value { get; init; }
+            }
+
+            public class BoxConverterFactory : JsonConverterFactory
+            {
+                public override bool CanConvert(Type typeToConvert) => true;
+
+                public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+                    => null!;
+
+                public class Converter<T> : JsonConverter<Box<T>> where T : Base
+                {
+                    public override Box<T> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+                        => default;
+
+                    public override void Write(Utf8JsonWriter writer, Box<T> value, JsonSerializerOptions options)
+                    { }
+                }
+            }
+            """);
+
+        // act
+        var (outputCompilation, result) = Run(compilation);
+
+        // assert
+        AssertNoErrors(outputCompilation, result);
+        GetGeneratedCode(result).Should().NotContain("BoxConverterFactory.Converter<");
+    }
+
+    [Fact]
     public void ContextServingRpcThroughConverterShouldTriggerALG0004()
     {
         // Arrange

@@ -52,7 +52,14 @@ internal unsafe class LZ4FastDictionary: UnmanagedResources
 		}
 	}
 
-	internal byte* Data => _dataPin.Pointer;
+	internal byte* Data
+	{
+		get
+		{
+			ThrowIfDisposed();
+			return _dataPin.Pointer;
+		}
+	}
 
 	private LZ4Context* Context => _contextPin.Reference<LZ4Context>();
 

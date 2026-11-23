@@ -98,7 +98,7 @@ container with `f.DefaultFormat`:
 ```cs
 // Compact MessagePack with LZ4-compressed server-to-client frames
 services.AddRpc().ConfigureWireFormats(f => {
-    f.AddLZ4Variants();
+    f.AddLZ4Variants("lz4");
     f.DefaultFormat = f["msgpack6c-lz4"];
 });
 ```
@@ -259,9 +259,9 @@ services.AddRpc().ConfigureWireFormats(f => f.Add(format));
 
 ### LZ4 Dictionaries
 
-A compression context starts empty, and it's reset every few frames
-(`RpcCompressionOptions`), so the first frames after each reset compress poorly: there is
-nothing yet to reference. A preset dictionary fixes that. It's built from a sample of typical
+A compression context starts empty, and it's reset periodically (by default, every 512 frames or
+128 KB, see `RpcCompressionOptions`), so the first frames after each reset compress poorly: there
+is nothing yet to reference. A preset dictionary fixes that. It's built from a sample of typical
 frames (LZ4 uses its last 64 KB), and every compressor and decompressor starts from it, so even
 the first frame can reference the method names, type names and headers it holds.
 
@@ -290,8 +290,8 @@ decompressor to another dictionary (or to none) without recreating it.
 `format.WithLZ4(suffix, dictionary, mode)` makes a single format's variant, and
 `RpcCompressionFormat.NewLZ4(id, dictionary)` the compression format behind it; for other codecs,
 use `RpcCompressionFormat.New(id, compression, dictionary)` with
-`f.AddCompressedVariants(suffix, compressionFormat, mode)`. All these methods fail if a key they
-would add is already taken, and add nothing then.
+`f.AddCompressedVariants(suffix, compressionFormat, mode)`. `AddLZ4Variants` and
+`AddCompressedVariants` fail if a key they would add is already taken, and add nothing then.
 
 
 ## Configuring Formats
@@ -321,7 +321,8 @@ so it can't change after that.
 ```cs
 services.AddRpc().ConfigureWireFormats(f => {
     f.AddNerdbankMessagePack(); // nmsgpack6, nmsgpack6c
-    f.AddLZ4Variants(RpcCompressionMode.ServerToClient, RpcCompressionMode.Full); // "-lz4" and "-lz4f"
+    f.AddLZ4Variants("lz4"); // "msgpack6c-lz4", ...
+    f.AddLZ4Variants("lz4f", compressionMode: RpcCompressionMode.Full); // "msgpack6c-lz4f", ...
     f.DefaultFormat = f["msgpack6c-lz4"];
 });
 ```

@@ -39,7 +39,10 @@ public sealed class RpcWireFormat(
         string suffix,
         object? dictionary = null,
         RpcCompressionMode compressionMode = RpcCompressionMode.ServerToClient)
-        => WithCompression($"{Key}-{suffix}", RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode);
+    {
+        ValidateLZ4Suffix(suffix, compressionMode);
+        return WithCompression($"{Key}-{suffix}", RpcCompressionFormat.NewLZ4(suffix, dictionary), compressionMode);
+    }
 
     public RpcWireFormat WithCompression(
         string key, RpcCompressionFormat compressionFormat, RpcCompressionMode compressionMode)
@@ -53,4 +56,19 @@ public sealed class RpcWireFormat(
             compressionFormat, compressionMode);
     }
 
+    // Internal methods
+
+    // Peers agree on a format by its key alone, so the well-known "lz4" / "lz4f" keys must always mean
+    // the same compression mode
+    internal static void ValidateLZ4Suffix(string suffix, RpcCompressionMode compressionMode)
+    {
+        if (suffix.IsNullOrEmpty())
+            throw new ArgumentOutOfRangeException(nameof(suffix));
+        if ((suffix is "lz4" && compressionMode != RpcCompressionMode.ServerToClient)
+            || (suffix is "lz4f" && compressionMode != RpcCompressionMode.Full))
+            throw new ArgumentOutOfRangeException(nameof(compressionMode),
+                $"Suffix '{suffix}' is reserved for RpcCompressionMode."
+                + (suffix is "lz4" ? nameof(RpcCompressionMode.ServerToClient) : nameof(RpcCompressionMode.Full))
+                + ".");
+    }
 }

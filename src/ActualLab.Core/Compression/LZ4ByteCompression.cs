@@ -26,7 +26,12 @@ public sealed class LZ4ByteCompression : ByteCompression
         => new LZ4FastDictionary(data);
 
     public override byte[] SaveDictionary(object dictionary)
-        => ToLZ4Dictionary(dictionary)!.Span.ToArray();
+    {
+        var result = ToLZ4Dictionary(dictionary)!.Span.ToArray();
+        // The dictionary's finalizer frees the memory Span points to
+        GC.KeepAlive(dictionary);
+        return result;
+    }
 
     // Internal methods
 

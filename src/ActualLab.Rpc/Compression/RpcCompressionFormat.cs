@@ -34,7 +34,15 @@ public sealed class RpcCompressionFormat(
     // a different dictionary must use a different id.
     public static RpcCompressionFormat New(
         Symbol id, ByteCompression compression, object? dictionary = null, RpcCompressionOptions? options = null)
-        => new(id, () => compression.NewCompressor(dictionary), () => compression.NewDecompressor(dictionary), options);
+    {
+        if (dictionary is not null)
+            compression.NewDecompressor(dictionary).Dispose(); // Fails now rather than on every connection
+
+        return new(id,
+            () => compression.NewCompressor(dictionary),
+            () => compression.NewDecompressor(dictionary),
+            options);
+    }
 
     public Symbol Id { get; } = id;
     public Func<ByteCompressor> CompressorFactory { get; } = compressorFactory;

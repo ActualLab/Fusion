@@ -33,10 +33,6 @@ public abstract class ByteCompressor : IDisposable
     public virtual void Dispose()
     { }
 
-    // Protected methods
-
-    protected abstract void ResetCore(object? dictionary);
-
     // The inverse: the longest source whose worst-case output still fits maxLength.
     public int GetMaxSourceLength(int maxLength)
     {
@@ -52,4 +48,8 @@ public abstract class ByteCompressor : IDisposable
         }
         return min;
     }
+
+    // Protected methods
+
+    protected abstract void ResetCore(object? dictionary);
 }
