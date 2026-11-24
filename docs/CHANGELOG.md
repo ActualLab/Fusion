@@ -11,6 +11,38 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 16.0.52+d2eeecd11 | npm: 16.0.52
+
+Release date: 2026-11-24
+
+A packaging release: `ActualLab.Serialization.MemoryPack` no longer pulls in the Fusion extensions
+and Newtonsoft.Json, and the key-value stores are gone.
+
+### Breaking Changes
+
+- **The key-value stores are removed:** `IKeyValueStore`, `ISandboxedKeyValueStore`, their commands,
+  `KeyValueStoreExt`, `SandboxedKeyValueStoreExt`, `InMemoryKeyValueStore`, `DbKeyValueStore`,
+  `DbKeyValue`, `DbKeyValueTrimmer` and the `Add*KeyValueStore` helpers. If you use them, copy their
+  v15 sources into your app; the `_KeyValues` table isn't touched.
+- **MemoryPack can't serialize `NewtonsoftJsonSerialized<T>` and
+  `TypeDecoratingNewtonsoftJsonSerialized<TSchema, T>` anymore.** If you need it, register a
+  formatter with `MemoryPackSerialization.RegisterGenericType`.
+
+### Changed
+
+- **Package dependencies.** `ActualLab.Serialization.MemoryPack` depends only on `ActualLab.Fusion`
+  (it referenced `ActualLab.Fusion.Ext.Backend.Contracts`, and through it Newtonsoft.Json). The
+  formatters of `User`, `SessionInfo`, `PageRef<T>`, the auth commands, etc. moved into
+  `ActualLab.Fusion.Ext.Contracts` / `.Ext.Backend.Contracts`, which now reference MemoryPack and
+  no longer reference Newtonsoft.Json. Their MemoryPack output is unchanged. A client referencing
+  `ActualLab.Fusion` and `ActualLab.Serialization.MemoryPack` doesn't get Newtonsoft.Json.
+  See [Package Dependencies](NuGet-Packages.md#package-dependencies).
+
+### Added
+
+- `MemoryPackSerialization.RegisterGenericType` registers a MemoryPack formatter for a generic type
+  of your own, so `MemoryPackSerialization.Register<T>()` closes it as well.
+
 ## 16.0.50+910509349 | npm: 16.0.50
 
 Release date: 2026-11-23
