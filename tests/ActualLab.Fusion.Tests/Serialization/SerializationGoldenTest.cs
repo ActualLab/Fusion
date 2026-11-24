@@ -50,16 +50,9 @@ public class SerializationGoldenTest(ITestOutputHelper @out) : GoldenSerializati
             new Auth_SignOut(FixedSession, "hash", kickAllUserSessions: true, force: true));
         yield return Case("AuthBackend_SetSessionOptions.Value", new AuthBackend_SetSessionOptions(
             FixedSession, new PropertyBag().Set("Int", 1), 7));
-        yield return Case("SandboxedKeyValueStore_Set.Value", new SandboxedKeyValueStore_Set(
-            FixedSession, [("a", "1", null), ("b", "2", FixedMoment)]));
-        yield return Case("SandboxedKeyValueStore_Remove.Value", new SandboxedKeyValueStore_Remove(
-            FixedSession, ["a", "b"]));
         yield return Case("AuthBackend_SignIn.Value", new AuthBackend_SignIn(FixedSession, user, identity));
         yield return Case("AuthBackend_SetupSession.Value", new AuthBackend_SetupSession(
             FixedSession, "127.0.0.1", "Golden/1.0", new PropertyBag().Set("Int", 1)));
-        yield return Case("KeyValueStore_Set.Value", new KeyValueStore_Set(
-            "shard", [("a", "1", null), ("b", "2", FixedMoment)]));
-        yield return Case("KeyValueStore_Remove.Value", new KeyValueStore_Remove("shard", ["a", "b"]));
     }
 
     // Private methods

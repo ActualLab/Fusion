@@ -418,9 +418,9 @@ Newtonsoft.Json attributes; the contract resolver reads their System.Text.Json a
 attributes and supplies their converters, so set it in any `JsonSerializerSettings` you create.
 
 The packages that persist data with Newtonsoft.Json reference it themselves:
-`ActualLab.Fusion.EntityFramework` (the operation log), `ActualLab.Fusion.Ext.Contracts` and
-`ActualLab.Fusion.Ext.Services`. The `njson*` RPC formats are backend-only by default: they honor
-nested `"$type"` markers, which a public endpoint shouldn't accept.
+`ActualLab.Fusion.EntityFramework` (the operation log) and `ActualLab.Fusion.Ext.Services`.
+The `njson*` RPC formats are backend-only by default: they honor nested `"$type"` markers,
+which a public endpoint shouldn't accept.
 
 ### Nerdbank.MessagePack
 

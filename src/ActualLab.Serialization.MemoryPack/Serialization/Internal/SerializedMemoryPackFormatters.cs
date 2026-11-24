@@ -63,15 +63,8 @@ public sealed class TextSerializedMemoryPackFormatter<T>
 public sealed class SystemJsonSerializedMemoryPackFormatter<T>
     : TextSerializedMemoryPackFormatterBase<SystemJsonSerialized<T>, T>;
 
-public sealed class NewtonsoftJsonSerializedMemoryPackFormatter<T>
-    : TextSerializedMemoryPackFormatterBase<NewtonsoftJsonSerialized<T>, T>;
-
 public sealed class TypeDecoratingSystemJsonSerializedMemoryPackFormatter<TSchema, T>
     : TextSerializedMemoryPackFormatterBase<TypeDecoratingSystemJsonSerialized<TSchema, T>, T>
-    where TSchema : TypeSchema;
-
-public sealed class TypeDecoratingNewtonsoftJsonSerializedMemoryPackFormatter<TSchema, T>
-    : TextSerializedMemoryPackFormatterBase<TypeDecoratingNewtonsoftJsonSerialized<TSchema, T>, T>
     where TSchema : TypeSchema;
 
 /// <summary>

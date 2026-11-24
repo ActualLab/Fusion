@@ -23,7 +23,7 @@ public class DataContractSyncTest(ITestOutputHelper @out) : TestBase(@out)
         typeof(RpcHub).Assembly, // ActualLab.Rpc
         typeof(Session).Assembly, // ActualLab.Fusion
         typeof(User).Assembly, // ActualLab.Fusion.Ext.Contracts
-        typeof(IKeyValueStore).Assembly, // ActualLab.Fusion.Ext.Backend.Contracts
+        typeof(IAuthBackend).Assembly, // ActualLab.Fusion.Ext.Backend.Contracts
         typeof(DbHub<>).Assembly, // ActualLab.Fusion.EntityFramework
         typeof(RedisDb).Assembly, // ActualLab.Redis
     ];

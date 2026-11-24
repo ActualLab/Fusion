@@ -17,6 +17,7 @@ using ActualLab.Generators;
 using ActualLab.Locking;
 using ActualLab.Rpc;
 using ActualLab.Tests;
+using ActualLab.Fusion.Tests.Extensions;
 
 namespace ActualLab.Fusion.Tests;
 

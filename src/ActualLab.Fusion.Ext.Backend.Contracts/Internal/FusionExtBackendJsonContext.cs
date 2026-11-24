@@ -11,7 +11,5 @@ namespace ActualLab.Fusion.Extensions.Internal;
 [JsonSerializable(typeof(AuthBackend_SetSessionOptions))]
 [JsonSerializable(typeof(AuthBackend_SetupSession))]
 [JsonSerializable(typeof(AuthBackend_SignIn))]
-[JsonSerializable(typeof(KeyValueStore_Set))]
-[JsonSerializable(typeof(KeyValueStore_Remove))]
 internal sealed partial class FusionExtBackendJsonContext : JsonSerializerContext;
 #endif

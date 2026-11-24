@@ -215,8 +215,8 @@ public class DbProtectedInvalidationService(IServiceProvider services)
     }
 }
 
-// The shape SandboxedKeyValueStore has: a handler that declares no mode and only delegates to a
-// Replicated one, so the operation's mode has to come from the nested command
+// A handler that declares no mode and only delegates to a Replicated one,
+// so the operation's mode has to come from the nested command
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record DbDelegatingOverReplicated_Set(

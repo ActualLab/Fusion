@@ -14,9 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
     <ProjectReference Include="..\ActualLab.CommandR\ActualLab.CommandR.csproj" />
-    <ProjectReference Include="..\ActualLab.Interception\ActualLab.Interception.csproj" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />

@@ -1,6 +1,7 @@
+using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Operations.Internal;
 
-namespace ActualLab.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 /// <summary>
 /// An in-memory implementation of <see cref="IKeyValueStore"/> suitable for

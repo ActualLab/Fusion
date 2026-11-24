@@ -86,9 +86,9 @@ See [Native AOT and Trimming](../PartAOT.md) for the details.
 
 ## Upgrade Constraints
 
-- **Hosts that share the operation log or backend RPC upgrade together.** `IAuthBackend`,
-  `IKeyValueStore` and their commands moved to another assembly, and the assembly name is part of
-  the type name these commands are serialized with.
+- **Hosts that share the operation log or backend RPC upgrade together.** `IAuthBackend` and its
+  commands moved to another assembly, and the assembly name is part of the type name these
+  commands are serialized with.
 - **v15 clients default to `mempack6`.** To keep them working while you roll out v16, the server
   must serve it: add `f.AddMemoryPack()` there (see [Step 4](#step-4-configure-rpc-formats-per-container)).
 - **Moved type names only resolve forward.** v16 reads payloads that name a moved type by its old
@@ -105,7 +105,7 @@ See [Native AOT and Trimming](../PartAOT.md) for the details.
 | `NewtonsoftJsonSerializer`, `NewtonsoftJsonSerialized<T>`, `njson*` RPC formats | `ActualLab.Serialization.NewtonsoftJson` |
 | `nmsgpack*` RPC formats | `ActualLab.Serialization.NerdbankMessagePack` |
 | `OptionSet`, `ImmutableOptionSet`, `FuncByteSerializer`, `FuncTextSerializer` (obsolete) | `ActualLab.Core.Legacy` |
-| `IAuthBackend`, `IKeyValueStore` and their commands without `ActualLab.Fusion.Ext.Services` | `ActualLab.Fusion.Ext.Backend.Contracts` |
+| `IAuthBackend` and its commands without `ActualLab.Fusion.Ext.Services` | `ActualLab.Fusion.Ext.Backend.Contracts` |
 | `FileSystemCache` | `ActualLab.Plugins` |
 
 `ActualLab.Serialization.MemoryPack` targets .NET Core 3.1+ and .NET Standard 2.1; it has no
@@ -117,7 +117,7 @@ before the first serialization (e.g. you only use `[MemoryPackable]` types), or 
 .NET Core 3.1 / .NET Standard 2.1, call `MemoryPackSerialization.Register()` /
 `NewtonsoftJsonSerialization.Register()` at startup.
 
-`ActualLab.Fusion.Ext.Services` type-forwards `IAuthBackend`, `IKeyValueStore` and their commands,
+`ActualLab.Fusion.Ext.Services` type-forwards `IAuthBackend` and its commands,
 so code that uses them compiles unchanged.
 
 ## Step 2: Fix MEMPACK019 in your `[MemoryPackable]` types
@@ -295,6 +295,14 @@ a preset dictionary needs a suffix of its own, e.g.
 - **Moved type names.** `TypeRef.MovedTypes` maps the names of types that moved to another
   assembly, so payloads written by v15 still resolve them.
 - **`ActivatorExt.New<T>()`** is gone; use `Activator.CreateInstance<T>()`.
+- **The key-value stores are gone:** `IKeyValueStore`, `ISandboxedKeyValueStore`, their commands,
+  `KeyValueStoreExt`, `SandboxedKeyValueStoreExt`, `InMemoryKeyValueStore`, `DbKeyValueStore`,
+  `DbKeyValue`, `DbKeyValueTrimmer`, `AddInMemoryKeyValueStore`, `AddDbKeyValueStore` and
+  `AddSandboxedKeyValueStore`. If you use them, copy their v15 sources into your app; the
+  `_KeyValues` table they used isn't touched.
+- **MemoryPack can't serialize `NewtonsoftJsonSerialized<T>` and `TypeDecoratingNewtonsoftJsonSerialized<TSchema, T>`**
+  anymore, so the two serializer packages don't depend on each other. If you need it, register a
+  formatter with `MemoryPackSerialization.RegisterGenericType`.
 - **Native AOT:** the `MemoryPackByteSerializer.IsEnabled` trimming switch is gone &ndash; MemoryPack
   keep-code now exists only if you reference `ActualLab.Serialization.MemoryPack`.
 - **Compression:** a custom codec derives from `ByteCodec` (an abstract record) and creates

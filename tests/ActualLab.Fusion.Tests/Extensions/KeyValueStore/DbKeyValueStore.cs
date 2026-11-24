@@ -1,7 +1,8 @@
+using ActualLab.Fusion.Extensions;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
-namespace ActualLab.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 /// <summary>
 /// Database-backed implementation of <see cref="IKeyValueStore"/> using Entity Framework Core.

@@ -1,28 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.Extensions.Services;
 using ActualLab.Rpc;
 
-namespace ActualLab.Fusion.Extensions;
+namespace ActualLab.Fusion.Tests.Extensions;
 
-/// <summary>
-/// Extension methods for <see cref="FusionBuilder"/> to register key-value store services.
-/// </summary>
-public static class FusionBuilderExt
+public static class KeyValueStoreFusionBuilderExt
 {
-    // SandboxedKeyValueStore
-
-    public static FusionBuilder AddSandboxedKeyValueStore<TContext>(
-        this FusionBuilder fusion,
-        Func<IServiceProvider, SandboxedKeyValueStore<TContext>.Options>? optionsFactory = null)
-    {
-        var services = fusion.Services;
-        services.AddSingleton(optionsFactory, _ => SandboxedKeyValueStore<TContext>.Options.Default);
-        fusion.AddService<ISandboxedKeyValueStore, SandboxedKeyValueStore<TContext>>();
-        return fusion;
-    }
-
     // InMemoryKeyValueStore
 
     public static FusionBuilder AddInMemoryKeyValueStore(
@@ -30,9 +14,6 @@ public static class FusionBuilderExt
         Func<IServiceProvider, InMemoryKeyValueStore.Options>? optionsFactory = null)
     {
         var services = fusion.Services;
-        // Even though InMemoryKeyValueStore doesn't need TDbContext,
-        // SandboxedKeyValueStore uses string-based APIs, so we add fake IDbShardRegistry<Unit>
-        // to let it use Unit as TDbContext.
         services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.Single));
         services.TryAddSingleton<IDbShardResolver<Unit>>(c => new DbShardResolver<Unit>(c));
         services.AddSingleton(optionsFactory, _ => InMemoryKeyValueStore.Options.Default);

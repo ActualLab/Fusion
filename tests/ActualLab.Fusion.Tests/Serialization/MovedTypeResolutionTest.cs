@@ -1,5 +1,4 @@
 using ActualLab.Fusion.Authentication;
-using ActualLab.Fusion.Extensions;
 using ActualLab.Reflection;
 using ActualLab.Tests;
 
@@ -16,10 +15,6 @@ public class MovedTypeResolutionTest(ITestOutputHelper @out) : TestBase(@out)
                 typeof(AuthBackend_SignIn)),
             ("ActualLab.Fusion.Authentication.AuthBackend_SetupSession, ActualLab.Fusion.Ext.Services",
                 typeof(AuthBackend_SetupSession)),
-            ("ActualLab.Fusion.Extensions.KeyValueStore_Set, ActualLab.Fusion.Ext.Services",
-                typeof(KeyValueStore_Set)),
-            ("ActualLab.Fusion.Extensions.KeyValueStore_Remove, ActualLab.Fusion.Ext.Services",
-                typeof(KeyValueStore_Remove)),
         };
 
         // act

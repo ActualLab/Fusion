@@ -17,7 +17,5 @@ namespace ActualLab.Fusion.Extensions.Internal;
 [JsonSerializable(typeof(Auth_SignOut))]
 [JsonSerializable(typeof(PageRef<string>))]
 [JsonSerializable(typeof(SortDirection))]
-[JsonSerializable(typeof(SandboxedKeyValueStore_Set))]
-[JsonSerializable(typeof(SandboxedKeyValueStore_Remove))]
 internal sealed partial class FusionExtJsonContext : JsonSerializerContext;
 #endif

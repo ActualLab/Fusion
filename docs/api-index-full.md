@@ -2644,10 +2644,6 @@ Provides shared `ActivitySource` and `Meter` instances for Fusion diagnostics.
 
 A compute service that provides auto-invalidating time-related computed values.
 
-###### `ISandboxedKeyValueStore`, `SandboxedKeyValueStoreExt`
-
-A session-scoped key-value store that enforces key prefix constraints based on the current session and user.
-
 ###### `RpcPeerStateKind` (enum)
 
 Defines the high-level connection state kinds for an RPC peer.
@@ -2679,14 +2675,6 @@ A user-friendly representation of an RPC peer's connection state.
 ###### `RpcPeerStateMonitor`
 
 A background worker that monitors RPC peer connection state changes and exposes the current state via computed properties.
-
-###### `SandboxedKeyValueStore_Remove` (record)
-
-Command to remove one or more keys from the `ISandboxedKeyValueStore`.
-
-###### `SandboxedKeyValueStore_Set` (record)
-
-Command to set one or more key-value entries in the `ISandboxedKeyValueStore`.
 
 ###### `EnumerableExt`
 
@@ -3362,28 +3350,6 @@ In-memory implementation of `IAuth` and `IAuthBackend` for testing and client-si
 
 Selects the database isolation level for authentication-related commands.
 
-### ActualLab.Fusion.Extensions.Services
-
-###### `DbKeyValue`
-
-Entity Framework entity representing a key-value pair with optional expiration.
-
-###### `DbKeyValueStore`
-
-Database-backed implementation of `IKeyValueStore` using Entity Framework Core.
-
-###### `DbKeyValueTrimmer`
-
-A background worker that periodically removes expired key-value entries from the database.
-
-###### `InMemoryKeyValueStore`
-
-An in-memory implementation of `IKeyValueStore` suitable for client-side use cases and testing.
-
-###### `SandboxedKeyValueStore<TContext>`
-
-Implementation of `ISandboxedKeyValueStore` that delegates to `IKeyValueStore` with session- and user-scoped key constraints.
-
 ## ActualLab.Serialization.NerdbankMessagePack
 
 ### ActualLab.Serialization
@@ -3495,20 +3461,6 @@ Backend command to set up or update session metadata (IP address, user agent, op
 ###### `AuthBackend_SignIn` (record)
 
 Backend command to sign in a user with the specified identity.
-
-### ActualLab.Fusion.Extensions
-
-###### `IKeyValueStore`
-
-A shard-aware key-value store service with compute method support for invalidation. It's an `IBackendService`, so it's reachable only from a backend peer — frontend clients go through `ISandboxedKeyValueStore`. `KeyValueStoreExt` is in `ActualLab.Fusion.Ext.Services`.
-
-###### `KeyValueStore_Remove` (record)
-
-Backend command to remove one or more keys from the `IKeyValueStore`.
-
-###### `KeyValueStore_Set` (record)
-
-Backend command to set one or more key-value entries in the `IKeyValueStore`.
 
 ## ActualLab.Redis
 

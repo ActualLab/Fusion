@@ -10,6 +10,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
-    <ProjectReference Include="..\ActualLab.Rpc\ActualLab.Rpc.csproj" />
   </ItemGroup>
 </Project>

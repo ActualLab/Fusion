@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ActualLab.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 /// <summary>
 /// Entity Framework entity representing a key-value pair with optional expiration.

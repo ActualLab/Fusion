@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Tests.DbModel;
+using ActualLab.Fusion.Tests.Extensions;
 
 namespace ActualLab.Fusion.Tests;
 

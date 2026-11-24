@@ -2,8 +2,6 @@ using ActualLab.Collections.Internal;
 using ActualLab.CommandR.Operations;
 using ActualLab.Compliance;
 using ActualLab.Compliance.Internal;
-using ActualLab.Fusion.Authentication;
-using ActualLab.Fusion.Extensions;
 using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
@@ -64,13 +62,9 @@ public static class MemoryPackSerialization
             = FormatterType(typeof(TypeDecoratingMessagePackSerializedMemoryPackFormatter<,>)),
         [typeof(TextSerialized<>)] = FormatterType(typeof(TextSerializedMemoryPackFormatter<>)),
         [typeof(SystemJsonSerialized<>)] = FormatterType(typeof(SystemJsonSerializedMemoryPackFormatter<>)),
-        [typeof(NewtonsoftJsonSerialized<>)] = FormatterType(typeof(NewtonsoftJsonSerializedMemoryPackFormatter<>)),
         [typeof(TypeDecoratingSystemJsonSerialized<,>)]
             = FormatterType(typeof(TypeDecoratingSystemJsonSerializedMemoryPackFormatter<,>)),
-        [typeof(TypeDecoratingNewtonsoftJsonSerialized<,>)]
-            = FormatterType(typeof(TypeDecoratingNewtonsoftJsonSerializedMemoryPackFormatter<,>)),
         [typeof(RpcStream<>)] = FormatterType(typeof(RpcStreamMemoryPackFormatter<>)),
-        [typeof(PageRef<>)] = FormatterType(typeof(PageRefMemoryPackFormatter<>)),
     };
     private static bool _isRegistered;
     // Guarded by Lock; non-null while a walk runs, which makes reentrant Register(Type) calls join it
@@ -113,26 +107,25 @@ public static class MemoryPackSerialization
             MemoryPackFormatterProvider.Register(new ServiceCallMemoryPackFormatter());
             MemoryPackFormatterProvider.Register(new OperationCompletionMemoryPackFormatter());
 
-            // ActualLab.Fusion, ActualLab.Fusion.Ext.Contracts, ActualLab.Fusion.Ext.Backend.Contracts
+            // ActualLab.Fusion
             MemoryPackFormatterProvider.Register(new SessionMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new UserIdentityMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new UserMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new SessionAuthInfoMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new SessionInfoMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new AuthEditUserMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new AuthSignOutMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new AuthBackendSetSessionOptionsMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new AuthBackendSetupSessionMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new AuthBackendSignInMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new SandboxedKeyValueStoreSetMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new SandboxedKeyValueStoreRemoveMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new KeyValueStoreSetMemoryPackFormatter());
-            MemoryPackFormatterProvider.Register(new KeyValueStoreRemoveMemoryPackFormatter());
 
             SerializerKind.MemoryPack.Register(
                 () => MemoryPackByteSerializer.Default,
                 () => MemoryPackByteSerializer.DefaultTypeDecorating);
             Volatile.Write(ref _isRegistered, true);
+        }
+    }
+
+    // For packages that serialize their own generic types: Register<T> closes these formatters too
+    public static void RegisterGenericType(
+        Type genericTypeDefinition,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        Type formatterTypeDefinition)
+    {
+        lock (Lock) {
+            GenericFormatterTypes[genericTypeDefinition] = formatterTypeDefinition;
+            MemoryPackFormatterProvider.RegisterGenericType(genericTypeDefinition, formatterTypeDefinition);
         }
     }
 

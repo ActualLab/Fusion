@@ -1,8 +1,9 @@
 using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Diagnostics;
 
-namespace ActualLab.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 /// <summary>
 /// A background worker that periodically removes expired key-value entries from the database.

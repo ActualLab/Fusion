@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Operations;
-using ActualLab.Fusion.Extensions.Services;
+using ActualLab.Fusion.Tests.Extensions;
 
 namespace ActualLab.Fusion.Tests.DbModel;
 

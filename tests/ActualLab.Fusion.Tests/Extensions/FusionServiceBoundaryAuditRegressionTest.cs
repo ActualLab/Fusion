@@ -1,10 +1,8 @@
 #if !NETFRAMEWORK
-using System.Globalization;
 using System.Security.Claims;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Endpoints;
 using ActualLab.Fusion.Extensions;
-using ActualLab.Fusion.Extensions.Services;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Endpoints;
 using ActualLab.Reflection;
@@ -18,33 +16,11 @@ namespace ActualLab.Fusion.Tests.Extensions;
 public class FusionServiceBoundaryAuditRegressionTest
 {
     [Fact]
-    public void SandboxedStoreShouldRejectKeysFromUsersWithLongerMatchingIds()
-    {
-        var settings = new SandboxedKeyValueStore<Unit>.Options();
-        var sessionPrefix = string.Format(
-            CultureInfo.InvariantCulture, settings.SessionKeyPrefixFormat, "session-id");
-        var userPrefix = string.Format(CultureInfo.InvariantCulture, settings.UserKeyPrefixFormat, "12");
-        var keyChecker = new SandboxedKeyValueStore<Unit>.KeyChecker {
-            Prefix = sessionPrefix,
-            SecondaryPrefix = userPrefix,
-        };
-
-        var action = () => keyChecker.CheckKey("@user/123/private");
-
-        action.Should().Throw<InvalidOperationException>();
-        keyChecker.Invoking(x => x.CheckKey(userPrefix)).Should().NotThrow();
-        keyChecker.Invoking(x => x.CheckKey(userPrefix + "/private")).Should().NotThrow();
-        keyChecker.Invoking(x => x.CheckKey(sessionPrefix)).Should().NotThrow();
-        keyChecker.Invoking(x => x.CheckKey(sessionPrefix + "/private")).Should().NotThrow();
-    }
-
-    [Fact]
     public void KeyValueStoreShouldNotBeReachableFromFrontendPeers()
     {
         var services = new ServiceCollection();
         var fusion = services.AddFusion().WithServiceMode(RpcServiceMode.Server, true);
         fusion.AddInMemoryKeyValueStore();
-        fusion.AddSandboxedKeyValueStore<Unit>();
         using var serviceProvider = services.BuildServiceProvider();
         var registry = serviceProvider.RpcHub().ServiceRegistry;
 
@@ -52,15 +28,6 @@ public class FusionServiceBoundaryAuditRegressionTest
         var storeMethodPrefix = typeof(IKeyValueStore).GetName() + ".";
         registry.ServerMethodResolver.MethodByFullName!.Keys
             .Should().NotContain(x => x.StartsWith(storeMethodPrefix, StringComparison.Ordinal));
-
-        var sandboxedServiceDef = registry.Get<ISandboxedKeyValueStore>();
-        sandboxedServiceDef.Should().NotBeNull();
-        sandboxedServiceDef!.IsBackend.Should().BeFalse();
-        sandboxedServiceDef.Methods.Should().NotBeEmpty();
-        foreach (var methodDef in sandboxedServiceDef.Methods) {
-            methodDef.IsBackend.Should().BeFalse();
-            registry.ServerMethodResolver[methodDef.FullName].Should().BeSameAs(methodDef);
-        }
     }
 
     [Fact]

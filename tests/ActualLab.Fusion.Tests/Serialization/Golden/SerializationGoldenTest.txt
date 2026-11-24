@@ -306,42 +306,6 @@ AuthBackend_SetSessionOptions.Value | NewtonsoftJson | {"Session":"golden-sessio
 AuthBackend_SetSessionOptions.Value | NewtonsoftJson:RoundTrip | ok
 AuthBackend_SetSessionOptions.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Session":"golden-session-id-0001","Options":{"RawItems":[{"Key":"Int","Serialized":{"NewtonsoftJson":"/* @type System.Int32, System.Private.CoreLib */ 1"}}]},"ExpectedVersion":7}
 AuthBackend_SetSessionOptions.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | MemoryPack | 022048011ee9ffffff16000000676f6c64656e2d73657373696f6e2d69642d3030303102000000feffffff0100000061feffffff010000003100000000000000000000000000000000feffffff0100000062feffffff0100000032010000000000000080400a83498b3c00
-SandboxedKeyValueStore_Set.Value | MemoryPack:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | MemoryPack.TypeDecorating | 015ea9ffffff5600000041637475616c4c61622e467573696f6e2e457874656e73696f6e732e53616e64626f7865644b657956616c756553746f72655f5365742c2041637475616c4c61622e467573696f6e2e4578742e436f6e747261637473022048011ee9ffffff16000000676f6c64656e2d73657373696f6e2d69642d3030303102000000feffffff0100000061feffffff010000003100000000000000000000000000000000feffffff0100000062feffffff0100000032010000000000000080400a83498b3c00
-SandboxedKeyValueStore_Set.Value | MemoryPack.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | MessagePack | 82a753657373696f6eb6676f6c64656e2d73657373696f6e2d69642d30303031a54974656d739293a161a131c093a162a132d3003c8b49830a4080
-SandboxedKeyValueStore_Set.Value | MessagePack:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | MessagePack.TypeDecorating | d95641637475616c4c61622e467573696f6e2e457874656e73696f6e732e53616e64626f7865644b657956616c756553746f72655f5365742c2041637475616c4c61622e467573696f6e2e4578742e436f6e74726163747382a753657373696f6eb6676f6c64656e2d73657373696f6e2d69642d30303031a54974656d739293a161a131c093a162a132d3003c8b49830a4080
-SandboxedKeyValueStore_Set.Value | MessagePack.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | Nerdbank | 82a753657373696f6eb6676f6c64656e2d73657373696f6e2d69642d30303031a54974656d739293a161a131c093a162a132d3003c8b49830a4080
-SandboxedKeyValueStore_Set.Value | Nerdbank:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | SystemJson | {"session":"golden-session-id-0001","items":[{},{}]}
-SandboxedKeyValueStore_Set.Value | SystemJson:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | SystemJson.TypeDecorating | /* @type . */ {"session":"golden-session-id-0001","items":[{},{}]}
-SandboxedKeyValueStore_Set.Value | SystemJson.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | NewtonsoftJson | {"Session":"golden-session-id-0001","Items":[{"Item1":"a","Item2":"1"},{"Item1":"b","Item2":"2","Item3":"2024-01-02T03:04:05.0000000Z"}]}
-SandboxedKeyValueStore_Set.Value | NewtonsoftJson:RoundTrip | ok
-SandboxedKeyValueStore_Set.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Session":"golden-session-id-0001","Items":[{"Item1":"a","Item2":"1"},{"Item1":"b","Item2":"2","Item3":"2024-01-02T03:04:05.0000000Z"}]}
-SandboxedKeyValueStore_Set.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | MemoryPack | 022016011ee9ffffff16000000676f6c64656e2d73657373696f6e2d69642d3030303102000000feffffff0100000061feffffff0100000062
-SandboxedKeyValueStore_Remove.Value | MemoryPack:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | MemoryPack.TypeDecorating | 0161a6ffffff5900000041637475616c4c61622e467573696f6e2e457874656e73696f6e732e53616e64626f7865644b657956616c756553746f72655f52656d6f76652c2041637475616c4c61622e467573696f6e2e4578742e436f6e747261637473022016011ee9ffffff16000000676f6c64656e2d73657373696f6e2d69642d3030303102000000feffffff0100000061feffffff0100000062
-SandboxedKeyValueStore_Remove.Value | MemoryPack.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | MessagePack | 82a753657373696f6eb6676f6c64656e2d73657373696f6e2d69642d30303031a44b65797392a161a162
-SandboxedKeyValueStore_Remove.Value | MessagePack:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | MessagePack.TypeDecorating | d95941637475616c4c61622e467573696f6e2e457874656e73696f6e732e53616e64626f7865644b657956616c756553746f72655f52656d6f76652c2041637475616c4c61622e467573696f6e2e4578742e436f6e74726163747382a753657373696f6eb6676f6c64656e2d73657373696f6e2d69642d30303031a44b65797392a161a162
-SandboxedKeyValueStore_Remove.Value | MessagePack.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | Nerdbank | 82a753657373696f6eb6676f6c64656e2d73657373696f6e2d69642d30303031a44b65797392a161a162
-SandboxedKeyValueStore_Remove.Value | Nerdbank:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | SystemJson | {"session":"golden-session-id-0001","keys":["a","b"]}
-SandboxedKeyValueStore_Remove.Value | SystemJson:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | SystemJson.TypeDecorating | /* @type . */ {"session":"golden-session-id-0001","keys":["a","b"]}
-SandboxedKeyValueStore_Remove.Value | SystemJson.TypeDecorating:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | NewtonsoftJson | {"Session":"golden-session-id-0001","Keys":["a","b"]}
-SandboxedKeyValueStore_Remove.Value | NewtonsoftJson:RoundTrip | ok
-SandboxedKeyValueStore_Remove.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Session":"golden-session-id-0001","Keys":["a","b"]}
-SandboxedKeyValueStore_Remove.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
 AuthBackend_SignIn.Value | MemoryPack | 032084ab0017011ee9ffffff16000000676f6c64656e2d73657373696f6e2d69642d30303031050e0d08433ff9ffffff06000000757365722d31faffffff05000000416c696365020000000000000002000000faffffff05000000656d61696ceeffffff11000000616c696365406578616d706c652e636f6dfbffffff04000000726f6c65faffffff0500000061646d696e02000000f3ffffff0c0000006769746875622f616c69636500000000f2ffffff0d000000676f6f676c652f757365722d31f9ffffff060000007365637265740115f2ffffff0d000000676f6f676c652f757365722d31
 AuthBackend_SignIn.Value | MemoryPack:RoundTrip | ok
 AuthBackend_SignIn.Value | MemoryPack.TypeDecorating | 0162a5ffffff5a00000041637475616c4c61622e467573696f6e2e41757468656e7469636174696f6e2e417574684261636b656e645f5369676e496e2c2041637475616c4c61622e467573696f6e2e4578742e4261636b656e642e436f6e747261637473032084ab0017011ee9ffffff16000000676f6c64656e2d73657373696f6e2d69642d30303031050e0d08433ff9ffffff06000000757365722d31faffffff05000000416c696365020000000000000002000000faffffff05000000656d61696ceeffffff11000000616c696365406578616d706c652e636f6dfbffffff04000000726f6c65faffffff0500000061646d696e02000000f3ffffff0c0000006769746875622f616c69636500000000f2ffffff0d000000676f6f676c652f757365722d31f9ffffff060000007365637265740115f2ffffff0d000000676f6f676c652f757365722d31
@@ -378,39 +342,3 @@ AuthBackend_SetupSession.Value | NewtonsoftJson | {"Session":"golden-session-id-
 AuthBackend_SetupSession.Value | NewtonsoftJson:RoundTrip | ok
 AuthBackend_SetupSession.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Session":"golden-session-id-0001","IPAddress":"127.0.0.1","UserAgent":"Golden/1.0","Options":{"RawItems":[{"Key":"Int","Serialized":{"NewtonsoftJson":"/* @type System.Int32, System.Private.CoreLib */ 1"}}]}}
 AuthBackend_SetupSession.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
-KeyValueStore_Set.Value | MemoryPack | 020d48faffffff05000000736861726402000000feffffff0100000061feffffff010000003100000000000000000000000000000000feffffff0100000062feffffff0100000032010000000000000080400a83498b3c00
-KeyValueStore_Set.Value | MemoryPack:RoundTrip | ok
-KeyValueStore_Set.Value | MemoryPack.TypeDecorating | 015daaffffff5500000041637475616c4c61622e467573696f6e2e457874656e73696f6e732e4b657956616c756553746f72655f5365742c2041637475616c4c61622e467573696f6e2e4578742e4261636b656e642e436f6e747261637473020d48faffffff05000000736861726402000000feffffff0100000061feffffff010000003100000000000000000000000000000000feffffff0100000062feffffff0100000032010000000000000080400a83498b3c00
-KeyValueStore_Set.Value | MemoryPack.TypeDecorating:RoundTrip | ok
-KeyValueStore_Set.Value | MessagePack | 82a55368617264a57368617264a54974656d739293a161a131c093a162a132d3003c8b49830a4080
-KeyValueStore_Set.Value | MessagePack:RoundTrip | ok
-KeyValueStore_Set.Value | MessagePack.TypeDecorating | d95541637475616c4c61622e467573696f6e2e457874656e73696f6e732e4b657956616c756553746f72655f5365742c2041637475616c4c61622e467573696f6e2e4578742e4261636b656e642e436f6e74726163747382a55368617264a57368617264a54974656d739293a161a131c093a162a132d3003c8b49830a4080
-KeyValueStore_Set.Value | MessagePack.TypeDecorating:RoundTrip | ok
-KeyValueStore_Set.Value | Nerdbank | 82a55368617264a57368617264a54974656d739293a161a131c093a162a132d3003c8b49830a4080
-KeyValueStore_Set.Value | Nerdbank:RoundTrip | ok
-KeyValueStore_Set.Value | SystemJson | {"shard":"shard","items":[{},{}]}
-KeyValueStore_Set.Value | SystemJson:RoundTrip | ok
-KeyValueStore_Set.Value | SystemJson.TypeDecorating | /* @type . */ {"shard":"shard","items":[{},{}]}
-KeyValueStore_Set.Value | SystemJson.TypeDecorating:RoundTrip | ok
-KeyValueStore_Set.Value | NewtonsoftJson | {"Shard":"shard","Items":[{"Item1":"a","Item2":"1"},{"Item1":"b","Item2":"2","Item3":"2024-01-02T03:04:05.0000000Z"}]}
-KeyValueStore_Set.Value | NewtonsoftJson:RoundTrip | ok
-KeyValueStore_Set.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Shard":"shard","Items":[{"Item1":"a","Item2":"1"},{"Item1":"b","Item2":"2","Item3":"2024-01-02T03:04:05.0000000Z"}]}
-KeyValueStore_Set.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok
-KeyValueStore_Remove.Value | MemoryPack | 020d16faffffff05000000736861726402000000feffffff0100000061feffffff0100000062
-KeyValueStore_Remove.Value | MemoryPack:RoundTrip | ok
-KeyValueStore_Remove.Value | MemoryPack.TypeDecorating | 0160a7ffffff5800000041637475616c4c61622e467573696f6e2e457874656e73696f6e732e4b657956616c756553746f72655f52656d6f76652c2041637475616c4c61622e467573696f6e2e4578742e4261636b656e642e436f6e747261637473020d16faffffff05000000736861726402000000feffffff0100000061feffffff0100000062
-KeyValueStore_Remove.Value | MemoryPack.TypeDecorating:RoundTrip | ok
-KeyValueStore_Remove.Value | MessagePack | 82a55368617264a57368617264a44b65797392a161a162
-KeyValueStore_Remove.Value | MessagePack:RoundTrip | ok
-KeyValueStore_Remove.Value | MessagePack.TypeDecorating | d95841637475616c4c61622e467573696f6e2e457874656e73696f6e732e4b657956616c756553746f72655f52656d6f76652c2041637475616c4c61622e467573696f6e2e4578742e4261636b656e642e436f6e74726163747382a55368617264a57368617264a44b65797392a161a162
-KeyValueStore_Remove.Value | MessagePack.TypeDecorating:RoundTrip | ok
-KeyValueStore_Remove.Value | Nerdbank | 82a55368617264a57368617264a44b65797392a161a162
-KeyValueStore_Remove.Value | Nerdbank:RoundTrip | ok
-KeyValueStore_Remove.Value | SystemJson | {"shard":"shard","keys":["a","b"]}
-KeyValueStore_Remove.Value | SystemJson:RoundTrip | ok
-KeyValueStore_Remove.Value | SystemJson.TypeDecorating | /* @type . */ {"shard":"shard","keys":["a","b"]}
-KeyValueStore_Remove.Value | SystemJson.TypeDecorating:RoundTrip | ok
-KeyValueStore_Remove.Value | NewtonsoftJson | {"Shard":"shard","Keys":["a","b"]}
-KeyValueStore_Remove.Value | NewtonsoftJson:RoundTrip | ok
-KeyValueStore_Remove.Value | NewtonsoftJson.TypeDecorating | /* @type . */ {"Shard":"shard","Keys":["a","b"]}
-KeyValueStore_Remove.Value | NewtonsoftJson.TypeDecorating:RoundTrip | ok

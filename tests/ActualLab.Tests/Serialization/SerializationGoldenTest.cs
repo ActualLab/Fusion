@@ -176,7 +176,7 @@ public class SerializationGoldenTest(ITestOutputHelper @out) : GoldenSerializati
         yield return Case("MemoryPackSerialized<int>", MemoryPackSerialized.New(5));
         yield return Case("MemoryPackSerialized<string>", MemoryPackSerialized.New("abc"));
         yield return Case("MessagePackSerialized<int>", MessagePackSerialized.New(5));
-        yield return Case("NewtonsoftJsonSerialized<int>", NewtonsoftJsonSerialized.New(5));
+        yield return Case("NewtonsoftJsonSerialized<int>", NewtonsoftJsonSerialized.New(5), "MemoryPack");
         yield return Case("SystemJsonSerialized<int>", SystemJsonSerialized.New(5));
         yield return Case("NerdbankMessagePackSerialized<int>", NerdbankMessagePackSerialized.New(5));
         yield return Case("TypeDecoratingMemoryPackSerialized<Any,object>",
@@ -184,7 +184,7 @@ public class SerializationGoldenTest(ITestOutputHelper @out) : GoldenSerializati
         yield return Case("TypeDecoratingMessagePackSerialized<Any,object>",
             TypeDecoratingMessagePackSerialized.New<TypeSchema.Any, object>(5));
         yield return Case("TypeDecoratingNewtonsoftJsonSerialized<Any,object>",
-            TypeDecoratingNewtonsoftJsonSerialized.New<TypeSchema.Any, object>(5));
+            TypeDecoratingNewtonsoftJsonSerialized.New<TypeSchema.Any, object>(5), "MemoryPack");
         yield return Case("TypeDecoratingSystemJsonSerialized<Any,object>",
             TypeDecoratingSystemJsonSerialized.New<TypeSchema.Any, object>(5));
         yield return Case("TypeDecoratingNerdbankMessagePackSerialized<object>",

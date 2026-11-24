@@ -52,7 +52,7 @@ You should reference these packages based on your project type:
 ### Fusion Extensions (`IAuth`, etc.)
 
 - [ActualLab.Fusion.Ext.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Contracts/) &ndash; Contracts (client-side package)
-- [ActualLab.Fusion.Ext.Backend.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Backend.Contracts/) &ndash; Backend contracts (`IAuthBackend`, `IKeyValueStore` and their commands)
+- [ActualLab.Fusion.Ext.Backend.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Backend.Contracts/) &ndash; Backend contracts (`IAuthBackend` and its commands)
 - [ActualLab.Fusion.Ext.Services](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Services/) &ndash; Implementations (server-side package)
 
 ### Optional Serialization Packages
@@ -60,9 +60,47 @@ You should reference these packages based on your project type:
 `ActualLab.Core` supports System.Text.Json and MessagePack. Other serializers come from separate
 packages &ndash; see [Serializer Packages](./PartS.md#serializer-packages):
 
-- [ActualLab.Serialization.NewtonsoftJson](https://www.nuget.org/packages/ActualLab.Serialization.NewtonsoftJson/) &ndash; Newtonsoft.Json support: `NewtonsoftJsonSerializer` and the `njson*` RPC formats. `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Contracts` and `ActualLab.Fusion.Ext.Services` reference it. See [Newtonsoft.Json](./PartS.md#newtonsoft-json).
+- [ActualLab.Serialization.NewtonsoftJson](https://www.nuget.org/packages/ActualLab.Serialization.NewtonsoftJson/) &ndash; Newtonsoft.Json support: `NewtonsoftJsonSerializer` and the `njson*` RPC formats. `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Services` and `ActualLab.Core.Legacy` reference it. See [Newtonsoft.Json](./PartS.md#newtonsoft-json).
 - [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) &ndash; Nerdbank.MessagePack support: `NerdbankMessagePackByteSerializer` and the `nmsgpack*` RPC formats (.NET 8+). See [Nerdbank.MessagePack](./PartS.md#nerdbank-messagepack).
-- [ActualLab.Serialization.MemoryPack](https://www.nuget.org/packages/ActualLab.Serialization.MemoryPack/) &ndash; MemoryPack support: `MemoryPackByteSerializer`, `ApiOption<T>` / `ApiNullable<T>` and the `mempack*` RPC formats. Not recommended outside of compatibility with pre-v16 peers. See [MemoryPack](./PartS.md#memorypack).
+- [ActualLab.Serialization.MemoryPack](https://www.nuget.org/packages/ActualLab.Serialization.MemoryPack/) &ndash; MemoryPack support: `MemoryPackByteSerializer`, `ApiOption<T>` / `ApiNullable<T>` and the `mempack*` RPC formats. Not recommended outside of compatibility with pre-v16 peers. `ActualLab.Fusion.Ext.Contracts` references it (except on .NET Standard 2.0). See [MemoryPack](./PartS.md#memorypack).
+
+## Package Dependencies
+
+Direct dependencies of each package on other ActualLab packages (`ActualLab.Generators` is a build-time
+dependency of most of them and isn't listed):
+
+| Package | Depends on |
+|---------|------------|
+| `ActualLab.Core` | &ndash; |
+| `ActualLab.Core.Legacy` | `ActualLab.Serialization.NewtonsoftJson` |
+| `ActualLab.Interception` | `ActualLab.Core` |
+| `ActualLab.Plugins` | `ActualLab.Core` |
+| `ActualLab.Redis` | `ActualLab.Core` |
+| `ActualLab.RestEase` | `ActualLab.Core` |
+| `ActualLab.Testing` | `ActualLab.Core` |
+| `ActualLab.Rpc` | `ActualLab.Interception` |
+| `ActualLab.Rpc.Server` | `ActualLab.Rpc` |
+| `ActualLab.Rpc.TypeScript` | `ActualLab.Rpc` |
+| `ActualLab.Rpc.TypeScript.Generator` | `ActualLab.Fusion`, `ActualLab.Rpc.TypeScript` |
+| `ActualLab.CommandR` | `ActualLab.Rpc` |
+| `ActualLab.Fusion` | `ActualLab.CommandR` |
+| `ActualLab.Serialization.NewtonsoftJson` | `ActualLab.Fusion` |
+| `ActualLab.Serialization.NerdbankMessagePack` | `ActualLab.Fusion` |
+| `ActualLab.Serialization.MemoryPack` | `ActualLab.Fusion` |
+| `ActualLab.Fusion.Blazor` | `ActualLab.Fusion` |
+| `ActualLab.Fusion.Server` | `ActualLab.Fusion.Blazor`, `ActualLab.Rpc.Server` |
+| `ActualLab.Fusion.EntityFramework` | `ActualLab.Fusion`, `ActualLab.Serialization.NewtonsoftJson` |
+| `ActualLab.Fusion.EntityFramework.Npgsql` | `ActualLab.Fusion.EntityFramework` |
+| `ActualLab.Fusion.EntityFramework.Redis` | `ActualLab.Fusion.EntityFramework`, `ActualLab.Redis` |
+| `ActualLab.Fusion.Ext.Contracts` | `ActualLab.Fusion`, `ActualLab.Serialization.MemoryPack` (not on .NET Standard 2.0) |
+| `ActualLab.Fusion.Ext.Backend.Contracts` | `ActualLab.Fusion.Ext.Contracts` |
+| `ActualLab.Fusion.Ext.Services` | `ActualLab.Fusion.Server`, `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion.Ext.Backend.Contracts` |
+| `ActualLab.Fusion.Blazor.Authentication` | `ActualLab.Fusion.Blazor`, `ActualLab.Fusion.Ext.Contracts` |
+| `ActualLab.Rpc.Server.NetFx` | `ActualLab.Rpc` |
+| `ActualLab.Fusion.Server.NetFx` | `ActualLab.Fusion.Ext.Contracts`, `ActualLab.Rpc.Server.NetFx` |
+
+So a client that references only `ActualLab.Fusion` (and, optionally, `ActualLab.Serialization.MemoryPack`)
+doesn't get Newtonsoft.Json.
 
 <br />
 

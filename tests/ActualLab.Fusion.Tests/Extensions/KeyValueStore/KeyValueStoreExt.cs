@@ -1,5 +1,6 @@
+using ActualLab.Fusion.Extensions;
 
-namespace ActualLab.Fusion.Extensions;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 /// <summary>
 /// Extension methods for <see cref="IKeyValueStore"/>.

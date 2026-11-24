@@ -1,11 +1,11 @@
+using ActualLab.Fusion.Extensions;
 using ActualLab.Rpc;
 using MessagePack;
 
-namespace ActualLab.Fusion.Extensions;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 // IBackendService is load-bearing here: every method takes a raw shard + key and authorizes
 // nothing, so none of them may be reachable from a client peer.
-// ISandboxedKeyValueStore is the client-facing surface.
 
 /// <summary>
 /// A shard-aware key-value store service with compute method support for invalidation.

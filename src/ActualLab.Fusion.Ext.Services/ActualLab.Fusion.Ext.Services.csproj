@@ -16,7 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
     <ProjectReference Include="..\ActualLab.Fusion.Ext.Backend.Contracts\ActualLab.Fusion.Ext.Backend.Contracts.csproj" />
-    <ProjectReference Include="..\ActualLab.Serialization.NewtonsoftJson\ActualLab.Serialization.NewtonsoftJson.csproj" />
   </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard'))">
     <ProjectReference Include="..\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
