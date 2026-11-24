@@ -98,7 +98,7 @@
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
     <OpenTelemetryVersion>[1.13.0,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
-    <AspireSdkVersion>13.5.3</AspireSdkVersion>
+    <AspireSdkVersion>17.0.0</AspireSdkVersion>
     <BlazoriseVersion>[1.8.9,)</BlazoriseVersion>
     <FusionVersion>15.1.15</FusionVersion>
   </PropertyGroup>
