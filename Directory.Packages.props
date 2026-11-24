@@ -110,7 +110,7 @@
     <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
-    <PackageVersion Include="Bullseye" Version="6.2.0" />
+    <PackageVersion Include="Bullseye" Version="6.3.0" />
     <PackageVersion Include="CliWrap" Version="3.10.5" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
